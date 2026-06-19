@@ -24,6 +24,7 @@ import type {
   HomeData,
   Match,
   MatchResultInput,
+  NewUser,
   NewsItem,
   Player,
   Settings,
@@ -128,7 +129,7 @@ export const publicApi = {
   getSettings: () =>
     api.get("/public/home").then((r) => adaptSettings(r.data.settings ?? {})),
   getTeams: (params?: { search?: string; tournament_id?: number }) =>
-    api.get<Team[]>("/public/teams", { params }).then((r) => r.data.map(adaptTeam)),
+    api.get<Team[]>("/public/teams", { params }).then((r) => r.data),
   getTeam: (id: number | string) =>
     api.get(`/public/teams/${id}`).then((r) => adaptTeam(r.data)),
   getPlayers: (params?: { team_id?: number; tournament_id?: number; search?: string }) =>
@@ -170,7 +171,7 @@ export const authApi = {
   getUsers: () =>
     api.get<User[]>("/users").then((r) => r.data),
   // New: create a user
-  createUser: (data: Partial<User>) =>
+  createUser: (data: NewUser) =>
     api.post<User>("/users", data).then((r) => r.data),
 };
 

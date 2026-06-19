@@ -14,6 +14,14 @@ export interface NewUser {
   role: UserRole;
 }
 
+export interface User {
+  id: number;
+  name?: string;
+  email: string;
+  username: string;
+  role: UserRole;
+  created_at?: string;
+}
 
 export interface AuthResponse {
   token: string;
