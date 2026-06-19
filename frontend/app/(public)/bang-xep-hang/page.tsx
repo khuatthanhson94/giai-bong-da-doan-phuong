@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 export default function BangXepHangPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["standings"],
-    queryFn: publicApi.getStandings,
+    queryFn: () => publicApi.getStandings(),
   });
 
   return (

@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "127.0.0.1", port: "3004" },
     ],
   },
+  // Ensure Turbopack knows the correct workspace root for Vercel builds
+  turbopack: {
+    root: ".",
+  },
 };
 
 export default nextConfig;

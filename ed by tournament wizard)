@@ -1,0 +1,33 @@
+[1mdiff --git a/frontend/lib/api.ts b/frontend/lib/api.ts[m
+[1mindex 213e9f3..f057b3f 100644[m
+[1m--- a/frontend/lib/api.ts[m
+[1m+++ b/frontend/lib/api.ts[m
+[36m@@ -226,6 +226,28 @@[m [mexport const galleryApi = {[m
+ };[m
+ [m
+ export const adminApi = {[m
+[32m+[m[32m  // existing adminApi methods (unchanged)[m
+[32m+[m[32m};[m
+[32m+[m
+[32m+[m[32m// NEW: groupApi – handles group generation for tournament wizard[m
+[32m+[m[32mexport const groupApi = {[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Generate groups for a tournament.[m
+[32m+[m[32m   * @param teamCount Number of teams participating.[m
+[32m+[m[32m   * @param groupCount Number of groups to create.[m
+[32m+[m[32m   * @param type Generation strategy (default "random").[m
+[32m+[m[32m   * Adjust the endpoint according to your backend API.[m
+[32m+[m[32m   */[m
+[32m+[m[32m  generate: (teamCount: number, groupCount: number, type: string = "random") =>[m
+[32m+[m[32m    api[m
+[32m+[m[32m      .post("/groups/generate", {[m
+[32m+[m[32m        team_count: teamCount,[m
+[32m+[m[32m        group_count: groupCount,[m
+[32m+[m[32m        type,[m
+[32m+[m[32m      })[m
+[32m+[m[32m      .then((r) => r.data),[m
+[32m+[m[32m  // placeholder methods can be added later (list, update, delete, etc.)[m
+[32m+[m[32m};[m
+   dashboard: () =>[m
+     api.get("/dashboard").then((r) => {[m
+       const stats = r.data.stats ?? {};[m

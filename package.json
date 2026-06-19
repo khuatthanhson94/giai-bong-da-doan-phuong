@@ -27,7 +27,9 @@
     "docker:setup": "bash scripts/setup.sh",
     "docker:setup:win": "powershell -ExecutionPolicy Bypass -File scripts/setup.ps1",
     "lint:frontend": "npm run lint --prefix frontend",
-    "test:backend": "docker compose -f docker/docker-compose.yml exec backend php artisan test"
+    "test:backend": "docker compose -f docker/docker-compose.yml exec backend php artisan test",
+    "build:client": "npm run build --prefix client",
+    "postinstall": "npm run build:client"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
