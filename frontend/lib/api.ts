@@ -226,28 +226,7 @@ export const galleryApi = {
 };
 
 export const adminApi = {
-  // existing adminApi methods (unchanged)
-};
-
-// NEW: groupApi – handles group generation for tournament wizard
-export const groupApi = {
-  /**
-   * Generate groups for a tournament.
-   * @param teamCount Number of teams participating.
-   * @param groupCount Number of groups to create.
-   * @param type Generation strategy (default "random").
-   * Adjust the endpoint according to your backend API.
-   */
-  generate: (teamCount: number, groupCount: number, type: string = "random") =>
-    api
-      .post("/groups/generate", {
-        team_count: teamCount,
-        group_count: groupCount,
-        type,
-      })
-      .then((r) => r.data),
-  // placeholder methods can be added later (list, update, delete, etc.)
-};
+  // Dashboard stats
   dashboard: () =>
     api.get("/dashboard").then((r) => {
       const stats = r.data.stats ?? {};
@@ -262,11 +241,37 @@ export const groupApi = {
         logs: [],
       } satisfies DashboardData;
     }),
+
+  // Update settings (used by wizard)
   updateSettings: (settings: Settings) => api.put("/settings", { settings }),
+
+  // Export standings endpoint
   exportStandings: (tournamentId: number) =>
-    api.get(`/import-export/standings/${tournamentId}/export`, { responseType: "blob" }).then((r) => r.data),
-  qrcode: (type: string, id: number) =>
-    api.get(`/qr/${type}/${id}`).then((r) => r.data),
+    api
+      .get(`/import-export/standings/${tournamentId}/export`, { responseType: "blob" })
+      .then((r) => r.data),
+
+  // QR code generator
+  qrcode: (type: string, id: number) => api.get(`/qr/${type}/${id}`).then((r) => r.data),
+};
+
+export const groupApi = {
+  /**
+   * Generate groups for a tournament.
+   * @param teamCount Number of teams participating.
+   * @param groupCount Number of groups to create.
+   * @param type Generation strategy (default "random").
+   */
+  generate: (teamCount: number, groupCount: number, type: string = "random") =>
+    api
+      .post("/groups/generate", {
+        team_count: teamCount,
+        group_count: groupCount,
+        type,
+      })
+      .then((r) => r.data),
+
+  // placeholder methods can be added later (list, update, delete, etc.)
 };
 
 export const seasonApi = {
