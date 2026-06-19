@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '..', 'data');
@@ -150,4 +151,37 @@ export function initDatabase() {
       FOREIGN KEY (player_id) REFERENCES players(id)
     );
   `);
+
+  // Automatically seed users if empty
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
+  if (!userCount || userCount.count === 0) {
+    console.log('Database empty. Running automatic seed of default users...');
+    const adminHash = bcrypt.hashSync('admin123', 10);
+    const bientapHash = bcrypt.hashSync('bientap123', 10);
+    const nhapketquaHash = bcrypt.hashSync('ketqua123', 10);
+
+    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('admin', ?, 'super_admin')").run(adminHash);
+    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('bientap', ?, 'editor')").run(bientapHash);
+    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('nhapketqua', ?, 'scorekeeper')").run(nhapketquaHash);
+    
+    // Seed settings
+    const settings = [
+      ['tournament_name', 'Giải Bóng đá Thanh niên Đoàn phường 2026'],
+      ['slogan', 'Đoàn kết - Kỷ luật - Sáng tạo - Thành công'],
+      ['banner', ''],
+      ['union_logo', ''],
+      ['contact_phone', '0123 456 789'],
+      ['contact_email', 'doanphuong@example.com'],
+      ['contact_address', 'UBND Phường, Quận/Huyện, Tỉnh/TP'],
+      ['about', 'Giải bóng đá Thanh niên do Đoàn phường tổ chức nhằm tạo sân chơi lành mạnh, rèn luyện thể chất và tinh thần đoàn kết cho thanh niên trên địa bàn phường.'],
+      ['livestream_url', ''],
+    ];
+    const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    for (const [k, v] of settings) upsert.run(k, v);
+    
+    console.log('Seeded:');
+    console.log('- admin / admin123 (super_admin)');
+    console.log('- bientap / bientap123 (editor)');
+    console.log('- nhapketqua / ketqua123 (scorekeeper)');
+  }
 }
