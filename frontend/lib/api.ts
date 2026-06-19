@@ -226,6 +226,28 @@ export const galleryApi = {
 };
 
 export const adminApi = {
+  // existing adminApi methods (unchanged)
+};
+
+// NEW: groupApi – handles group generation for tournament wizard
+export const groupApi = {
+  /**
+   * Generate groups for a tournament.
+   * @param teamCount Number of teams participating.
+   * @param groupCount Number of groups to create.
+   * @param type Generation strategy (default "random").
+   * Adjust the endpoint according to your backend API.
+   */
+  generate: (teamCount: number, groupCount: number, type: string = "random") =>
+    api
+      .post("/groups/generate", {
+        team_count: teamCount,
+        group_count: groupCount,
+        type,
+      })
+      .then((r) => r.data),
+  // placeholder methods can be added later (list, update, delete, etc.)
+};
   dashboard: () =>
     api.get("/dashboard").then((r) => {
       const stats = r.data.stats ?? {};
