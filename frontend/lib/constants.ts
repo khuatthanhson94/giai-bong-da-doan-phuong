@@ -1,21 +1,32 @@
-// The API base URL is injected via NEXT_PUBLIC_API_URL on Vercel, falling back to Render in production and localhost in development.
-export const API_URL =
+// Normalize and build the API URL based on env vars
+let rawApiUrl =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
     ? "http://localhost:3004/api"
     : "https://giai-bong-da-doan-phuong-backend.onrender.com/api");
 
-export const UPLOAD_URL =
+if (rawApiUrl && !rawApiUrl.endsWith("/api") && !rawApiUrl.endsWith("/api/")) {
+  rawApiUrl = rawApiUrl.replace(/\/$/, "") + "/api";
+}
+
+export const API_URL = rawApiUrl;
+
+let rawUploadUrl =
   process.env.NEXT_PUBLIC_UPLOAD_URL ||
   (process.env.NODE_ENV === "development"
     ? "http://localhost:3004"
     : "https://giai-bong-da-doan-phuong-backend.onrender.com");
 
-export const WS_URL =
+rawUploadUrl = rawUploadUrl.replace(/\/$/, "");
+export const UPLOAD_URL = rawUploadUrl;
+
+let rawWsUrl =
   process.env.NEXT_PUBLIC_WS_URL ||
   (process.env.NODE_ENV === "development"
     ? "ws://localhost:3004/ws"
     : "wss://giai-bong-da-doan-phuong-backend.onrender.com/ws");
+
+export const WS_URL = rawWsUrl;
 
 export const AUTH_TOKEN_KEY = "gbddp_token";
 export const AUTH_REFRESH_KEY = "gbddp_refresh";
