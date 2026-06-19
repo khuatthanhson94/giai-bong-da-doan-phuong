@@ -195,8 +195,8 @@ export const playerApi = {
 
 export const matchApi = {
   list: (params?: Record<string, string | number>) =>
-    api.get<Match[]>("/matches", { params }).then((r) =>
-      (Array.isArray(r.data) ? r.data : r.data.data ?? []).map((m) =>
+    api.get<any>("/matches", { params }).then((r) =>
+      (Array.isArray(r.data) ? r.data : r.data.data ?? []).map((m: any) =>
         adaptMatch(m as Parameters<typeof adaptMatch>[0])
       )
     ),
@@ -218,7 +218,7 @@ export const matchApi = {
 
 export const newsApi = {
   list: (category?: string) => publicApi.getNews(category ? { page: 1 } : undefined),
-  adminList: () => api.get<NewsItem[]>("/news").then((r) => (Array.isArray(r.data) ? r.data : r.data.data ?? []).map(adaptNews)),
+  adminList: () => api.get<any>("/news").then((r) => (Array.isArray(r.data) ? r.data : r.data.data ?? []).map(adaptNews)),
   get: (id: number | string) => api.get(`/news/${id}`).then((r) => adaptNews(r.data)),
   create: (data: Partial<NewsItem>) => api.post("/news", data),
   update: (id: number, data: Partial<NewsItem>) => api.put(`/news/${id}`, data),

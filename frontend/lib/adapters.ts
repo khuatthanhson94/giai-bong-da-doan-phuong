@@ -193,6 +193,6 @@ export function adaptHome(raw: LaravelHome): HomeData {
   };
 }
 
-export function adaptTeam(raw: Record<string, unknown>): Team {
+export function adaptTeam(raw: any): Team {
   return raw as unknown as Team;
 }
