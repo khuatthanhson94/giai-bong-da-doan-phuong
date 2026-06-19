@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "@/components/ui/Toast";
 import { ROLE_LABELS } from "@/lib/constants";
+import type { User } from "@/lib/types";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
@@ -18,7 +19,7 @@ export default function AdminUsersPage() {
   const qc = useQueryClient();
   const { data = [] } = useQuery({ queryKey: ["admin-users"], queryFn: authApi.getUsers });
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ username: "", password: "", role: "admin" });
+  const [form, setForm] = useState<Partial<User>>({ username: "", password: "", role: "admin" as User['role'] });
 
   const createMut = useMutation({
     mutationFn: authApi.createUser,
@@ -45,7 +46,7 @@ export default function AdminUsersPage() {
           <Input label="Mật khẩu" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <Select label="Vai trò" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
             options={Object.entries(ROLE_LABELS).map(([v, l]) => ({ value: v, label: l }))} />
-          <Button onClick={() => createMut.mutate(form)}>Tạo</Button>
+          <Button onClick={() => createMut.mutate(form as Partial<User>)}>Tạo</Button>
         </div>
       </Modal>
     </div>

@@ -8,7 +8,9 @@ import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Select } from "@/components/ui/Select";
+import type { GalleryItem } from "@/lib/types";
 import { toast } from "@/components/ui/Toast";
 import { useState } from "react";
 import { Plus } from "lucide-react";
@@ -18,7 +20,7 @@ export default function AdminGalleryPage() {
   const { data = [] } = useQuery({ queryKey: ["admin-gallery"], queryFn: () => galleryApi.list() });
   const [confirmIds, setConfirmIds] = useState<number[] | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", image_url: "", album: "Chung", type: "image" });
+  const [form, setForm] = useState<Partial<GalleryItem>>({ title: "", image_url: "", album: "Chung", type: "image" });
 
   const createMut = useMutation({
     mutationFn: galleryApi.create,
@@ -50,11 +52,11 @@ export default function AdminGalleryPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Thêm media">
         <div className="space-y-4">
           <Input label="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <Input label="URL ảnh/video" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+          <Input label="URL ảnh/video" value={form.image_url ?? ""} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
           <Input label="Album" value={form.album} onChange={(e) => setForm({ ...form, album: e.target.value })} />
-          <Select label="Loại" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
+          <Select label="Loại" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as GalleryItem["type"] })}
             options={[{ value: "image", label: "Ảnh" }, { value: "video", label: "Video" }]} />
-          <Button onClick={() => createMut.mutate(form)}>Lưu</Button>
+          <Button onClick={() => createMut.mutate(form as Partial<GalleryItem>)}>Lưu</Button>
         </div>
       </Modal>
       <ConfirmDialog open={!!confirmIds} title="Xóa media" message={`Xóa ${confirmIds?.length} mục?`}

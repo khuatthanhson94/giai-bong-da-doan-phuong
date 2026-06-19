@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/Toast";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import type { NewsItem } from "@/lib/types";
 
 export default function AdminNewsPage() {
   const qc = useQueryClient();
@@ -39,12 +40,12 @@ export default function AdminNewsPage() {
       <DataTable
         data={data}
         searchable
-        searchKeys={["title"]}
+        searchKeys={['title'] as any}
         onDelete={(ids) => setConfirmIds(ids)}
         columns={[
           { key: "title", header: "Tiêu đề" },
           { key: "category", header: "Danh mục" },
-          { key: "created_at", header: "Ngày", render: (r) => formatDate(r.created_at) },
+          { key: "created_at", header: "Ngày", render: (r: NewsItem) => formatDate(r.created_at) },
           { key: "published", header: "Công bố", render: (r) => (r.published ? "Có" : "Ẩn") },
         ]}
       />

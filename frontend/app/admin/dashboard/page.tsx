@@ -6,12 +6,13 @@ import { adminApi } from "@/lib/api";
 import { AdminHeader } from "@/components/layout/AdminHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import type { DashboardData, Standing } from "@/lib/types";
 import { Users, Shield, Calendar, Trophy } from "lucide-react";
 
 const COLORS = ["#15803d", "#22c55e", "#4ade80", "#86efac"];
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["dashboard"], queryFn: adminApi.dashboard });
+  const { data, isLoading } = useQuery<DashboardData>({ queryKey: ["dashboard"], queryFn: adminApi.dashboard });
 
   const stats = [
     { label: "Đội bóng", value: data?.totalTeams ?? 0, icon: Shield },
@@ -20,7 +21,7 @@ export default function DashboardPage() {
     { label: "Đã kết thúc", value: data?.finishedMatches ?? 0, icon: Trophy },
   ];
 
-  const chartData = (data?.standings ?? []).slice(0, 6).map((s) => ({
+  const chartData = (data?.standings ?? []).slice(0, 6).map((s: Standing) => ({
     name: s.name.length > 12 ? s.name.slice(0, 12) + "…" : s.name,
     points: s.points,
   }));

@@ -8,14 +8,12 @@ export type UserRole =
   | "editor"
   | "viewer";
 
-export interface User {
-  id: number;
-  name?: string;
-  email: string;
+export interface NewUser {
   username: string;
+  password: string;
   role: UserRole;
-  created_at?: string;
 }
+
 
 export interface AuthResponse {
   token: string;

@@ -37,9 +37,9 @@ export default function AdminResultsPage() {
   });
 
   const publishMut = useMutation({
-    mutationFn: matchApi.publish,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-results"] }); toast.success("Đã công bố"); },
-  });
+  mutationFn: (id: number) => matchApi.publish(id),
+  onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-results"] }); toast.success("Đã công bố"); },
+});
 
   const allMatches = [...pending, ...data];
 

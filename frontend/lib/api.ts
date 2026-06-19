@@ -166,6 +166,12 @@ export const authApi = {
     api.get<{ user: { id: number; name: string; email: string; role: string } }>("/auth/me").then((r) => adaptUser(r.data.user)),
   logout: (refreshToken?: string) =>
     api.post("/auth/logout", { refresh_token: refreshToken }),
+  // New: fetch list of users
+  getUsers: () =>
+    api.get<User[]>("/users").then((r) => r.data),
+  // New: create a user
+  createUser: (data: Partial<User>) =>
+    api.post<User>("/users", data).then((r) => r.data),
 };
 
 export const teamApi = {
@@ -219,7 +225,11 @@ export const newsApi = {
 };
 
 export const galleryApi = {
-  list: () => api.get<GalleryItem[]>("/gallery/albums").then((r) => r.data),
+  // Allow optional query params (e.g., filter by type: "video" or "image")
+  list: (params?: { type?: string }) =>
+    api
+      .get<GalleryItem[]>("/gallery/albums", { params })
+      .then((r) => r.data),
   albums: () => api.get<string[]>("/gallery/albums").then((r) => r.data),
   create: (data: Partial<GalleryItem>) => api.post("/gallery/albums", data),
   delete: (id: number) => api.delete(`/gallery/albums/${id}`),
@@ -246,10 +256,10 @@ export const adminApi = {
   updateSettings: (settings: Settings) => api.put("/settings", { settings }),
 
   // Export standings endpoint
-  exportStandings: (tournamentId: number) =>
-    api
-      .get(`/import-export/standings/${tournamentId}/export`, { responseType: "blob" })
-      .then((r) => r.data),
+  exportStandings: (tournamentId?: number) => {
+        const url = tournamentId !== undefined ? `/import-export/standings/${tournamentId}/export` : `/import-export/standings/export`;
+        return api.get(url, { responseType: "blob" }).then((r) => r.data);
+      },
 
   // QR code generator
   qrcode: (type: string, id: number) => api.get(`/qr/${type}/${id}`).then((r) => r.data),
