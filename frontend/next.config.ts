@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     root: ".",
   },
   async rewrites() {
-    const apiTarget = process.env.NEXT_PUBLIC_API_URL;
+    const apiTarget = process.env.NEXT_PUBLIC_API_URL || "https://giai-bong-da-doan-phuong-backend.onrender.com/api";
     if (apiTarget && apiTarget.startsWith("http")) {
       return [
         {
@@ -22,7 +22,6 @@ const nextConfig: NextConfig = {
         },
       ];
     }
-    // Fallback: if NEXT_PUBLIC_API_URL is relative or not defined, don't rewrite
     return [];
   },
 };

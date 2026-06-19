@@ -1,12 +1,21 @@
-// The API base URL is injected via NEXT_PUBLIC_API_URL on Vercel.
+// The API base URL is injected via NEXT_PUBLIC_API_URL on Vercel, falling back to Render in production and localhost in development.
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || ""; // empty string makes axios use relative '/api' on Vercel
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:3004/api"
+    : "https://giai-bong-da-doan-phuong-backend.onrender.com/api");
 
 export const UPLOAD_URL =
-  process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:3004";
+  process.env.NEXT_PUBLIC_UPLOAD_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:3004"
+    : "https://giai-bong-da-doan-phuong-backend.onrender.com");
 
 export const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "ws://localhost:3004/ws"
+    : "wss://giai-bong-da-doan-phuong-backend.onrender.com/ws");
 
 export const AUTH_TOKEN_KEY = "gbddp_token";
 export const AUTH_REFRESH_KEY = "gbddp_refresh";
