@@ -214,6 +214,10 @@ export const matchApi = {
       .then((r) => adaptMatch(r.data)),
   publish: (id: number, mvpPlayerId?: number) =>
     api.post(`/matches/${id}/publish`, { mvp_player_id: mvpPlayerId }).then((r) => adaptMatch(r.data)),
+  generateGroupSchedule: (groupId: number) =>
+    api.post("/matches/generate-group-schedule", { group_id: groupId }).then((r) => r.data),
+  generateKnockout: (config: any) =>
+    api.post("/matches/generate-knockout", { config }).then((r) => r.data),
 };
 
 export const newsApi = {
@@ -294,6 +298,7 @@ export const seasonApi = {
 
 export const tournamentApi = {
   list: () => api.get("/tournaments").then((r) => (Array.isArray(r.data) ? r.data : r.data.data ?? [])),
+  get: (id: number | string) => api.get(`/tournaments/${id}`).then((r) => r.data),
   create: (data: Record<string, unknown>) => api.post("/tournaments", data),
   wizardStep: (tournamentId: number, step: number, payload: Record<string, unknown>) =>
     api.post(`/tournaments/${tournamentId}/wizard/step/${step}`, payload),

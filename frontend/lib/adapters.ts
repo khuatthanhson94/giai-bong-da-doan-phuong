@@ -4,6 +4,7 @@ import type { HomeData, Match, NewsItem, Player, Settings, Standing, Team, User 
 interface LaravelMatch {
   id: number;
   round?: number | string;
+  bracket_position?: string;
   scheduled_at?: string;
   venue?: string;
   home_team_id?: number;
@@ -90,7 +91,7 @@ export function adaptMatch(raw: LaravelMatch): Match {
   const { match_date, match_time } = splitDateTime(raw.scheduled_at);
   return {
     id: raw.id,
-    round: String(raw.round ?? ""),
+    round: raw.bracket_position || String(raw.round ?? ""),
     match_date,
     match_time,
     venue: raw.venue ?? "",

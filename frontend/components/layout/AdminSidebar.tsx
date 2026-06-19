@@ -4,8 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Calendar,
+  CalendarRange,
+  ClipboardList,
   Database,
   Download,
+  Handshake,
   Image,
   LayoutDashboard,
   LogOut,
@@ -32,6 +35,9 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Shield,
   Users,
   Calendar,
+  CalendarRange,
+  ClipboardList,
+  Handshake,
   Trophy,
   Newspaper,
   Image,

@@ -69,6 +69,8 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('teams', TeamController::class);
         Route::apiResource('players', PlayerController::class);
         Route::apiResource('matches', MatchController::class);
+        Route::post('matches/generate-group-schedule', [MatchController::class, 'generateGroupSchedule']);
+        Route::post('matches/generate-knockout', [MatchController::class, 'generateKnockout']);
 
         Route::prefix('matches/{match}')->group(function () {
             Route::put('score', [MatchResultController::class, 'updateScore']);

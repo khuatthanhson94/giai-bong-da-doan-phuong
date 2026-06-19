@@ -88,6 +88,7 @@ export const ADMIN_NAV = [
   { href: "/admin/teams", label: "Đội bóng", icon: "Shield" },
   { href: "/admin/players", label: "Cầu thủ", icon: "Users" },
   { href: "/admin/matches", label: "Lịch thi đấu", icon: "Calendar" },
+  { href: "/admin/schedule", label: "Tạo lịch thi đấu", icon: "Wand2" },
   { href: "/admin/results", label: "Kết quả", icon: "ClipboardList" },
   { href: "/admin/news", label: "Tin tức", icon: "Newspaper" },
   { href: "/admin/gallery", label: "Thư viện", icon: "Image" },
