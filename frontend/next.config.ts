@@ -12,21 +12,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: ".",
   },
-  async rewrites() {
-    let apiTarget = process.env.NEXT_PUBLIC_API_URL || "https://giai-bong-da-doan-phuong-backend.onrender.com/api";
-    if (apiTarget && apiTarget.startsWith("http")) {
-      if (!apiTarget.endsWith("/api") && !apiTarget.endsWith("/api/")) {
-        apiTarget = apiTarget.replace(/\/$/, "") + "/api";
-      }
-      return [
-        {
-          source: "/api/:path*",
-          destination: `${apiTarget}/:path*`,
-        },
-      ];
-    }
-    return [];
-  },
 };
 
 export default nextConfig;
