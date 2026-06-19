@@ -17,10 +17,12 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $result = $this->authService->login(
-            $request->only('email', 'password'),
-            $request->input('device_name')
-        );
+        $credentials = $request->only('email', 'password');
+        if (empty($credentials['email']) && $request->filled('username')) {
+            $credentials['email'] = $request->input('username');
+        }
+        $result = $this->authService->login($credentials, $request->input('device_name'));
+
 
         return response()->json($result);
     }
