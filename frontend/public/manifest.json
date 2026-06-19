@@ -1,0 +1,19 @@
+{
+  "name": "Giải bóng đá đoàn phường",
+  "short_name": "GBĐP",
+  "description": "Theo dõi lịch thi đấu, kết quả và bảng xếp hạng giải bóng đá đoàn phường",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8faf8",
+  "theme_color": "#15803d",
+  "orientation": "portrait-primary",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8faf8;
+  --foreground: #0f1a14;
+  --card: #ffffff;
+  --card-foreground: #0f1a14;
+  --muted: #eef2ee;
+  --muted-foreground: #5c6b62;
+  --border: #d8e3dc;
+  --primary: #15803d;
+  --primary-foreground: #f0fdf4;
+  --secondary: #166534;
+  --accent: #22c55e;
+  --accent-foreground: #052e16;
+  --destructive: #dc2626;
+  --ring: #22c55e;
+  --field: #1a5c34;
+  --field-light: #2d8a52;
+  --sidebar: #0f2918;
+  --sidebar-foreground: #ecfdf5;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #0a120e;
+  --foreground: #ecfdf5;
+  --card: #111f17;
+  --card-foreground: #ecfdf5;
+  --muted: #1a2e22;
+  --muted-foreground: #94a89a;
+  --border: #243d2e;
+  --primary: #22c55e;
+  --primary-foreground: #052e16;
+  --secondary: #15803d;
+  --accent: #4ade80;
+  --accent-foreground: #052e16;
+  --destructive: #ef4444;
+  --ring: #4ade80;
+  --field: #14532d;
+  --field-light: #166534;
+  --sidebar: #071510;
+  --sidebar-foreground: #d1fae5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+  --color-field: var(--field);
+  --color-field-light: var(--field-light);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-lg: var(--radius);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.field-gradient {
+  background: linear-gradient(135deg, var(--field) 0%, var(--field-light) 100%);
+}
+
+.glass {
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 999px;
+}

@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Môi trường triển khai"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add known hosts
+        run: ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} << 'ENDSSH'
+            set -e
+            cd ${DEPLOY_PATH:-/opt/giai-bong-da}
+            git pull origin main
+            bash scripts/backup.sh prod
+            docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml \
+              --env-file docker/.env up -d --build --remove-orphans
+            docker compose -f docker/docker-compose.yml exec -T backend php artisan migrate --force
+            docker compose -f docker/docker-compose.yml exec -T backend php artisan config:cache
+            docker compose -f docker/docker-compose.yml exec -T backend php artisan queue:restart
+            bash scripts/health-check.sh
+          ENDSSH
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "::error::Deploy failed — kiểm tra logs trên server"
+
+# =============================================================================
+# Cấu hình GitHub Secrets cần thiết:
+#   DEPLOY_SSH_KEY  — Private SSH key
+#   DEPLOY_HOST     — IP hoặc domain server
+#   DEPLOY_USER     — User SSH (vd: deploy)
+#   DEPLOY_PATH     — Đường dẫn project trên server
+#
+# Cấu hình GitHub Environments:
+#   staging    — Môi trường thử nghiệm
+#   production — Môi trường chính thức (cần approval)
+# =============================================================================

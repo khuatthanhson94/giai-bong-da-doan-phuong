@@ -1,0 +1,228 @@
+# Giải Bóng đá Đoàn phường — Docker Compose (base)
+# Sử dụng: docker compose -f docker/docker-compose.yml [--profile dev|prod] up -d
+
+name: giai-bong-da
+
+x-backend-env: &backend-env
+  APP_NAME: ${APP_NAME:-Giải Bóng đá Đoàn phường}
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-http://localhost}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+  LOG_CHANNEL: stack
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: ${POSTGRES_DB:-giai_bong_da}
+  DB_USERNAME: ${POSTGRES_USER:-giai_bong_da}
+  DB_PASSWORD: ${POSTGRES_PASSWORD}
+  REDIS_HOST: redis
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-null}
+  REDIS_PORT: 6379
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  BROADCAST_CONNECTION: reverb
+  REVERB_APP_ID: ${REVERB_APP_ID:-giai-bong-da}
+  REVERB_APP_KEY: ${REVERB_APP_KEY}
+  REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+  REVERB_HOST: reverb
+  REVERB_PORT: 8080
+  REVERB_SCHEME: http
+  JWT_SECRET: ${JWT_SECRET}
+  JWT_TTL: ${JWT_TTL:-60}
+  JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-20160}
+  FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: gbd-nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../backend/public:/var/www/backend/public:ro
+      - backend_storage:/var/www/backend/storage/app/public:ro
+      - nginx_logs:/var/log/nginx
+      - ssl_certs:/etc/nginx/ssl:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+      reverb:
+        condition: service_started
+    networks:
+      - gbd-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      target: production
+    container_name: gbd-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost/ws}
+      NEXT_PUBLIC_APP_NAME: ${APP_NAME:-Giải Bóng đá Đoàn phường}
+    expose:
+      - "3000"
+    networks:
+      - gbd-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: gbd-backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    volumes:
+      - ../backend:/var/www/backend
+      - backend_vendor:/var/www/backend/vendor
+      - backend_storage:/var/www/backend/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - gbd-network
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan --version > /dev/null 2>&1 && php-fpm-healthcheck || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: gbd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-giai_bong_da}
+      POSTGRES_USER: ${POSTGRES_USER:-giai_bong_da}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - gbd-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-giai_bong_da} -d ${POSTGRES_DB:-giai_bong_da}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: gbd-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - gbd-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  reverb:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: gbd-reverb
+    restart: unless-stopped
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    environment:
+      <<: *backend-env
+    volumes:
+      - ../backend:/var/www/backend
+      - backend_vendor:/var/www/backend/vendor
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8080"
+    networks:
+      - gbd-network
+
+  queue:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: gbd-queue
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    environment:
+      <<: *backend-env
+    volumes:
+      - ../backend:/var/www/backend
+      - backend_vendor:/var/www/backend/vendor
+      - backend_storage:/var/www/backend/storage
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - gbd-network
+
+  scheduler:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: gbd-scheduler
+    restart: unless-stopped
+    command: php artisan schedule:work
+    environment:
+      <<: *backend-env
+    volumes:
+      - ../backend:/var/www/backend
+      - backend_vendor:/var/www/backend/vendor
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - gbd-network
+
+networks:
+  gbd-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_vendor:
+  backend_storage:
+  nginx_logs:
+  ssl_certs:
