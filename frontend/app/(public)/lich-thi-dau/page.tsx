@@ -4,16 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import { matchApi } from "@/lib/api";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import type { Match } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 
 export default function LichThiDauPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<Match[]>({
     queryKey: ["matches-scheduled"],
     queryFn: () => matchApi.list({ status: "scheduled", published: "1" }),
   });
 
-  const matches = data ?? [];
-  const rounds = [...new Set(matches.map((m) => m.round))];
+  const matches: Match[] = data ?? [];
+  const rounds: string[] = [...new Set(matches.map((m: Match) => m.round))];
+
+  const defaultRound = rounds.length > 0 ? rounds[0] : "all";
 
   return (
     <div className="space-y-6">
@@ -23,7 +26,7 @@ export default function LichThiDauPage() {
       ) : matches.length === 0 ? (
         <p className="text-muted-foreground">Chưa có lịch thi đấu.</p>
       ) : (
-        <Tabs defaultValue={rounds[0] || "all"}>
+        <Tabs defaultValue={defaultRound}>
           <TabsList className="flex-wrap">
             {rounds.map((r) => (
               <TabsTrigger key={r} value={r}>{r}</TabsTrigger>
