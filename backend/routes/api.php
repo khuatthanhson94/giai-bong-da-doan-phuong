@@ -42,7 +42,8 @@ Route::prefix('v1')->group(function () {
         Route::get('statistics', [PublicController::class, 'statistics']);
     });
 
-    // Auth
+    // Health check endpoint
+    Route::get('health', fn() => response()->json(['status' => 'ok']));
     Route::prefix('auth')->group(function () {
         Route::post('login', [AuthController::class, 'login']);
         Route::post('refresh', [AuthController::class, 'refresh']);
