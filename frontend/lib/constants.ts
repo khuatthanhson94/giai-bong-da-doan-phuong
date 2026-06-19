@@ -2,11 +2,11 @@
 let rawApiUrl =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === "development"
-    ? "http://localhost:3004/api"
-    : "https://giai-bong-da-doan-phuong-backend.onrender.com/api");
+    ? "http://localhost:3004/api/v1"
+    : "https://giai-bong-da-doan-phuong-backend.onrender.com/api/v1");
 
-if (rawApiUrl && !rawApiUrl.endsWith("/api") && !rawApiUrl.endsWith("/api/")) {
-  rawApiUrl = rawApiUrl.replace(/\/$/, "") + "/api";
+if (rawApiUrl && !rawApiUrl.endsWith("/api/v1") && !rawApiUrl.endsWith("/api/v1/")) {
+  rawApiUrl = rawApiUrl.replace(/\/$/, "") + "/api/v1";
 }
 
 export const API_URL = rawApiUrl;
