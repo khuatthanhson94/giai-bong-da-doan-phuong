@@ -33,8 +33,46 @@ class MatchController extends Controller
         return response()->json($this->matchRepository->paginate());
     }
 
+    private function translateLegacyPayload(Request $request)
+    {
+        if ($request->has('team_a_id') && !$request->has('home_team_id')) {
+            $request->merge(['home_team_id' => $request->input('team_a_id')]);
+        }
+        if ($request->has('team_b_id') && !$request->has('away_team_id')) {
+            $request->merge(['away_team_id' => $request->input('team_b_id')]);
+        }
+        if ($request->has('match_date') && !$request->has('scheduled_at')) {
+            $time = $request->input('match_time', '00:00') ?: '00:00';
+            $request->merge(['scheduled_at' => Carbon::parse($request->input('match_date') . ' ' . $time)]);
+        }
+        if ($request->has('round')) {
+            $roundVal = $request->input('round');
+            if (!is_numeric($roundVal)) {
+                $request->merge(['bracket_position' => $roundVal]);
+                $num = 1;
+                if (preg_match('/\d+/', $roundVal, $matches)) {
+                    $num = (int)$matches[0];
+                } elseif (stripos($roundVal, 'semi') !== false) {
+                    $num = 2;
+                } elseif (stripos($roundVal, 'quarter') !== false) {
+                    $num = 3;
+                }
+                $request->merge(['round' => $num]);
+            }
+        }
+        if (!$request->has('tournament_id')) {
+            $activeTournament = \App\Models\Tournament::where('status', 'active')->first()
+                ?? \App\Models\Tournament::orderByDesc('id')->first();
+            if ($activeTournament) {
+                $request->merge(['tournament_id' => $activeTournament->id]);
+            }
+        }
+    }
+
     public function store(Request $request): JsonResponse
     {
+        $this->translateLegacyPayload($request);
+
         $data = $request->validate([
             'tournament_id' => 'required|exists:tournaments,id',
             'home_team_id' => 'required|exists:teams,id',
@@ -42,6 +80,7 @@ class MatchController extends Controller
             'scheduled_at' => 'nullable|date',
             'venue' => 'nullable|string',
             'round' => 'nullable|integer',
+            'bracket_position' => 'nullable|string',
         ]);
 
         return response()->json($this->matchRepository->create($data), 201);
@@ -56,6 +95,7 @@ class MatchController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
+        $this->translateLegacyPayload($request);
         return response()->json($this->matchRepository->update($id, $request->all()));
     }
 
