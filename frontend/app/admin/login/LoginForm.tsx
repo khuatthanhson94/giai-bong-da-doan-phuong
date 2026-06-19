@@ -41,7 +41,7 @@ export default function AdminLoginForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input label="Tên đăng nhập" type="text" required value={email} onChange={(e) => setEmail(e.target.value)} />
             <Input label="Mật khẩu" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Đang đăng nhập..." : "Đăng nhập"}

@@ -159,12 +159,12 @@ export function adaptNews(raw: LaravelNews): NewsItem {
   };
 }
 
-export function adaptUser(raw: LaravelUser): User {
+export function adaptUser(raw: any): User {
   return {
     id: raw.id,
-    name: raw.name,
-    email: raw.email,
-    username: raw.email,
+    name: raw.name || raw.username || "",
+    email: raw.email || `${raw.username || "user"}@example.com`,
+    username: raw.username || raw.email || "",
     role: raw.role as User["role"],
     created_at: raw.created_at,
   };

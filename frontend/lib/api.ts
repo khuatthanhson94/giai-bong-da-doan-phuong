@@ -154,12 +154,12 @@ export const publicApi = {
 export const authApi = {
   login: (email: string, password: string) =>
     api
-      .post<{ access_token: string; refresh_token: string; user: { id: number; name: string; email: string; role: string } }>(
+      .post<any>(
         "/auth/login",
-        { email, password, device_name: "web" }
+        { username: email, email, password, device_name: "web" }
       )
       .then((r) => ({
-        token: r.data.access_token,
+        token: r.data.access_token || r.data.token,
         refreshToken: r.data.refresh_token,
         user: adaptUser(r.data.user),
       }) satisfies AuthResponse),
