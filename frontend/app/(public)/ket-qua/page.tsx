@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { matchApi } from "@/lib/api";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import type { Match } from "@/lib/types";
 
 export default function KetQuaPage() {
   const { data, isLoading } = useQuery({
@@ -20,7 +21,7 @@ export default function KetQuaPage() {
         <p className="text-muted-foreground">Chưa có kết quả.</p>
       ) : (
         <div className="space-y-3">
-          {(data ?? []).map((m) => <MatchCard key={m.id} match={m} showScore />)}
+          {(data ?? []).map((m: Match) => <MatchCard key={m.id} match={m} showScore />)}
         </div>
       )}
     </div>
