@@ -1,8 +1,9 @@
+// The API base URL is injected via NEXT_PUBLIC_API_URL on Vercel.
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || ""; // empty string makes axios use relative '/api' on Vercel
 
 export const UPLOAD_URL =
-  process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:8080";
+  process.env.NEXT_PUBLIC_UPLOAD_URL || "http://localhost:3004";
 
 export const WS_URL =
   process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";

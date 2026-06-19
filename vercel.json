@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "{{ env.NEXT_PUBLIC_API_URL }}/$1"
+    }
+  ]
+}
