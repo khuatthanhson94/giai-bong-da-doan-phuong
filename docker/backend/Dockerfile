@@ -89,12 +89,14 @@ FROM base AS production
 
 COPY --chown=www:www . /var/www/backend
 
-RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
-    && chown -R www:www storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache && \
-    if [ -f composer.json ]; then \
+RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache resources/views \
+    && chown -R www:www storage bootstrap/cache resources/views \
+    && chmod -R 775 storage bootstrap/cache resources/views \
+    && cp .env.example .env || true \
+    && if [ -f composer.json ]; then \
         composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist; \
-    fi
+    fi \
+    && true
 
 USER www
 EXPOSE 9000

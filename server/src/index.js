@@ -20,8 +20,38 @@ const PORT = process.env.PORT || 3004;
 
 initDatabase();
 
+const uploadDir = process.env.VERCEL 
+  ? '/tmp/uploads' 
+  : path.join(__dirname, '..', 'uploads');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Copy pre-existing uploads if on Vercel and they don't exist in /tmp
+if (process.env.VERCEL) {
+  const templateUploadsDir = path.join(__dirname, '..', 'uploads');
+  if (fs.existsSync(templateUploadsDir)) {
+    try {
+      const files = fs.readdirSync(templateUploadsDir);
+      for (const file of files) {
+        const src = path.join(templateUploadsDir, file);
+        const dest = path.join(uploadDir, file);
+        if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
+          fs.copyFileSync(src, dest);
+        }
+      }
+      console.log('Copied upload templates to /tmp/uploads');
+    } catch (e) {
+      console.error('Failed to copy upload templates:', e);
+    }
+  }
+}
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'uploads'),
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
   filename: (_req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, unique + path.extname(file.originalname));
@@ -31,7 +61,7 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/uploads', express.static(uploadDir));
 
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Không có file' });
@@ -60,6 +90,10 @@ app.get('/api/debug/uploads', (req, res) => {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
+
+export default app;

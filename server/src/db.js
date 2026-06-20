@@ -5,10 +5,29 @@ import fs from 'fs';
 import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+let dataDir;
+let dbPath;
 
-const dbPath = path.join(dataDir, 'tournament.db');
+if (process.env.VERCEL) {
+  dataDir = '/tmp/data';
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbPath = path.join(dataDir, 'tournament.db');
+
+  const templateDbPath = path.join(__dirname, '..', 'data', 'tournament.db');
+  if (!fs.existsSync(dbPath) && fs.existsSync(templateDbPath)) {
+    try {
+      fs.copyFileSync(templateDbPath, dbPath);
+      console.log('Copied database template to /tmp/data');
+    } catch (e) {
+      console.error('Failed to copy database template:', e);
+    }
+  }
+} else {
+  dataDir = path.join(__dirname, '..', 'data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbPath = path.join(dataDir, 'tournament.db');
+}
+
 export const db = new DatabaseSync(dbPath);
 // Enable foreign key constraints for cascade deletes
 db.exec('PRAGMA foreign_keys = ON');
