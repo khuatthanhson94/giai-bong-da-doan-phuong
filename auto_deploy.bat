@@ -14,7 +14,7 @@ set "MAX_RETRIES=12"
 set "COUNT=0"
 :wait_loop
     timeout /t 5 >nul
-    powershell -Command "try { Invoke-WebRequest -Uri 'https://giai-bong-da-doan-phuong-backend.onrender.com/api/v1/health' -UseBasicParsing -Method Head -TimeoutSec 5; exit 0 } catch { exit 1 }"
+    powershell -Command "try { Invoke-WebRequest -Uri 'https://giai-bong-da-doan-phuong-backend.onrender.com/api/health' -UseBasicParsing -Method Head -TimeoutSec 5; exit 0 } catch { exit 1 }"
     if %errorlevel%==0 goto deploy
     set /a COUNT+=1
     if %COUNT% LSS %MAX_RETRIES% goto wait_loop

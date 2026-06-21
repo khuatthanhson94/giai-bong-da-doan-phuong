@@ -1,5 +1,5 @@
 // Normalize and build the API URL based on env vars
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:3004/api/v1" : "https://giai-bong-da-doan-phuong-backend.onrender.com/api/v1");
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:3004/api" : "https://giai-bong-da-doan-phuong-backend.onrender.com/api");
 
 export const API_URL = rawApiUrl;
 

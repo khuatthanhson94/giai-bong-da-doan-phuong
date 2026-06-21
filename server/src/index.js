@@ -97,7 +97,7 @@ app.get('/api/debug/uploads', (req, res) => {
   });
 });
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
 
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
