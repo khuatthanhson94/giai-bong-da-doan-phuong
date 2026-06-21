@@ -1,14 +1,14 @@
 // Normalize and build the API URL based on env vars
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:3004/api/v1" : "https://giai-bong-da-tung-thien.loca.lt/api/v1");
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:3004/api/v1" : "https://giai-bong-da-doan-phuong-backend.onrender.com/api/v1");
 
 export const API_URL = rawApiUrl;
 
 // Upload URL (root of backend, without trailing slash)
-const rawUploadUrl = process.env.NEXT_PUBLIC_UPLOAD_URL || (process.env.NODE_ENV === "development" ? "http://localhost:3004" : "https://giai-bong-da-tung-thien.loca.lt");
+const rawUploadUrl = process.env.NEXT_PUBLIC_UPLOAD_URL || (process.env.NODE_ENV === "development" ? "http://localhost:3004" : "https://giai-bong-da-doan-phuong-backend.onrender.com");
 export const UPLOAD_URL = rawUploadUrl.replace(/\/$/, "");
 
 // WebSocket URL
-const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === "development" ? "ws://localhost:3004/ws" : "wss://giai-bong-da-tung-thien.loca.lt/ws");
+const rawWsUrl = process.env.NEXT_PUBLIC_WS_URL || (process.env.NODE_ENV === "development" ? "ws://localhost:3004/ws" : "wss://giai-bong-da-doan-phuong-backend.onrender.com/ws");
 export const WS_URL = rawWsUrl;
 
 export const AUTH_TOKEN_KEY = "gbddp_token";
