@@ -16,10 +16,7 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "server/data/tournament.db",
-        "server/uploads/**"
-      ]
+      "includeFiles": "server/{data/tournament.db,uploads/**}"
     }
   }
 }
