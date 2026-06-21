@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import api from '../api/client';
 
 const navItems = [
   { to: '/', label: 'Trang chủ' },
@@ -17,18 +18,43 @@ const navItems = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [settings, setSettings] = useState({});
+
+  useEffect(() => {
+    api.get('/settings')
+      .then(setSettings)
+      .catch(err => console.error('Failed to load settings in navbar:', err));
+  }, []);
+
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-sm">
-              ĐP
-            </div>
+            {settings.union_logo ? (
+              <img
+                src={getFullUrl(settings.union_logo)}
+                alt="Logo"
+                className="w-10 h-10 rounded-full object-cover border border-gray-100 animate-fade-in"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-sm">
+                ĐP
+              </div>
+            )}
             <div className="hidden sm:block">
-              <div className="font-bold text-primary text-sm leading-tight">ĐOÀN PHƯỜNG</div>
-              <div className="text-xs text-youth font-medium">Giải Bóng đá TN</div>
+              <div className="font-bold text-primary text-sm leading-tight">
+                {settings.union_name || 'ĐOÀN PHƯỜNG'}
+              </div>
+              <div className="text-xs text-youth font-medium">
+                {settings.tournament_name_short || 'Giải Bóng đá TN'}
+              </div>
             </div>
           </Link>
 
