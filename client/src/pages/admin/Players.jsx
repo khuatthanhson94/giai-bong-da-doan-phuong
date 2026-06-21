@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import { getFullUrl } from '../../utils/url';
 
 const positions = ['Thủ môn', 'Hậu vệ', 'Tiền vệ', 'Tiền đạo'];
 
@@ -33,13 +34,7 @@ export default function AdminPlayers() {
     loadTeams();
   }, []);
 
-  // Resolve image URLs for preview
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/')) return `${window.location.origin}${url}`;
-    return `${window.location.origin}/uploads/${url}`;
-  };
+
 
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];

@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { getFullUrl } from '../utils/url';
 
 export default function Teams() {
   const [teams, setTeams] = useState([]);
   const [search, setSearch] = useState('');
-  // Helper to build full URL for logo
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/')) return `${window.location.origin}${url}`;
-    return `${window.location.origin}/uploads/${url}`;
-  };
 
   useEffect(() => {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';

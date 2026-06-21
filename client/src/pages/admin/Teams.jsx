@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import { getFullUrl } from '../../utils/url';
 
 /**
  * Admin interface for managing teams.
@@ -24,13 +25,7 @@ export default function AdminTeams() {
     load();
   }, []);
 
-  // Resolve image URLs (handles absolute, relative, and filename-only values)
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/')) return `${window.location.origin}${url}`;
-    return `${window.location.origin}/uploads/${url}`;
-  };
+
 
   const handleLogoChange = async (e) => {
     const file = e.target.files[0];

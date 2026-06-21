@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import MatchCard, { Countdown } from '../components/MatchCard';
 import StandingsTable from '../components/StandingsTable';
+import { getFullUrl } from '../utils/url';
 
 export default function Home() {
   const [data, setData] = useState(null);
@@ -24,15 +25,6 @@ export default function Home() {
   }
 
   const { settings, latestMatch, upcomingMatches, news, standings, topScorers } = data || {};
-
-  // Helper to build full URL for images
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/')) return `${window.location.origin}${url}`;
-    // Plain filename stored in DB
-    return `${window.location.origin}/uploads/${url}`;
-  };
 
   // Banner styling with fallback gradient
   const bannerStyle = settings?.banner_url

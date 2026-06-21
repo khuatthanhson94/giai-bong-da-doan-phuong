@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
-const getFullUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  if (url.startsWith('/')) return `${window.location.origin}${url}`;
-  return `${window.location.origin}/uploads/${url}`;
-};
+import { getFullUrl } from '../utils/url';
 
 export default function TeamDetail() {
   const { id } = useParams();

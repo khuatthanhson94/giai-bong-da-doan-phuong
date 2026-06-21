@@ -123,3 +123,4 @@ public/uploads/
 # AI / tooling
 .claude/
 .cursor/
+.env*
