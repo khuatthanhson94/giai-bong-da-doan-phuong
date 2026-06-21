@@ -16,8 +16,10 @@ export default function AdminSettings() {
   const getFullUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    if (url.startsWith('/')) return `${window.location.origin}${url}`;
-    return `${window.location.origin}/uploads/${url}`;
+    const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+    const baseUrl = API_BASE || window.location.origin;
+    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
+    return `${baseUrl}${cleanUrl}`;
   };
 
   // Upload image file with client‑side resize and update form state
