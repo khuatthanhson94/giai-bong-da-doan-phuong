@@ -26,27 +26,29 @@ export default function Home() {
 
   const { settings, latestMatch, upcomingMatches, news, standings, topScorers } = data || {};
 
-  // Banner styling with fallback gradient
-  const bannerStyle = settings?.banner_url
-    ? {
-      backgroundImage: `url(${getFullUrl(settings.banner_url)})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }
-    : { background: 'linear-gradient(to bottom right, var(--color-primary), var(--color-primary-dark), var(--color-youth))' };
-
   return (
     <div>
       {/* Banner */}
-      <section className="relative text-white overflow-hidden" style={bannerStyle}>
-        <div className="absolute inset-0 bg-black opacity-30" />
-        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 relative animate-fade-in">
+      <section className="relative text-white overflow-hidden bg-primary-dark">
+        {/* Banner image or fallback gradient */}
+        {settings?.banner_url ? (
+          <img
+            src={getFullUrl(settings.banner_url)}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none z-0"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary-dark via-youth opacity-100 z-0" />
+        )}
+        <div className="absolute inset-0 bg-black/45 z-10" />
+
+        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 relative z-20 animate-fade-in">
           <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-[400px] h-[400px] rounded-full overflow-hidden">
+            <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full overflow-hidden bg-white p-2 flex items-center justify-center border-4 border-white/20 shadow-xl flex-shrink-0 animate-scale-in">
               {settings?.logo_url ? (
-                <img src={getFullUrl(settings.logo_url)} alt="Logo" className="w-full h-full object-contain" />
+                <img src={getFullUrl(settings.logo_url)} alt="Logo" className="w-full h-full object-contain rounded-full" />
               ) : (
-                <div className="w-full h-full bg-white/20 flex items-center justify-center text-4xl font-bold border-4 border-white/30">
+                <div className="w-full h-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-3xl font-bold text-white rounded-full">
                   ĐP
                 </div>
               )}
@@ -197,9 +199,7 @@ export default function Home() {
               <Link key={n.id} to={`/tin-tuc/${n.id}`} className="card group">
                 <div className="h-40 bg-gradient-to-br from-primary/20 to-youth/20 flex items-center justify-center">
                   {n.image ? (
-                    <div className="w-[400px] h-[400px] mx-auto rounded-full overflow-hidden">
-                      <img src={getFullUrl(n.image)} alt={n.title} className="team-logo" />
-                    </div>
+                    <img src={getFullUrl(n.image)} alt={n.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   ) : (
                     <span className="text-4xl">⚽</span>
                   )}

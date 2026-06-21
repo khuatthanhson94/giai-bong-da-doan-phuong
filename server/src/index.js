@@ -63,6 +63,13 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(uploadDir));
 
+// Fallback for static files on ephemeral serverless environment (Vercel)
+// Redirect requests for missing files to the persistent Render backend
+app.use('/uploads/:filename', (req, res) => {
+  const renderBackend = 'https://giai-bong-da-doan-phuong-backend.onrender.com';
+  res.redirect(`${renderBackend}/uploads/${req.params.filename}`);
+});
+
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Không có file' });
   res.json({ url: `/uploads/${req.file.filename}` });
