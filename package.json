@@ -30,7 +30,7 @@
     "lint:frontend": "npm run lint --prefix frontend",
     "test:backend": "docker compose -f docker/docker-compose.yml exec backend php artisan test",
     "build:client": "npm run build --prefix client",
-    "postinstall": "npm run build:client"
+    "postinstall": "npm install --prefix client && npm run build --prefix client"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
