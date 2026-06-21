@@ -41,7 +41,7 @@ export default function Navbar() {
               <img
                 src={getFullUrl(settings.union_logo)}
                 alt="Logo"
-                className="w-10 h-10 rounded-full object-cover border border-gray-100 animate-fade-in"
+                className="w-10 h-10 rounded-full object-contain bg-white border border-gray-100 p-0.5 animate-fade-in"
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-sm">
