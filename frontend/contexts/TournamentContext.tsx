@@ -23,9 +23,9 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     try {
       const home = await publicApi.getHome();
       setHomeData(home);
-      setSettings(home.settings);
+      setSettings(home.settings ?? {});
     } catch {
-      /* public pages degrade gracefully */
+      /* trang công khai vẫn hiển thị khi API lỗi */
     } finally {
       setLoading(false);
     }

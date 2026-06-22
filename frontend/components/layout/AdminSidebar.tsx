@@ -67,7 +67,7 @@ export function AdminSidebar() {
         )}
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {ADMIN_NAV.map((item) => {
+        {ADMIN_NAV.filter((item) => !user?.role || (item.roles as readonly string[]).includes(user.role)).map((item) => {
           const Icon = ICONS[item.icon] || LayoutDashboard;
           const active = pathname.startsWith(item.href);
           return (
