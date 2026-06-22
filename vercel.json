@@ -3,5 +3,11 @@
   "devCommand": "npm run dev --prefix frontend",
   "installCommand": "npm install --prefix frontend",
   "framework": "nextjs",
-  "outputDirectory": "frontend/.next"
+  "outputDirectory": "frontend/.next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@api-url",
+    "NEXT_PUBLIC_RENDER_API_URL": "@render-api-url",
+    "NEXT_PUBLIC_UPLOAD_URL": "@upload-url",
+    "NEXT_PUBLIC_FRONTEND_URL": "@frontend-url"
+  }
 }

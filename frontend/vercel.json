@@ -4,5 +4,11 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@api-url",
+    "NEXT_PUBLIC_RENDER_API_URL": "@render-api-url",
+    "NEXT_PUBLIC_UPLOAD_URL": "@upload-url",
+    "NEXT_PUBLIC_FRONTEND_URL": "@frontend-url"
+  }
 }

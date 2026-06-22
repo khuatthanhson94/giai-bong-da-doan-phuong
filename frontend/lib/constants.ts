@@ -15,6 +15,13 @@ export const UPLOAD_URL =
     ? "http://localhost:3004"
     : RENDER_API.replace(/\/$/, ""));
 
+/** Frontend URL cho CORS configuration */
+export const FRONTEND_URL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "");
+
 export const AUTH_TOKEN_KEY = "gbddp_token";
 export const AUTH_USER_KEY = "gbddp_user";
 export const AUTH_COOKIE = "gbddp_auth";
