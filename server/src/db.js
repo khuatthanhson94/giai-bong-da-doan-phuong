@@ -22,6 +22,12 @@ if (process.env.VERCEL) {
       console.error('Failed to copy database template:', e);
     }
   }
+} else if (process.env.RENDER) {
+  // Use persistent disk on Render
+  dataDir = '/opt/render/project/server/data';
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbPath = path.join(dataDir, 'tournament.db');
+  console.log('Using persistent disk on Render:', dbPath);
 } else {
   dataDir = path.join(__dirname, '..', 'data');
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });

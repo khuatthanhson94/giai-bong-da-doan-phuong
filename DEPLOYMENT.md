@@ -20,11 +20,15 @@ File `vercel.json` đã được cập nhật để bao gồm các biến môi t
 File `render.yaml` đã được cập nhật với:
 - `NODE_ENV`: production
 - `JWT_SECRET`: Tự động tạo
-- `FRONTEND_URL`: https://giai-bong-da-doan-phuong.vercel.app
+- `FRONTEND_URL`: https://giai-bong-da-doan-phuong-tung-thien.vercel.app
 - `PORT`: 3004
+- **Persistent Disk**: 1GB cho database (để lưu dữ liệu)
 
 ### 3. Frontend Constants
 File `frontend/lib/constants.ts` đã được cập nhật để xử lý URL production đúng cách.
+
+### 4. Database Configuration
+File `server/src/db.js` đã được cập nhật để sử dụng persistent disk trên Render.
 
 ## Các bước cấu hình trên Vercel
 
@@ -49,9 +53,9 @@ Sau khi triển khai, vào Vercel Dashboard → Settings → Environment Variabl
 | `NEXT_PUBLIC_API_URL` | `https://giai-bong-da-doan-phuong-backend.onrender.com/api` | Production |
 | `NEXT_PUBLIC_RENDER_API_URL` | `https://giai-bong-da-doan-phuong-backend.onrender.com` | Production |
 | `NEXT_PUBLIC_UPLOAD_URL` | `https://giai-bong-da-doan-phuong-backend.onrender.com` | Production |
-| `NEXT_PUBLIC_FRONTEND_URL` | `https://giai-bong-da-doan-phuong.vercel.app` | Production |
+| `NEXT_PUBLIC_FRONTEND_URL` | `https://giai-bong-da-doan-phuong-tung-thien.vercel.app` | Production |
 
-**Lưu ý**: Thay thế `giai-bong-da-doan-phuong` với tên project thực tế của bạn.
+**Lưu ý**: Thay thế `giai-bong-da-doan-phuong-tung-thien` với tên project thực tế của bạn.
 
 ## Các bước cấu hình trên Render
 
@@ -75,12 +79,41 @@ Vào Render Dashboard → Service → Environment và thêm:
 |-----|-------|
 | `NODE_ENV` | `production` |
 | `JWT_SECRET` | (Tự động tạo hoặc đặt giá trị bảo mật) |
-| `FRONTEND_URL` | `https://giai-bong-da-doan-phuong.vercel.app` |
+| `FRONTEND_URL` | `https://giai-bong-da-doan-phuong-tung-thien.vercel.app` |
 | `PORT` | `3004` |
 
 **Lưu ý**: 
 - `FRONTEND_URL` phải trùng với URL của Vercel frontend
 - `JWT_SECRET` nên là một chuỗi ngẫu nhiên dài và bảo mật
+- **Persistent Disk đã được cấu hình trong render.yaml** - không cần cấu hình thủ công
+
+## Re-deploy sau khi cập nhật cấu hình
+
+Sau khi cập nhật các file cấu hình, bạn cần re-deploy:
+
+### 1. Re-deploy Render (Backend)
+```bash
+# Push code lên GitHub
+git add .
+git commit -m "Fix database persistence and CORS configuration"
+git push
+
+# Render sẽ tự động re-deploy khi có push mới
+```
+
+Hoặc vào Render Dashboard → Manual Deploy
+
+### 2. Re-deploy Vercel (Frontend)
+```bash
+# Push code lên GitHub
+git add .
+git commit -m "Fix API URLs configuration"
+git push
+
+# Vercel sẽ tự động re-deploy khi có push mới
+```
+
+Hoặc vào Vercel Dashboard → Deployments → Redeploy
 
 ## Kiểm tra kết nối
 
@@ -94,23 +127,44 @@ Phải trả về: `{"status":"ok"}`
 
 ### 2. Kiểm tra Frontend
 
-Truy cập: `https://giai-bong-da-doan-phuong.vercel.app`
+Truy cập: `https://giai-bong-da-doan-phuong-tung-thien.vercel.app`
 
 Kiểm tra console browser để đảm bảo không có lỗi kết nối API.
 
+### 3. Kiểm tra Database Persistence
+
+Sau khi re-deploy Render, kiểm tra xem dữ liệu có còn được giữ lại không:
+- Tạo một đội bóng mới qua admin panel
+- Re-deploy Render
+- Kiểm tra xem đội bóng đó còn tồn tại không
+
 ## Xử lý sự cố
 
-### Frontend không kết nối được với Backend
+### Frontend không hiển thị dữ liệu
 
 1. Kiểm tra environment variables trên Vercel
 2. Đảm bảo backend URL đúng
-3. Kiểm tra CORS configuration trên backend (đã cấu hình trong `server/src/index.js`)
+3. Kiểm tra console browser xem có lỗi API không
+4. Test backend API trực tiếp: `curl https://giai-bong-da-doan-phuong-backend.onrender.com/api/teams`
+
+### Không thể truy cập trang admin
+
+1. Kiểm tra xem đã seed users chưa (admin/admin123)
+2. Kiểm tra JWT_SECRET trên Render
+3. Xóa cookies và đăng nhập lại
+
+### Dữ liệu bị mất sau khi re-deploy
+
+1. Đảm bảo persistent disk đã được cấu hình trong render.yaml
+2. Kiểm tra Render Dashboard → Disks để xem disk có đang hoạt động không
+3. Kiểm tra logs trên Render xem có lỗi gì không
 
 ### Upload file không hoạt động
 
 1. Kiểm tra `NEXT_PUBLIC_UPLOAD_URL` trên Vercel
 2. Đảm bảo backend có quyền ghi vào thư mục uploads
 3. Trên Vercel, file uploads được lưu trong `/tmp/uploads` (ephemeral)
+4. Trên Render, file uploads được lưu trong `/tmp/uploads` (ephemeral) - cần cấu hình persistent disk cho uploads nếu muốn lưu lâu dài
 
 ### CORS errors
 

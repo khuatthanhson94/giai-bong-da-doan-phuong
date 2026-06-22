@@ -12,6 +12,10 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://giai-bong-da-doan-phuong.vercel.app
+        value: https://giai-bong-da-doan-phuong-tung-thien.vercel.app
       - key: PORT
         value: 3004
+    disk:
+      name: data
+      mountPath: /opt/render/project/server/data
+      sizeGB: 1
