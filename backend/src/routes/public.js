@@ -44,9 +44,9 @@ router.get('/home', (req, res) => {
     JOIN teams tb ON m.team_b_id = tb.id
     LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
     LEFT JOIN groups g ON gt.group_id = g.id
-    WHERE m.status = 'scheduled' AND m.match_date >= ?
+    WHERE m.status = 'scheduled'
     ORDER BY m.match_date, m.match_time LIMIT 12
-  `).all(now);
+  `).all();
 
   const news = db.prepare('SELECT * FROM news WHERE published = 1 ORDER BY created_at DESC LIMIT 4').all();
   const standings = computeStandings();
