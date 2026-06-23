@@ -24,7 +24,7 @@ if (process.env.VERCEL) {
   }
 } else if (process.env.RENDER) {
   // Use persistent disk on Render
-  dataDir = '/opt/render/project/server/data';
+  dataDir = '/opt/render/project/backend/data';
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, 'tournament.db');
   console.log('Using persistent disk on Render:', dbPath);

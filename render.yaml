@@ -2,7 +2,7 @@ services:
   - type: web
     name: giai-bong-da-api
     runtime: node
-    rootDir: server
+    rootDir: backend
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
@@ -17,5 +17,5 @@ services:
         value: 3004
     disk:
       name: data
-      mountPath: /opt/render/project/server/data
+      mountPath: /opt/render/project/backend/data
       sizeGB: 1
