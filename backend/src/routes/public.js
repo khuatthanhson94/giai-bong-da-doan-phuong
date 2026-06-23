@@ -79,6 +79,15 @@ router.put('/settings', authRequired, requireRole(ROLES.SUPER_ADMIN, ROLES.ADMIN
   res.json({ message: 'Cập nhật thành công' });
 });
 
+// Temporary endpoint to update settings without auth (for initial setup)
+router.post('/admin/update-settings', (req, res) => {
+  const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+  for (const [key, value] of Object.entries(req.body)) {
+    upsert.run(key, String(value));
+  }
+  res.json({ message: 'Cập nhật thành công' });
+});
+
 router.get('/dashboard', authRequired, (req, res) => {
   const totalTeams = db.prepare('SELECT COUNT(*) as c FROM teams').get().c;
   const totalPlayers = db.prepare('SELECT COUNT(*) as c FROM players').get().c;
