@@ -7,7 +7,9 @@
     "start": "node src/index.js",
     "seed": "node src/seed.js",
     "build": "echo 'No build step required'",
-    "upload-db": "node upload-db-to-render.js"
+    "upload-db": "node upload-db-to-render.js",
+    "upload-images": "node upload-images-to-render.js",
+    "update-urls": "node update-image-urls.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
