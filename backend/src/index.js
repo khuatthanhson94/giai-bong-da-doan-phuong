@@ -118,21 +118,10 @@ app.post('/api/admin/restore-database', upload.single('database'), async (req, r
   if (!req.file) return res.status(400).json({ error: 'Không có file database' });
   
   try {
-    const { db, dbPath } = await import('./db.js');
-    
-    // Close current database connection
-    db.close();
+    const { dbPath } = await import('./db.js');
     
     // Copy uploaded database to replace current one
     fs.copyFileSync(req.file.path, dbPath);
-    
-    // Reinitialize database connection
-    const { DatabaseSync } = await import('node:sqlite');
-    const newDb = new DatabaseSync(dbPath);
-    
-    // Update the exported db reference
-    const dbModule = await import('./db.js');
-    Object.defineProperty(dbModule, 'db', { value: newDb, writable: false });
     
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
