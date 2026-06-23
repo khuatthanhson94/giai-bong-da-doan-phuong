@@ -113,6 +113,33 @@ app.get('/api/debug/uploads', (req, res) => {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
+// Admin endpoint to restore database from uploaded file (for initial setup)
+app.post('/api/admin/restore-database', upload.single('database'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Không có file database' });
+  
+  try {
+    const { db } = await import('./db.js');
+    const dbPath = db.filename;
+    
+    // Close current database connection
+    db.close();
+    
+    // Copy uploaded database to replace current one
+    fs.copyFileSync(req.file.path, dbPath);
+    
+    // Reinitialize database
+    const { initDatabase } = await import('./db.js');
+    initDatabase();
+    
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+    
+    res.json({ message: 'Database restored successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
