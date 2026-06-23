@@ -35,6 +35,7 @@ if (process.env.VERCEL) {
 }
 
 export const db = new DatabaseSync(dbPath);
+export { dbPath };
 // Enable foreign key constraints for cascade deletes
 db.exec('PRAGMA foreign_keys = ON');
 
