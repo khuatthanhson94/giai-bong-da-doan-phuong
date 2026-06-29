@@ -1,12 +1,4 @@
-export type UserRole =
-  | "super_admin"
-  | "admin"
-  | "organizer"
-  | "scorekeeper"
-  | "mc"
-  | "media"
-  | "editor"
-  | "viewer";
+export type UserRole = "super_admin" | "admin" | "editor" | "scorekeeper";
 
 export interface NewUser {
   username: string;
@@ -16,16 +8,15 @@ export interface NewUser {
 
 export interface User {
   id: number;
-  name?: string;
-  email: string;
   username: string;
+  email?: string;
+  name?: string;
   role: UserRole;
   created_at?: string;
 }
 
 export interface AuthResponse {
   token: string;
-  refreshToken?: string;
   user: User;
 }
 
@@ -115,6 +106,7 @@ export interface Match {
 
 export interface Standing {
   team_id: number;
+  group_id?: number;
   name: string;
   logo?: string | null;
   jersey_color?: string;

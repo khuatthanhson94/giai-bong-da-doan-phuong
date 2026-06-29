@@ -1,22 +1,10 @@
+/**
+ * API client — tương thích Express server (server/) trên Render.
+ * Khớp 100% endpoint legacy client/src/api/client.js
+ */
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import {
-  adaptHome,
-  adaptMatch,
-  adaptNews,
-  adaptPlayer,
-  adaptSettings,
-  adaptStanding,
-  adaptTeam,
-  adaptUser,
-} from "./adapters";
-import { API_URL } from "./constants";
-import {
-  clearAuthSession,
-  getRefreshToken,
-  getStoredToken,
-  isTokenExpired,
-  setAuthSession,
-} from "./auth";
+import { API_URL, UPLOAD_URL } from "./constants";
+import { clearAuthSession, getStoredToken, setAuthSession } from "./auth";
 import type {
   AuthResponse,
   DashboardData,
@@ -34,73 +22,23 @@ import type {
   User,
 } from "./types";
 
-let refreshPromise: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
-
-  try {
-    const { data } = await axios.post<{
-      access_token: string;
-      refresh_token?: string;
-      user: { id: number; name: string; email: string; role: string };
-    }>(`${API_URL}/auth/refresh`, { refresh_token: refreshToken });
-
-    const session: AuthResponse = {
-      token: data.access_token,
-      refreshToken: data.refresh_token ?? refreshToken,
-      user: adaptUser(data.user),
-    };
-    setAuthSession(session);
-    return data.access_token;
-  } catch {
-    clearAuthSession();
-    return null;
-  }
-}
-
 export const api = axios.create({
   baseURL: API_URL,
-  headers: { "Content-Type": "application/json", Accept: "application/json" },
+  headers: { "Content-Type": "application/json" },
 });
 
-api.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getStoredToken();
-  if (token) {
-    if (isTokenExpired(token)) {
-      if (!refreshPromise) {
-        refreshPromise = refreshAccessToken().finally(() => {
-          refreshPromise = null;
-        });
-      }
-      const newToken = await refreshPromise;
-      if (newToken) config.headers.Authorization = `Bearer ${newToken}`;
-    } else {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
 api.interceptors.response.use(
   (res) => res,
-  async (error: AxiosError) => {
-    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    if (error.response?.status === 401 && original && !original._retry) {
-      original._retry = true;
-      if (!refreshPromise) {
-        refreshPromise = refreshAccessToken().finally(() => {
-          refreshPromise = null;
-        });
-      }
-      const token = await refreshPromise;
-      if (token) {
-        original.headers.Authorization = `Bearer ${token}`;
-        return api(original);
-      }
+  (error: AxiosError) => {
+    if (error.response?.status === 401 && typeof window !== "undefined") {
       clearAuthSession();
-      if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+      if (window.location.pathname.startsWith("/admin") && !window.location.pathname.includes("/login")) {
         window.location.href = "/admin/login";
       }
     }
@@ -108,204 +46,137 @@ api.interceptors.response.use(
   }
 );
 
+function toUser(raw: Record<string, unknown>): User {
+  return {
+    id: raw.id as number,
+    username: (raw.username as string) || (raw.email as string) || "",
+    email: (raw.email as string) || (raw.username as string) || "",
+    name: (raw.name as string) || (raw.username as string),
+    role: raw.role as User["role"],
+    created_at: raw.created_at as string | undefined,
+  };
+}
+
 export const publicApi = {
-  getHome: () => api.get("/public/home").then((r) => adaptHome(r.data)),
-  getStandings: (tournamentId?: number) =>
-    api
-      .get("/public/tournaments/" + (tournamentId ? `${tournamentId}` : "active") + "/standings")
-      .then((r) => (Array.isArray(r.data) ? r.data.map(adaptStanding) : []))
-      .catch(async () => {
-        const home = await publicApi.getHome();
-        return home.standings;
-      }),
-  getStatistics: () =>
-    api.get("/public/statistics").then((r) => ({
-      topScorers: (r.data.top_scorers ?? []).map(adaptPlayer),
-      topAssists: [],
-      cleanSheets: [],
-      totalGoals: r.data.total_goals ?? 0,
-      totalMatches: r.data.total_matches ?? 0,
-    }) satisfies Statistics),
-  getSettings: () =>
-    api.get("/public/home").then((r) => adaptSettings(r.data.settings ?? {})),
-  getTeams: (params?: { search?: string; tournament_id?: number }) =>
-    api.get<Team[]>("/public/teams", { params }).then((r) => r.data),
-  getTeam: (id: number | string) =>
-    api.get(`/public/teams/${id}`).then((r) => adaptTeam(r.data)),
-  getPlayers: (params?: { team_id?: number; tournament_id?: number; search?: string }) =>
-    api.get<Player[]>("/public/players", { params }).then((r) => r.data.map(adaptPlayer)),
-  getPlayer: (id: number | string) =>
-    api.get(`/public/players/${id}`).then((r) => adaptPlayer(r.data)),
-  getNews: (params?: { page?: number }) =>
-    api.get("/public/news", { params }).then((r) => {
-      const items = r.data.data ?? r.data;
-      return (Array.isArray(items) ? items : []).map(adaptNews);
-    }),
-  getNewsDetail: (slug: string) =>
-    api.get(`/public/news/${slug}`).then((r) => adaptNews(r.data)),
-  getSponsors: () => api.get("/public/sponsors").then((r) => r.data),
-  getPage: (slug: string) => api.get(`/public/pages/${slug}`).then((r) => r.data),
-  getFixtures: (tournamentSlug: string) =>
-    api.get(`/public/tournaments/${tournamentSlug}/fixtures`).then((r) =>
-      (r.data as unknown[]).map((m) => adaptMatch(m as Parameters<typeof adaptMatch>[0]))
-    ),
+  getHome: () => api.get<HomeData>("/home").then((r) => r.data),
+  getStandings: () => api.get<Standing[]>("/standings").then((r) => r.data),
+  getStatistics: () => api.get<Statistics>("/statistics").then((r) => r.data),
+  getSettings: () => api.get<Settings>("/settings").then((r) => r.data),
 };
 
 export const authApi = {
-  login: (email: string, password: string) =>
-    api
-      .post<any>(
-        "/auth/login",
-        { username: email, email, password, device_name: "web" }
-      )
-      .then((r) => ({
-        token: r.data.access_token || r.data.token,
-        refreshToken: r.data.refresh_token,
-        user: adaptUser(r.data.user),
-      }) satisfies AuthResponse),
+  login: (username: string, password: string) =>
+    api.post<{ token: string; user: User }>("/auth/login", { username, password }).then((r) => {
+      const session: AuthResponse = { token: r.data.token, user: toUser(r.data.user as unknown as Record<string, unknown>) };
+      return session;
+    }),
   me: () =>
-    api.get<{ user: { id: number; name: string; email: string; role: string } }>("/auth/me").then((r) => adaptUser(r.data.user)),
-  logout: (refreshToken?: string) =>
-    api.post("/auth/logout", { refresh_token: refreshToken }),
-  // New: fetch list of users
-  getUsers: () =>
-    api.get<User[]>("/users").then((r) => r.data),
-  // New: create a user
+    api.get<User>("/auth/me").then((r) => toUser(r.data as unknown as Record<string, unknown>)),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post("/auth/change-password", { currentPassword, newPassword }),
+  getUsers: () => api.get<User[]>("/auth/users").then((r) => r.data.map((u) => toUser(u as unknown as Record<string, unknown>))),
   createUser: (data: NewUser) =>
-    api.post<User>("/users", data).then((r) => r.data),
+    api.post<User>("/auth/users", data).then((r) => toUser(r.data as unknown as Record<string, unknown>)),
+  updateUser: (id: number, data: { role?: string; password?: string }) =>
+    api.put(`/auth/users/${id}`, data),
+  deleteUser: (id: number) => api.delete(`/auth/users/${id}`),
 };
 
 export const teamApi = {
-  list: (search?: string, tournamentId?: number) =>
-    publicApi.getTeams({ search, tournament_id: tournamentId }),
-  get: (id: number | string) => publicApi.getTeam(id),
-  create: (data: Partial<Team>) => api.post<Team>("/teams", data).then((r) => adaptTeam(r.data)),
+  list: (search?: string) =>
+    api.get<Team[]>("/teams", { params: search ? { search } : {} }).then((r) => r.data),
+  get: (id: number | string) => api.get<Team>(`/teams/${id}`).then((r) => r.data),
+  create: (data: Partial<Team>) => api.post<Team>("/teams", data).then((r) => r.data),
   update: (id: number, data: Partial<Team>) => api.put(`/teams/${id}`, data),
   delete: (id: number) => api.delete(`/teams/${id}`),
-  deleteAll: () => api.delete("/teams"),
+  deleteAll: () => api.delete("/teams/all"),
 };
 
 export const playerApi = {
-  list: (teamId?: number) => publicApi.getPlayers(teamId ? { team_id: teamId } : undefined),
-  get: (id: number | string) => publicApi.getPlayer(id),
-  create: (data: Partial<Player>) => api.post<Player>("/players", data).then((r) => adaptPlayer(r.data)),
+  list: (teamId?: number) =>
+    api.get<Player[]>("/players", { params: teamId ? { teamId } : {} }).then((r) => r.data),
+  get: (id: number | string) => api.get<Player>(`/players/${id}`).then((r) => r.data),
+  create: (data: Partial<Player>) => api.post<Player>("/players", data).then((r) => r.data),
   update: (id: number, data: Partial<Player>) => api.put(`/players/${id}`, data),
   delete: (id: number) => api.delete(`/players/${id}`),
 };
 
 export const matchApi = {
   list: (params?: Record<string, string | number>) =>
-    api.get<any>("/matches", { params }).then((r) =>
-      (Array.isArray(r.data) ? r.data : r.data.data ?? []).map((m: any) =>
-        adaptMatch(m as Parameters<typeof adaptMatch>[0])
-      )
-    ),
-  get: (id: number | string) =>
-    api.get(`/matches/${id}`).then((r) => adaptMatch(r.data)),
-  create: (data: Partial<Match>) => api.post("/matches", data),
+    api.get<Match[]>("/matches", { params }).then((r) => r.data),
+  get: (id: number | string) => api.get<Match>(`/matches/${id}`).then((r) => r.data),
+  rounds: () => api.get<string[]>("/matches/rounds").then((r) => r.data),
+  create: (data: Partial<Match>) => api.post<Match>("/matches", data).then((r) => r.data),
   update: (id: number, data: Partial<Match>) => api.put(`/matches/${id}`, data),
   delete: (id: number) => api.delete(`/matches/${id}`),
   saveResult: (id: number, data: MatchResultInput) =>
-    api
-      .put(`/matches/${id}/score`, {
-        home_score: data.score_a,
-        away_score: data.score_b,
-      })
-      .then((r) => adaptMatch(r.data)),
-  publish: (id: number, mvpPlayerId?: number) =>
-    api.post(`/matches/${id}/publish`, { mvp_player_id: mvpPlayerId }).then((r) => adaptMatch(r.data)),
-  generateGroupSchedule: (groupId: number) =>
-    api.post("/matches/generate-group-schedule", { group_id: groupId }).then((r) => r.data),
-  generateKnockout: (config: any) =>
-    api.post("/matches/generate-knockout", { config }).then((r) => r.data),
+    api.post<Match>(`/matches/${id}/result`, data).then((r) => r.data),
+  publish: (id: number) => api.post<Match>(`/matches/${id}/publish`).then((r) => r.data),
+  generateGroupSchedule: () =>
+    api.post<{ message: string }>("/matches/generate-group-schedule").then((r) => r.data),
+  generateKnockout: (config: Record<string, unknown>) =>
+    api.post<{ message: string }>("/matches/generate-knockout", { config }).then((r) => r.data),
 };
 
 export const newsApi = {
-  list: (category?: string) => publicApi.getNews(category ? { page: 1 } : undefined),
-  adminList: () => api.get<any>("/news").then((r) => (Array.isArray(r.data) ? r.data : r.data.data ?? []).map(adaptNews)),
-  get: (id: number | string) => api.get(`/news/${id}`).then((r) => adaptNews(r.data)),
-  create: (data: Partial<NewsItem>) => api.post("/news", data),
+  list: (category?: string) =>
+    api.get<NewsItem[]>("/news", { params: category ? { category } : {} }).then((r) => r.data),
+  adminList: () => api.get<NewsItem[]>("/news/admin/all").then((r) => r.data),
+  get: (id: number | string) => api.get<NewsItem>(`/news/${id}`).then((r) => r.data),
+  create: (data: Partial<NewsItem>) => api.post<NewsItem>("/news", data).then((r) => r.data),
   update: (id: number, data: Partial<NewsItem>) => api.put(`/news/${id}`, data),
   delete: (id: number) => api.delete(`/news/${id}`),
 };
 
 export const galleryApi = {
-  // Allow optional query params (e.g., filter by type: "video" or "image")
-  list: (params?: { type?: string }) =>
-    api
-      .get<GalleryItem[]>("/gallery/albums", { params })
-      .then((r) => r.data),
+  list: (params?: { album?: string; type?: string }) =>
+    api.get<GalleryItem[]>("/gallery", { params }).then((r) => r.data),
   albums: () => api.get<string[]>("/gallery/albums").then((r) => r.data),
-  create: (data: Partial<GalleryItem>) => api.post("/gallery/albums", data),
-  delete: (id: number) => api.delete(`/gallery/albums/${id}`),
-};
-
-export const adminApi = {
-  // Dashboard stats
-  dashboard: () =>
-    api.get("/dashboard").then((r) => {
-      const stats = r.data.stats ?? {};
-      return {
-        totalTeams: stats.teams ?? 0,
-        totalPlayers: stats.players ?? 0,
-        totalMatches: stats.matches ?? 0,
-        finishedMatches: stats.finished_matches ?? 0,
-        scheduledMatches: stats.scheduled_matches ?? 0,
-        recentNews: [],
-        standings: [],
-        logs: [],
-      } satisfies DashboardData;
-    }),
-
-  // Update settings (used by wizard)
-  updateSettings: (settings: Settings) => api.put("/settings", { settings }),
-
-  // Export standings endpoint
-  exportStandings: (tournamentId?: number) => {
-        const url = tournamentId !== undefined ? `/import-export/standings/${tournamentId}/export` : `/import-export/standings/export`;
-        return api.get(url, { responseType: "blob" }).then((r) => r.data);
-      },
-
-  // QR code generator
-  qrcode: (type: string, id: number) => api.get(`/qr/${type}/${id}`).then((r) => r.data),
+  create: (data: Partial<GalleryItem>) => api.post<GalleryItem>("/gallery", data).then((r) => r.data),
+  delete: (id: number) => api.delete(`/gallery/${id}`),
 };
 
 export const groupApi = {
-  /**
-   * Generate groups for a tournament.
-   * @param teamCount Number of teams participating.
-   * @param groupCount Number of groups to create.
-   * @param type Generation strategy (default "random").
-   */
-  generate: (teamCount: number, groupCount: number, type: string = "random") =>
-    api
-      .post("/groups/generate", {
-        team_count: teamCount,
-        group_count: groupCount,
-        type,
-      })
-      .then((r) => r.data),
-
-  // placeholder methods can be added later (list, update, delete, etc.)
+  list: () => api.get<GroupWithTeams[]>("/groups").then((r) => r.data),
+  create: (name: string) => api.post("/groups", { name }).then((r) => r.data),
+  update: (id: number, name: string) => api.put(`/groups/${id}`, { name }),
+  delete: (id: number) => api.delete(`/groups/${id}`),
+  assignTeams: (groupId: number, teamIds: number[]) =>
+    api.post(`/groups/${groupId}/teams`, { teamIds }),
+  removeTeam: (groupId: number, teamId: number) =>
+    api.delete(`/groups/${groupId}/teams/${teamId}`),
+  generate: (count: number) => api.post("/groups/generate", { count }).then((r) => r.data),
 };
 
-export const seasonApi = {
-  list: () => api.get("/seasons").then((r) => (Array.isArray(r.data) ? r.data : r.data.data ?? [])),
-  create: (data: Record<string, unknown>) => api.post("/seasons", data),
-  update: (id: number, data: Record<string, unknown>) => api.put(`/seasons/${id}`, data),
-  delete: (id: number) => api.delete(`/seasons/${id}`),
+export interface GroupWithTeams {
+  id: number;
+  name: string;
+  teams?: Team[];
+}
+
+export const adminApi = {
+  dashboard: () => api.get<DashboardData>("/dashboard").then((r) => r.data),
+  updateSettings: (settings: Settings) => api.put("/settings", settings),
+  exportStandings: () =>
+    api.get("/export/standings", { responseType: "blob" }).then((r) => r.data),
+  qrcode: (url: string) =>
+    api.get<{ qr: string; url: string }>("/qrcode", { params: { url } }).then((r) => r.data),
 };
 
-export const tournamentApi = {
-  list: () => api.get("/tournaments").then((r) => (Array.isArray(r.data) ? r.data : r.data.data ?? [])),
-  get: (id: number | string) => api.get(`/tournaments/${id}`).then((r) => r.data),
-  create: (data: Record<string, unknown>) => api.post("/tournaments", data),
-  wizardStep: (tournamentId: number, step: number, payload: Record<string, unknown>) =>
-    api.post(`/tournaments/${tournamentId}/wizard/step/${step}`, payload),
-};
+export async function uploadFile(file: File | Blob) {
+  const form = new FormData();
+  form.append("file", file);
+  const token = getStoredToken();
+  const { data } = await axios.post<{ url: string }>(`${UPLOAD_URL}/api/upload`, form, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  return data;
+}
 
-export const recycleBinApi = {
-  list: () => api.get("/recycle-bin").then((r) => r.data),
-  restore: (id: number) => api.post(`/recycle-bin/${id}/restore`),
-  destroy: (id: number) => api.delete(`/recycle-bin/${id}`),
-};
+/** Giữ tương thích import cũ */
+export const seasonApi = { list: async () => [] as unknown[] };
+export const tournamentApi = { list: async () => [] as unknown[], get: async () => ({ groups: [], teams: [] }) };
+export const recycleBinApi = { list: async () => [] };

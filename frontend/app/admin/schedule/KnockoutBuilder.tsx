@@ -1,23 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { tournamentApi, matchApi, publicApi } from "@/lib/api";
+import { groupApi, matchApi, publicApi, teamApi } from "@/lib/api";
+import type { GroupWithTeams } from "@/lib/api";
 import { Standing, Team } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
-
-interface Tournament {
-  id: number;
-  name: string;
-  is_published: boolean;
-  status: string;
-  groups?: Group[];
-  teams?: Team[];
-}
 
 interface Group {
   id: number;
   name: string;
-  code: string;
   teams?: Team[];
 }
 
@@ -45,8 +36,6 @@ interface NextRound {
 }
 
 export default function KnockoutBuilder() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
   const [groups, setGroups] = useState<Group[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [standings, setStandings] = useState<Standing[]>([]);
@@ -58,60 +47,18 @@ export default function KnockoutBuilder() {
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Load tournaments on mount
+  // Load groups, teams, standings on mount
   useEffect(() => {
     setLoading(true);
-    publicApi.getHome()
-      .then((homeData) => {
-        const activeId = homeData.activeTournament?.id;
-        tournamentApi.list()
-          .then((list) => {
-            setTournaments(list);
-            if (activeId && list.some((t: Tournament) => t.id === activeId)) {
-              setSelectedTournamentId(String(activeId));
-            } else if (list.length > 0) {
-              setSelectedTournamentId(String(list[0].id));
-            }
-          })
-          .catch(() => {});
+    Promise.all([groupApi.list(), teamApi.list(), publicApi.getStandings()])
+      .then(([grps, tms, stds]) => {
+        setGroups(grps);
+        setTeams(tms);
+        setStandings(stds);
       })
-      .catch(() => {
-        tournamentApi.list()
-          .then((list) => {
-            setTournaments(list);
-            if (list.length > 0) {
-              setSelectedTournamentId(String(list[0].id));
-            }
-          })
-          .catch(() => {});
-      })
+      .catch((err) => console.error("Lỗi khi tải dữ liệu:", err))
       .finally(() => setLoading(false));
   }, []);
-
-  // Fetch groups, teams, standings when selected tournament changes
-  useEffect(() => {
-    if (!selectedTournamentId) {
-      setGroups([]);
-      setTeams([]);
-      setStandings([]);
-      return;
-    }
-
-    setLoading(true);
-    Promise.all([
-      tournamentApi.get(Number(selectedTournamentId)),
-      publicApi.getStandings(Number(selectedTournamentId))
-    ])
-      .then(([tourn, stds]) => {
-        setGroups(tourn.groups || []);
-        setTeams(tourn.teams || []);
-        setStandings(stds || []);
-      })
-      .catch((err) => {
-        console.error("Lỗi khi tải dữ liệu cấu hình:", err);
-      })
-      .finally(() => setLoading(false));
-  }, [selectedTournamentId]);
 
   const getGroupIdByIndex = (index: number) => {
     return groups[index]?.id || "";
@@ -399,13 +346,9 @@ export default function KnockoutBuilder() {
         startingRound,
         advancingCount,
         startingMatches,
-        nextRounds
+        nextRounds,
       };
-      const res = await matchApi.generateKnockout({
-        ...config,
-        // Include tournament_id
-        tournament_id: Number(selectedTournamentId)
-      });
+      const res = await matchApi.generateKnockout(config);
       alert(res.message || "Khởi tạo vòng loại trực tiếp thành công!");
     } catch (err: any) {
       alert(err.response?.data?.error || err.message || "Có lỗi xảy ra khi tạo vòng loại trực tiếp.");
@@ -432,24 +375,6 @@ export default function KnockoutBuilder() {
             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2z"/>
           </svg>
         </div>
-      </div>
-
-      {/* Select Tournament */}
-      <div className="bg-card border p-6 rounded-xl shadow-sm">
-        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Chọn giải đấu cấu hình</label>
-        <select
-          className="flex h-10 w-full rounded-lg border border-border bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          value={selectedTournamentId}
-          onChange={(e) => setSelectedTournamentId(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">-- Chọn giải đấu --</option>
-          {tournaments.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} {t.status === "active" ? "(Đang diễn ra)" : ""}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Configuration Card */}

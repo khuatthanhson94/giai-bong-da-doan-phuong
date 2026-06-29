@@ -36,8 +36,8 @@ export default function TournamentWizardPage() {
         tournament_name: state.tournamentName,
         season_name: state.seasonName,
       });
-      if (state.teams.length && state.numGroups) {
-        await groupApi.generate(state.teams.length, state.numGroups, "random");
+      if (state.numGroups) {
+        await groupApi.generate(state.numGroups);
       }
       toast.success("Hoàn tất thiết lập giải đấu!");
       setState(initialState);
