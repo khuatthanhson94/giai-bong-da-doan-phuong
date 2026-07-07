@@ -2,7 +2,24 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import api from '../api/client';
 
-const navItems = [
+const primaryNavItems = [
+  { to: '/', label: 'Trang chủ' },
+  { to: '/lich-thi-dau', label: 'Lịch đấu' },
+  { to: '/ket-qua', label: 'Kết quả' },
+  { to: '/bang-xep-hang', label: 'BXH' },
+  { to: '/doi-bong', label: 'Đội bóng' },
+  { to: '/tin-tuc', label: 'Tin tức' },
+];
+
+const secondaryNavItems = [
+  { to: '/cau-thu', label: 'Cầu thủ' },
+  { to: '/thong-ke', label: 'Thống kê' },
+  { to: '/thu-vien-anh', label: 'Thư viện ảnh' },
+  { to: '/gioi-thieu', label: 'Giới thiệu giải' },
+  { to: '/lien-he', label: 'Liên hệ' },
+];
+
+const mobileNavItems = [
   { to: '/', label: 'Trang chủ' },
   { to: '/gioi-thieu', label: 'Giới thiệu' },
   { to: '/lich-thi-dau', label: 'Lịch thi đấu' },
@@ -63,7 +80,7 @@ export default function Navbar() {
 
           <div className="hidden lg:flex items-center gap-3">
             <nav className="flex items-center gap-1">
-              {navItems.map((item) => (
+              {primaryNavItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -77,6 +94,28 @@ export default function Navbar() {
                   {item.label}
                 </NavLink>
               ))}
+
+              {/* Hover Dropdown */}
+              <div className="relative group">
+                <button className="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-primary flex items-center gap-0.5 cursor-pointer">
+                  Xem thêm <span className="text-[10px] text-gray-400">▼</span>
+                </button>
+                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1">
+                  {secondaryNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) =>
+                        `block px-4 py-2 text-sm transition-colors ${
+                          isActive ? 'bg-blue-50 text-primary font-semibold' : 'text-gray-700 hover:bg-blue-50 hover:text-primary'
+                        }`
+                      }
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
             </nav>
             <Link
               to="/admin"
@@ -104,7 +143,7 @@ export default function Navbar() {
         {open && (
           <nav className="lg:hidden pb-4 animate-fade-in">
             <div className="grid grid-cols-2 gap-1">
-              {navItems.map((item) => (
+              {mobileNavItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
