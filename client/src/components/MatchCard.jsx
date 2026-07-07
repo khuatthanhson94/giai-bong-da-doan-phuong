@@ -1,3 +1,5 @@
+import { getFullUrl } from '../utils/url';
+
 export default function MatchCard({ match, showScore = false }) {
   const teamA = match.team_a || { name: match.team_a_name, logo: match.team_a_logo };
   const teamB = match.team_b || { name: match.team_b_name, logo: match.team_b_logo };
@@ -44,7 +46,7 @@ export default function MatchCard({ match, showScore = false }) {
 
 function TeamBadge({ team }) {
   if (team?.logo) {
-    return <img src={team.logo} alt="" className="w-12 h-12 mx-auto rounded-full object-cover" />;
+    return <img src={getFullUrl(team.logo)} alt="" className="w-12 h-12 mx-auto rounded-full object-cover" />;
   }
   return (
     <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold">

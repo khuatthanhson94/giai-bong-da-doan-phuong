@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 
+import { getFullUrl } from '../utils/url';
+
 export default function Gallery() {
   const [items, setItems] = useState([]);
   const [albums, setAlbums] = useState([]);
@@ -43,7 +45,7 @@ export default function Gallery() {
                 <span className="text-white text-4xl">▶</span>
               </div>
             ) : item.image_url ? (
-              <img src={item.image_url} alt={item.title} className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300" />
+              <img src={getFullUrl(item.image_url)} alt={item.title} className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300" />
             ) : (
               <div className="aspect-square bg-gradient-to-br from-primary/20 to-youth/20 flex items-center justify-center text-4xl">📷</div>
             )}

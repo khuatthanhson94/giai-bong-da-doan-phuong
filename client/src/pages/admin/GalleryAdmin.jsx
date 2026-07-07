@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 
+import { getFullUrl } from '../../utils/url';
+
 export default function AdminGallery() {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ title: '', image_url: '', video_url: '', album: 'Chung', type: 'image' });
@@ -42,7 +44,7 @@ export default function AdminGallery() {
       <div className="grid sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {items.map((item) => (
           <div key={item.id} className="card p-3">
-            {item.image_url && <img src={item.image_url} alt="" className="w-full aspect-square object-cover rounded-lg mb-2" />}
+            {item.image_url && <img src={getFullUrl(item.image_url)} alt="" className="w-full aspect-square object-cover rounded-lg mb-2" />}
             <p className="text-sm font-medium truncate">{item.title}</p>
             <button
               onClick={async () => { if (confirm('Xóa?')) { await api.delete(`/gallery/${item.id}`); load(); } }}

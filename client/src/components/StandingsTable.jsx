@@ -1,3 +1,5 @@
+import { getFullUrl } from '../utils/url';
+
 export default function StandingsTable({ standings, compact = false }) {
   const cols = compact
     ? ['#', 'Đội', 'Tr', 'Đ']
@@ -17,10 +19,20 @@ export default function StandingsTable({ standings, compact = false }) {
               <td className="font-bold">{i + 1}</td>
               <td>
                 <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: s.jersey_color || '#0066CC' }}
-                  />
+                  {s.logo ? (
+                    <img
+                      src={getFullUrl(s.logo)}
+                      alt=""
+                      className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div
+                      className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ backgroundColor: s.jersey_color || '#0066CC' }}
+                    >
+                      {s.name?.charAt(0) || '?'}
+                    </div>
+                  )}
                   <span className="font-medium">{s.name}</span>
                 </div>
               </td>

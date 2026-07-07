@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 
+import { getFullUrl } from '../utils/url';
+
 const categories = [
   { value: '', label: 'Tất cả' },
   { value: 'khai-mac', label: 'Khai mạc' },
@@ -38,7 +40,7 @@ export default function News() {
         {news.map((n) => (
           <Link key={n.id} to={`/tin-tuc/${n.id}`} className="card group">
             <div className="h-48 bg-gradient-to-br from-primary/10 to-youth/10 flex items-center justify-center">
-              {n.image ? <img src={n.image} alt="" className="w-full h-full object-cover" /> : <span className="text-5xl">📰</span>}
+              {n.image ? <img src={getFullUrl(n.image)} alt="" className="w-full h-full object-cover" /> : <span className="text-5xl">📰</span>}
             </div>
             <div className="p-5">
               <span className="text-xs text-youth font-medium uppercase">{n.category}</span>

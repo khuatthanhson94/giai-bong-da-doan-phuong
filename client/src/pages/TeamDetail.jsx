@@ -57,7 +57,7 @@ export default function TeamDetail() {
                   <tr key={p.id}>
                     <td className="w-12 h-12">
                       {p.photo ? (
-                        <img src={p.photo} alt="Player" className="w-full h-full object-cover rounded-full" />
+                        <img src={getFullUrl(p.photo)} alt="Player" className="w-full h-full object-cover rounded-full" />
                       ) : (
                         <div className="w-full h-full bg-gray-200 rounded-full" />
                       )}
