@@ -20,16 +20,21 @@ const PORT = process.env.PORT || 3004;
 
 initDatabase();
 
-const uploadDir = process.env.VERCEL 
-  ? '/tmp/uploads' 
-  : path.join(__dirname, '..', 'uploads');
+let uploadDir;
+if (process.env.VERCEL) {
+  uploadDir = '/tmp/uploads';
+} else if (process.env.RENDER) {
+  uploadDir = '/opt/render/project/backend/data/uploads';
+} else {
+  uploadDir = path.join(__dirname, '..', 'uploads');
+}
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Copy pre-existing uploads if on Vercel and they don't exist in /tmp
-if (process.env.VERCEL) {
+// Copy pre-existing uploads if they don't exist in destination folder (for Vercel and Render persistent disk)
+if (process.env.VERCEL || process.env.RENDER) {
   const templateUploadsDir = path.join(__dirname, '..', 'uploads');
   if (fs.existsSync(templateUploadsDir)) {
     try {
@@ -41,7 +46,7 @@ if (process.env.VERCEL) {
           fs.copyFileSync(src, dest);
         }
       }
-      console.log('Copied upload templates to /tmp/uploads');
+      console.log(`Copied upload templates to ${uploadDir}`);
     } catch (e) {
       console.error('Failed to copy upload templates:', e);
     }
