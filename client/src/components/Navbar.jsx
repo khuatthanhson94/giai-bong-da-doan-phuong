@@ -61,22 +61,30 @@ export default function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                className={({ isActive }) =>
-                  `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive ? 'bg-primary text-white' : 'text-gray-600 hover:bg-blue-50 hover:text-primary'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="hidden lg:flex items-center gap-3">
+            <nav className="flex items-center gap-1">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive ? 'bg-primary text-white' : 'text-gray-600 hover:bg-blue-50 hover:text-primary'
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+            <Link
+              to="/admin"
+              className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors flex items-center gap-1"
+            >
+              🔐 Đăng nhập
+            </Link>
+          </div>
 
           <button
             onClick={() => setOpen(!open)}
@@ -111,6 +119,13 @@ export default function Navbar() {
                   {item.label}
                 </NavLink>
               ))}
+              <Link
+                to="/admin"
+                onClick={() => setOpen(false)}
+                className="col-span-2 mt-2 bg-primary text-white text-center py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors flex items-center justify-center gap-1"
+              >
+                🔐 Đăng nhập quản trị
+              </Link>
             </div>
           </nav>
         )}

@@ -65,6 +65,7 @@ export default function Home() {
                 <Link to="/lich-thi-dau" className="btn-secondary">Xem lịch thi đấu</Link>
                 <Link to="/ket-qua" className="bg-white/20 hover:bg-white/30 text-white px-6 py-2.5 rounded-lg font-medium transition">Xem kết quả</Link>
                 <Link to="/bang-xep-hang" className="bg-white/20 hover:bg-white/30 text-white px-6 py-2.5 rounded-lg font-medium transition">Bảng xếp hạng</Link>
+                <Link to="/admin" className="bg-youth hover:bg-youth/90 text-white px-6 py-2.5 rounded-lg font-medium transition flex items-center gap-1">🔐 Đăng nhập quản trị</Link>
               </div>
             </div>
           </div>
