@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
 import { useAuth } from '../../context/AuthContext';
+import * as XLSX from 'xlsx';
 
 const positions = ['Thủ môn', 'Hậu vệ', 'Tiền vệ', 'Tiền đạo'];
 
@@ -62,13 +63,22 @@ export default function AdminPlayers() {
 
 
   const downloadTemplate = () => {
-    const headers = 'Số áo,Họ tên,Ngày sinh (YYYY-MM-DD),Vị trí (Thủ môn/Hậu vệ/Tiền vệ/Tiền đạo),Giới thiệu\n';
-    const rows = '10,Nguyễn Văn A,1995-05-12,Tiền đạo,Đội trưởng nhiệt huyết\n1,Trần Văn B,1997-09-20,Thủ môn,Phản xạ cực tốt\n';
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const headers = ['Số áo', 'Họ tên', 'Ngày sinh (YYYY-MM-DD)', 'Vị trí', 'Giới thiệu'];
+    const rows = [
+      [10, 'Nguyễn Văn A', '1995-05-12', 'Tiền đạo', 'Đội trưởng nhiệt huyết'],
+      [1, 'Trần Văn B', '1997-09-20', 'Thủ môn', 'Phản xạ cực tốt']
+    ];
+    
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'mau_danh_sach_cau_thu.csv');
+    link.setAttribute('download', 'mau_danh_sach_cau_thu.xlsx');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -79,29 +89,37 @@ export default function AdminPlayers() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target.result;
-      const lines = text.split(/\r?\n/).filter(line => line.trim());
-      if (lines.length <= 1) {
-        alert('File không có dữ liệu cầu thủ!');
-        return;
-      }
-      
-      const parsed = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-        if (cols.length >= 2 && cols[1]) {
-          parsed.push({
-            jersey_number: Number(cols[0]) || 0,
-            name: cols[1],
-            dob: cols[2] || '',
-            position: cols[3] || 'Tiền vệ',
-            description: cols[4] || '',
-          });
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        if (rows.length <= 1) {
+          alert('File không có dữ liệu cầu thủ!');
+          return;
         }
+        
+        const parsed = [];
+        for (let i = 1; i < rows.length; i++) {
+          const cols = rows[i];
+          if (cols && cols.length >= 2 && cols[1]) {
+            parsed.push({
+              jersey_number: Number(cols[0]) || 0,
+              name: String(cols[1]).trim(),
+              dob: cols[2] ? String(cols[2]).trim() : '',
+              position: cols[3] ? String(cols[3]).trim() : 'Tiền vệ',
+              description: cols[4] ? String(cols[4]).trim() : '',
+            });
+          }
+        }
+        setImportedPlayers(parsed);
+      } catch (err) {
+        alert('Lỗi đọc file: ' + err.message);
       }
-      setImportedPlayers(parsed);
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsArrayBuffer(file);
     e.target.value = null;
   };
 
@@ -210,7 +228,7 @@ export default function AdminPlayers() {
             onClick={() => setShowImportSection(!showImportSection)}
             className="btn-outline text-sm"
           >
-            {showImportSection ? 'Đóng Import' : 'Nhập từ file CSV'}
+            {showImportSection ? 'Đóng Import' : 'Nhập từ file Excel'}
           </button>
           <button
             onClick={() => {
@@ -238,16 +256,16 @@ export default function AdminPlayers() {
       {/* CSV Import Section */}
       {showImportSection && (
         <div className="card p-6 mb-6 space-y-4">
-          <h2 className="text-lg font-bold text-primary">Nhập cầu thủ hàng loạt từ file CSV</h2>
+          <h2 className="text-lg font-bold text-primary">Nhập cầu thủ hàng loạt từ file Excel/CSV</h2>
           <div className="flex flex-wrap gap-4 items-end">
             <div>
               <button onClick={downloadTemplate} className="btn-outline text-sm flex items-center gap-2">
-                📥 Tải file mẫu CSV
+                📥 Tải file mẫu Excel (.xlsx)
               </button>
             </div>
             <div>
-              <label className="form-label mb-1">Chọn file CSV</label>
-              <input type="file" accept=".csv" onChange={handleFileChange} className="block text-sm" />
+              <label className="form-label mb-1">Chọn file Excel/CSV</label>
+              <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileChange} className="block text-sm" />
             </div>
             {user?.role !== 'team' && (
               <div>
