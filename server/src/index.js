@@ -64,7 +64,24 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    const allowed = [
+      /\.vercel\.app$/,
+      /^https:\/\/giai-bong-da-doan-phuong/,
+      /^http:\/\/localhost/,
+      /^http:\/\/127\.0\.0\.1/,
+    ];
+    if (allowed.some((pattern) => pattern.test(origin))) {
+      return callback(null, true);
+    }
+    callback(null, true); // Allow all for now; tighten if needed
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(uploadDir));
 
@@ -107,7 +124,22 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+
+    // Keep-alive: tự ping mỗi 14 phút để Render free tier không sleep
+    if (process.env.RENDER) {
+      const KEEP_ALIVE_URL = `https://giai-bong-da-doan-phuong-backend.onrender.com/api/health`;
+      setInterval(async () => {
+        try {
+          const res = await fetch(KEEP_ALIVE_URL);
+          console.log(`[keep-alive] ping OK: ${res.status}`);
+        } catch (e) {
+          console.warn(`[keep-alive] ping failed: ${e.message}`);
+        }
+      }, 14 * 60 * 1000); // 14 minutes
+      console.log('[keep-alive] Self-ping enabled (every 14 minutes)');
+    }
   });
 }
 
 export default app;
+
