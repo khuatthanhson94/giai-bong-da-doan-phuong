@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * Admin interface for managing teams.
@@ -8,6 +9,7 @@ import { getFullUrl } from '../../utils/url';
  * Uses the .form-label and .input-field utility classes for consistent styling.
  */
 export default function AdminTeams() {
+  const { user } = useAuth();
   const [teams, setTeams] = useState([]);
   const [form, setForm] = useState({
     name: '',
@@ -20,10 +22,21 @@ export default function AdminTeams() {
   const [logoPreview, setLogoPreview] = useState('');
 
   // Load teams on mount
-  const load = () => api.get('/teams').then(setTeams);
+  const load = () => {
+    api.get('/teams').then((data) => {
+      if (user?.role === 'team') {
+        setTeams(data.filter((t) => t.id === Number(user.team_id)));
+      } else {
+        setTeams(data);
+      }
+    });
+  };
+
   useEffect(() => {
-    load();
-  }, []);
+    if (user) {
+      load();
+    }
+  }, [user]);
 
 
 
@@ -105,18 +118,22 @@ export default function AdminTeams() {
     <div>
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Quản lý đội bóng</h1>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditId(null);
-            setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '' });
-            setLogoPreview('');
-          }}
-          className="btn-primary text-sm"
-        >
-          + Thêm đội
-        </button>
+        <h1 className="text-2xl font-bold text-primary">
+          {user?.role === 'team' ? 'Thông tin đội bóng' : 'Quản lý đội bóng'}
+        </h1>
+        {user?.role !== 'team' && (
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditId(null);
+              setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '' });
+              setLogoPreview('');
+            }}
+            className="btn-primary text-sm"
+          >
+            + Thêm đội
+          </button>
+        )}
       </div>
 
       {/* Form */}
@@ -129,6 +146,7 @@ export default function AdminTeams() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
+            disabled={user?.role === 'team'}
           />
 
           <label className="form-label">Màu áo</label>
@@ -198,9 +216,11 @@ export default function AdminTeams() {
                   <button onClick={() => handleEdit(t)} className="text-primary text-sm hover:underline">
                     Sửa
                   </button>
-                  <button onClick={() => handleDelete(t.id)} className="text-red-500 text-sm hover:underline">
-                    Xóa
-                  </button>
+                  {user?.role !== 'team' && (
+                    <button onClick={() => handleDelete(t.id)} className="text-red-500 text-sm hover:underline">
+                      Xóa
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

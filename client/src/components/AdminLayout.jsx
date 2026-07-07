@@ -3,10 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import TournamentInfo from './TournamentInfo';
 
 const menuItems = [
-  { to: '/admin', label: 'Dashboard', roles: ['super_admin', 'admin', 'editor', 'scorekeeper'] },
-  { to: '/admin/teams', label: 'Đội bóng', roles: ['super_admin', 'admin'] },
+  { to: '/admin', label: 'Dashboard', roles: ['super_admin', 'admin', 'editor', 'scorekeeper', 'team'] },
+  { to: '/admin/teams', label: 'Đội bóng', roles: ['super_admin', 'admin', 'team'] },
   { to: '/admin/groups', label: 'Bảng (Groups)', roles: ['super_admin', 'admin'] },
-  { to: '/admin/players', label: 'Cầu thủ', roles: ['super_admin', 'admin'] },
+  { to: '/admin/players', label: 'Cầu thủ', roles: ['super_admin', 'admin', 'team'] },
   { to: '/admin/matches', label: 'Lịch thi đấu', roles: ['super_admin', 'admin'] },
   { to: '/admin/results', label: 'Nhập kết quả', roles: ['super_admin', 'admin', 'scorekeeper'] },
   { to: '/admin/news', label: 'Tin tức', roles: ['super_admin', 'admin', 'editor'] },
@@ -23,7 +23,14 @@ export default function AdminLayout() {
   if (loading) return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
   if (!user) return <Navigate to="/admin/login" state={{ from: location }} replace />;
 
-  const visibleMenu = menuItems.filter((m) => m.roles.includes(user.role));
+  const visibleMenu = menuItems
+    .filter((m) => m.roles.includes(user.role))
+    .map((m) => {
+      if (m.to === '/admin/teams' && user.role === 'team') {
+        return { ...m, label: 'Đội bóng của tôi' };
+      }
+      return m;
+    });
 
   return (
     <div className="min-h-screen bg-gray-100 flex">

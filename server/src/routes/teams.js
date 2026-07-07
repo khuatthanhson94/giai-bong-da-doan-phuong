@@ -83,13 +83,31 @@ router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) =
 });
 
 // ---------- PUT ----------
-router.put('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
+router.put('/:id', authRequired, (req, res) => {
   try {
+    const isTeamAdmin = req.user.role === 'team' && Number(req.params.id) === Number(req.user.team_id);
+    const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+
+    if (!isTeamAdmin && !isAdmin) {
+      return res.status(403).json({ error: 'Không có quyền chỉnh sửa đội này' });
+    }
+
     const { name, logo, jersey_color, description, image } = req.body;
-    if (!name) return res.status(400).json({ error: 'Tên đội không được trống' });
-    const info = db.prepare(`
-      UPDATE teams SET name=?, logo=?, jersey_color=?, description=?, image=? WHERE id=?
-    `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, req.params.id);
+
+    let info;
+    if (isTeamAdmin) {
+      // Team representative can only modify logo, jersey color, and description
+      info = db.prepare(`
+        UPDATE teams SET logo=?, jersey_color=?, description=? WHERE id=?
+      `).run(logo || null, jersey_color || '#0066CC', description || '', req.params.id);
+    } else {
+      // Admin/Super Admin can update all
+      if (!name) return res.status(400).json({ error: 'Tên đội không được trống' });
+      info = db.prepare(`
+        UPDATE teams SET name=?, logo=?, jersey_color=?, description=?, image=? WHERE id=?
+      `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, req.params.id);
+    }
+
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy đội' });
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {

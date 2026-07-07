@@ -178,6 +178,13 @@ export function initDatabase() {
     );
   `);
 
+  // Migration: Add team_id to users if it doesn't exist
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id)');
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   // Automatically seed users if empty
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (!userCount || userCount.count === 0) {

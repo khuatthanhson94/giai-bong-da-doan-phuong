@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
+import { useAuth } from '../../context/AuthContext';
 
 const positions = ['Thủ môn', 'Hậu vệ', 'Tiền vệ', 'Tiền đạo'];
 
@@ -9,6 +10,7 @@ const positions = ['Thủ môn', 'Hậu vệ', 'Tiền vệ', 'Tiền đạo'];
  * Provides a clean, readable form using .form-label and .input-field utilities.
  */
 export default function AdminPlayers() {
+  const { user } = useAuth();
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [form, setForm] = useState({
@@ -25,16 +27,100 @@ export default function AdminPlayers() {
   const [showForm, setShowForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [photoPreview, setPhotoPreview] = useState('');
+  
+  // CSV Import States
+  const [importedPlayers, setImportedPlayers] = useState([]);
+  const [importTeamId, setImportTeamId] = useState('');
+  const [showImportSection, setShowImportSection] = useState(false);
 
   // Load initial data
-  const loadPlayers = () => api.get('/players').then(setPlayers);
-  const loadTeams = () => api.get('/teams').then(setTeams);
+  const loadPlayers = () => {
+    const url = user?.role === 'team' ? `/players?teamId=${user.team_id}` : '/players';
+    return api.get(url).then((data) => {
+      if (user?.role === 'team') {
+        setPlayers(data.filter((p) => p.team_id === Number(user.team_id)));
+      } else {
+        setPlayers(data);
+      }
+    });
+  };
+  
+  const loadTeams = () => api.get('/teams').then((data) => {
+    setTeams(data);
+    if (user?.role === 'team') {
+      setImportTeamId(String(user.team_id));
+    }
+  });
+
   useEffect(() => {
-    loadPlayers();
-    loadTeams();
-  }, []);
+    if (user) {
+      loadPlayers();
+      loadTeams();
+    }
+  }, [user]);
 
 
+
+  const downloadTemplate = () => {
+    const headers = 'Số áo,Họ tên,Ngày sinh (YYYY-MM-DD),Vị trí (Thủ môn/Hậu vệ/Tiền vệ/Tiền đạo),Giới thiệu\n';
+    const rows = '10,Nguyễn Văn A,1995-05-12,Tiền đạo,Đội trưởng nhiệt huyết\n1,Trần Văn B,1997-09-20,Thủ môn,Phản xạ cực tốt\n';
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'mau_danh_sach_cau_thu.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      const lines = text.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length <= 1) {
+        alert('File không có dữ liệu cầu thủ!');
+        return;
+      }
+      
+      const parsed = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length >= 2 && cols[1]) {
+          parsed.push({
+            jersey_number: Number(cols[0]) || 0,
+            name: cols[1],
+            dob: cols[2] || '',
+            position: cols[3] || 'Tiền vệ',
+            description: cols[4] || '',
+          });
+        }
+      }
+      setImportedPlayers(parsed);
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = null;
+  };
+
+  const handleConfirmImport = async () => {
+    const targetTeamId = user?.role === 'team' ? user.team_id : importTeamId;
+    if (!targetTeamId) {
+      alert('Vui lòng chọn đội bóng!');
+      return;
+    }
+    try {
+      await api.post('/players/import', { team_id: Number(targetTeamId), players: importedPlayers });
+      alert('Nhập danh sách cầu thủ thành công!');
+      setImportedPlayers([]);
+      setShowImportSection(false);
+      loadPlayers();
+    } catch (err) {
+      alert(err.message || 'Lỗi khi nhập danh sách cầu thủ.');
+    }
+  };
 
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
@@ -119,27 +205,100 @@ export default function AdminPlayers() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-primary">Quản lý cầu thủ</h1>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditId(null);
-            setForm({
-              name: '',
-              jersey_color: '#0066CC',
-              description: '',
-              photo: '',
-              jersey_number: '',
-              position: '',
-              dob: '',
-              team_id: '',
-            });
-            setPhotoPreview('');
-          }}
-          className="btn-primary text-sm"
-        >
-          + Thêm cầu thủ
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImportSection(!showImportSection)}
+            className="btn-outline text-sm"
+          >
+            {showImportSection ? 'Đóng Import' : 'Nhập từ file CSV'}
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditId(null);
+              setForm({
+                name: '',
+                jersey_color: '#0066CC',
+                description: '',
+                photo: '',
+                jersey_number: '',
+                position: '',
+                dob: '',
+                team_id: user?.role === 'team' ? String(user.team_id) : '',
+              });
+              setPhotoPreview('');
+            }}
+            className="btn-primary text-sm"
+          >
+            + Thêm cầu thủ
+          </button>
+        </div>
       </div>
+
+      {/* CSV Import Section */}
+      {showImportSection && (
+        <div className="card p-6 mb-6 space-y-4">
+          <h2 className="text-lg font-bold text-primary">Nhập cầu thủ hàng loạt từ file CSV</h2>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <button onClick={downloadTemplate} className="btn-outline text-sm flex items-center gap-2">
+                📥 Tải file mẫu CSV
+              </button>
+            </div>
+            <div>
+              <label className="form-label mb-1">Chọn file CSV</label>
+              <input type="file" accept=".csv" onChange={handleFileChange} className="block text-sm" />
+            </div>
+            {user?.role !== 'team' && (
+              <div>
+                <label className="form-label mb-1">Đội nhập vào</label>
+                <select className="input-field py-1" value={importTeamId} onChange={(e) => setImportTeamId(e.target.value)}>
+                  <option value="">Chọn đội...</option>
+                  {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {importedPlayers.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Xem trước dữ liệu ({importedPlayers.length} cầu thủ):</h3>
+              <div className="max-h-60 overflow-y-auto border rounded">
+                <table className="table-styled text-xs">
+                  <thead>
+                    <tr>
+                      <th>Số áo</th>
+                      <th>Họ tên</th>
+                      <th>Ngày sinh</th>
+                      <th>Vị trí</th>
+                      <th>Giới thiệu</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importedPlayers.map((p, idx) => (
+                      <tr key={idx}>
+                        <td>{p.jersey_number}</td>
+                        <td>{p.name}</td>
+                        <td>{p.dob}</td>
+                        <td>{p.position}</td>
+                        <td>{p.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleConfirmImport} className="btn-primary text-sm">
+                  Lưu danh sách cầu thủ
+                </button>
+                <button onClick={() => setImportedPlayers([])} className="btn-outline text-sm">
+                  Hủy bỏ
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -150,6 +309,7 @@ export default function AdminPlayers() {
             value={form.team_id}
             onChange={(e) => setForm({ ...form, team_id: e.target.value })}
             required
+            disabled={user?.role === 'team'}
           >
             <option value="">Chọn đội</option>
             {teams.map((t) => (

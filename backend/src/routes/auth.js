@@ -14,12 +14,12 @@ router.post('/login', (req, res) => {
   const token = signToken(user);
   res.json({
     token,
-    user: { id: user.id, username: user.username, role: user.role },
+    user: { id: user.id, username: user.username, role: user.role, team_id: user.team_id },
   });
 });
 
 router.get('/me', authRequired, (req, res) => {
-  const user = db.prepare('SELECT id, username, role, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, username, role, team_id, created_at FROM users WHERE id = ?').get(req.user.id);
   res.json(user);
 });
 
@@ -31,38 +31,45 @@ router.post('/change-password', authRequired, (req, res) => {
   }
   const hash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, req.user.id);
-  db.prepare('INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)').run(
-    req.user.id, 'change_password', '{}'
-  );
+  try {
+    db.prepare('INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)').run(
+      req.user.id, 'change_password', '{}'
+    );
+  } catch (e) {
+    // Ignore log table error if it doesn't exist
+  }
   res.json({ message: 'Đổi mật khẩu thành công' });
 });
 
 router.get('/users', authRequired, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
-  const users = db.prepare('SELECT id, username, role, created_at FROM users ORDER BY id').all();
+  const users = db.prepare('SELECT id, username, role, team_id, created_at FROM users ORDER BY id').all();
   res.json(users);
 });
 
 router.post('/users', authRequired, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password, role, team_id } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Thiếu thông tin' });
   }
   const hash = bcrypt.hashSync(password, 10);
   try {
     const result = db.prepare(`
-      INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)
-    `).run(username, hash, role || 'admin');
-    res.status(201).json({ id: result.lastInsertRowid, username, role: role || 'admin' });
-  } catch {
+      INSERT INTO users (username, password_hash, role, team_id) VALUES (?, ?, ?, ?)
+    `).run(username, hash, role || 'admin', team_id ? Number(team_id) : null);
+    res.status(201).json({ id: result.lastInsertRowid, username, role: role || 'admin', team_id: team_id ? Number(team_id) : null });
+  } catch (e) {
     res.status(400).json({ error: 'Tên đăng nhập đã tồn tại' });
   }
 });
 
 router.put('/users/:id', authRequired, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
-  const { role, password } = req.body;
+  const { role, password, team_id } = req.body;
   const id = req.params.id;
   if (role) {
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+  }
+  if (team_id !== undefined) {
+    db.prepare('UPDATE users SET team_id = ? WHERE id = ?').run(team_id ? Number(team_id) : null, id);
   }
   if (password) {
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(password, 10), id);

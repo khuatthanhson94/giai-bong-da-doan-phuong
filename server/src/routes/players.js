@@ -30,38 +30,111 @@ router.get('/:id', (req, res) => {
   res.json(enrichPlayer(player));
 });
 
-// Create player (admin only)
-router.post('/', authRequired, (req, res, next) => {
-  if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
-  next();
-}, (req, res) => {
+// Create player (admin and matching team accounts)
+router.post('/', authRequired, (req, res) => {
   const { team_id, name, dob, jersey_number, position, photo } = req.body;
-  const result = db.prepare(`
-    INSERT INTO players (team_id, name, dob, jersey_number, position, photo)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(team_id, name, dob, jersey_number, position, photo);
-  res.status(201).json({ id: result.lastInsertRowid, ...req.body });
+  
+  const isTeamAdmin = req.user.role === 'team' && Number(team_id) === Number(req.user.team_id);
+  const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+  if (!isTeamAdmin && !isAdmin) {
+    return res.status(403).json({ error: 'Không có quyền' });
+  }
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO players (team_id, name, dob, jersey_number, position, photo)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(Number(team_id), name, dob, Number(jersey_number), position, photo);
+    res.status(201).json({ id: result.lastInsertRowid, ...req.body });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Update player (admin only)
-router.put('/:id', authRequired, (req, res, next) => {
-  if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
-  next();
-}, (req, res) => {
+// Update player (admin and matching team accounts)
+router.put('/:id', authRequired, (req, res) => {
   const { team_id, name, dob, jersey_number, position, photo } = req.body;
-  db.prepare(`
-    UPDATE players SET team_id=?, name=?, dob=?, jersey_number=?, position=?, photo=? WHERE id=?
-  `).run(team_id, name, dob, jersey_number, position, photo, req.params.id);
-  res.json({ message: 'Cập nhật thành công' });
+  const id = req.params.id;
+
+  try {
+    const player = db.prepare('SELECT team_id FROM players WHERE id = ?').get(id);
+    if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
+
+    const isTeamAdmin = req.user.role === 'team' && 
+                        Number(player.team_id) === Number(req.user.team_id) && 
+                        Number(team_id) === Number(req.user.team_id);
+    const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+    if (!isTeamAdmin && !isAdmin) {
+      return res.status(403).json({ error: 'Không có quyền' });
+    }
+
+    db.prepare(`
+      UPDATE players SET team_id=?, name=?, dob=?, jersey_number=?, position=?, photo=? WHERE id=?
+    `).run(Number(team_id), name, dob, Number(jersey_number), position, photo, id);
+    res.json({ message: 'Cập nhật thành công' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Delete player (admin only)
-router.delete('/:id', authRequired, (req, res, next) => {
-  if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
-  next();
-}, (req, res) => {
-  db.prepare('DELETE FROM players WHERE id = ?').run(req.params.id);
-  res.json({ message: 'Đã xóa' });
+// Delete player (admin and matching team accounts)
+router.delete('/:id', authRequired, (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const player = db.prepare('SELECT team_id FROM players WHERE id = ?').get(id);
+    if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
+
+    const isTeamAdmin = req.user.role === 'team' && Number(player.team_id) === Number(req.user.team_id);
+    const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+    if (!isTeamAdmin && !isAdmin) {
+      return res.status(403).json({ error: 'Không có quyền' });
+    }
+
+    db.prepare('DELETE FROM players WHERE id = ?').run(id);
+    res.json({ message: 'Đã xóa' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk import players (admin and matching team accounts)
+router.post('/import', authRequired, (req, res) => {
+  const { team_id, players } = req.body;
+  if (!team_id || !Array.isArray(players)) {
+    return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
+  }
+
+  const isTeamAdmin = req.user.role === 'team' && Number(team_id) === Number(req.user.team_id);
+  const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
+  if (!isTeamAdmin && !isAdmin) {
+    return res.status(403).json({ error: 'Không có quyền thực hiện thao tác này' });
+  }
+
+  try {
+    db.exec('BEGIN TRANSACTION');
+    const stmt = db.prepare(`
+      INSERT INTO players (team_id, name, dob, jersey_number, position, photo)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const p of players) {
+      if (!p.name) continue;
+      stmt.run(
+        Number(team_id),
+        p.name,
+        p.dob || '',
+        Number(p.jersey_number) || 0,
+        p.position || 'Tiền vệ',
+        p.photo || ''
+      );
+    }
+    db.exec('COMMIT');
+    res.json({ message: 'Nhập danh sách cầu thủ thành công' });
+  } catch (err) {
+    db.exec('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

@@ -53,6 +53,8 @@ add_env NEXT_PUBLIC_API_URL "${API_URL}"
 add_env NEXT_PUBLIC_RENDER_API_URL "${RENDER_API_URL}"
 add_env NEXT_PUBLIC_UPLOAD_URL "${UPLOAD_URL}"
 add_env NEXT_PUBLIC_FRONTEND_URL "${FRONTEND_URL}"
+add_env VITE_API_URL "${RENDER_API_URL}"
+
 
 # Deploy to production
 echo "Deploying to Vercel (production)..."

@@ -4,7 +4,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'giai-bong-da-doan-phuong-secret-20
 
 export function signToken(user) {
   return jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
+    { id: user.id, username: user.username, role: user.role, team_id: user.team_id },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -37,6 +37,7 @@ export const ROLES = {
   ADMIN: 'admin',
   EDITOR: 'editor',
   SCOREKEEPER: 'scorekeeper',
+  TEAM: 'team',
 };
 
 export function canManageTournament(role) {
