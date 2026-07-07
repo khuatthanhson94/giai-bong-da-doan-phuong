@@ -51,12 +51,19 @@ if (isVercel) {
   dbPath = path.join(dataDir, 'tournament.db');
 }
 
-import { restoreDatabase, scheduleSync } from './services/sync.js';
+import { restoreDatabase, restoreUploads, scheduleSync } from './services/sync.js';
+
+const uploadDir = process.env.VERCEL
+  ? '/tmp/uploads'
+  : (process.env.RENDER
+      ? path.join(dataDir, 'uploads')
+      : path.join(__dirname, '..', 'uploads'));
 
 // Top-level await to restore SQLite database from PostgreSQL cloud storage on startup
 if (process.env.SYNC_DATABASE_URL) {
   try {
     await restoreDatabase(dbPath);
+    await restoreUploads(uploadDir);
   } catch (err) {
     console.error('[Sync] Error during startup restore:', err.message);
   }

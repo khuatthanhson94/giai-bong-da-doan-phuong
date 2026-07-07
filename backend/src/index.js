@@ -91,8 +91,16 @@ if (process.env.VERCEL) {
   });
 }
 
+import { backupUpload } from './services/sync.js';
+
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Không có file' });
+  
+  // Backup upload to Postgres in background
+  backupUpload(req.file.filename, req.file.path).catch((err) => {
+    console.error('[Sync] Background upload backup error:', err.message);
+  });
+
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 

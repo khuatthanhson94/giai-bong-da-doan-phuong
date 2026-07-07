@@ -1,4 +1,4 @@
-﻿import pg from "pg";
+import pg from "pg";
 import fs from "fs";
 import path from "path";
 
@@ -165,5 +165,91 @@ export function getSyncStatus() {
     isReadyToBackup,
     ...lastSyncStatus
   };
+}
+
+export async function restoreUploads(uploadDir) {
+  const url = process.env.SYNC_DATABASE_URL;
+  if (!url) return;
+
+  console.log("[Sync] Restoring uploaded files from cloud storage...");
+  
+  const client = new Client({ connectionString: url });
+  await client.connect();
+
+  try {
+    // Create the uploaded_files table if it does not exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS uploaded_files (
+        filename VARCHAR(255) PRIMARY KEY,
+        data BYTEA,
+        mime_type VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    const res = await client.query("SELECT filename, data FROM uploaded_files");
+    console.log(`[Sync] Found ${res.rows.length} uploaded files in cloud`);
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    let restoredCount = 0;
+    for (const row of res.rows) {
+      if (row.filename && row.data) {
+        const dest = path.join(uploadDir, row.filename);
+        fs.writeFileSync(dest, row.data);
+        restoredCount++;
+      }
+    }
+    console.log(`[Sync] Successfully restored ${restoredCount} uploads to ${uploadDir}`);
+  } catch (err) {
+    console.error("[Sync] Failed to restore uploaded files:", err.message);
+  } finally {
+    try {
+      await client.end();
+    } catch (e) {}
+  }
+}
+
+export async function backupUpload(filename, filepath) {
+  const url = process.env.SYNC_DATABASE_URL;
+  if (!url) return;
+
+  if (!fs.existsSync(filepath)) {
+    console.warn("[Sync] Uploaded file not found to backup:", filepath);
+    return;
+  }
+
+  console.log(`[Sync] Backing up uploaded file ${filename} to cloud...`);
+  try {
+    const data = fs.readFileSync(filepath);
+    
+    // Guess mime type from filename extension
+    const ext = path.extname(filename).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+    else if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.gif') mimeType = 'image/gif';
+    else if (ext === '.webp') mimeType = 'image/webp';
+    else if (ext === '.xlsx') mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+    const client = new Client({ connectionString: url });
+    await client.connect();
+
+    try {
+      await client.query(`
+        INSERT INTO uploaded_files (filename, data, mime_type, created_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (filename) DO UPDATE
+        SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type, created_at = CURRENT_TIMESTAMP;
+      `, [filename, data, mimeType]);
+      console.log(`[Sync] Successfully backed up uploaded file: ${filename} (${data.length} bytes)`);
+    } finally {
+      await client.end();
+    }
+  } catch (err) {
+    console.error(`[Sync] Backup uploaded file ${filename} failed:`, err.message);
+  }
 }
 
