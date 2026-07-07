@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
 import { useAuth } from '../../context/AuthContext';
+import * as XLSX from 'xlsx';
 
 /**
  * Admin interface for managing teams.
@@ -37,6 +38,21 @@ export default function AdminTeams() {
       load();
     }
   }, [user]);
+
+  const exportTeams = () => {
+    const headers = ['Tên đội bóng', 'Màu áo', 'Điểm số', 'Giới thiệu'];
+    const rows = teams.map((t) => [
+      t.name,
+      t.jersey_color,
+      t.points || 0,
+      t.description || ''
+    ]);
+    
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh sách đội bóng');
+    XLSX.writeFile(wb, 'danh_sach_doi_bong.xlsx');
+  };
 
 
 
@@ -121,19 +137,24 @@ export default function AdminTeams() {
         <h1 className="text-2xl font-bold text-primary">
           {user?.role === 'team' ? 'Thông tin đội bóng' : 'Quản lý đội bóng'}
         </h1>
-        {user?.role !== 'team' && (
-          <button
-            onClick={() => {
-              setShowForm(true);
-              setEditId(null);
-              setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '' });
-              setLogoPreview('');
-            }}
-            className="btn-primary text-sm"
-          >
-            + Thêm đội
+        <div className="flex gap-2">
+          <button onClick={exportTeams} className="btn-outline text-sm flex items-center gap-1">
+            📥 Xuất Excel
           </button>
-        )}
+          {user?.role !== 'team' && (
+            <button
+              onClick={() => {
+                setShowForm(true);
+                setEditId(null);
+                setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '' });
+                setLogoPreview('');
+              }}
+              className="btn-primary text-sm"
+            >
+              + Thêm đội
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Form */}

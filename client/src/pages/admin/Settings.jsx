@@ -11,7 +11,7 @@ export default function AdminSettings() {
   const [unionLogoPreview, setUnionLogoPreview] = useState('');
   const [bannerPreview, setBannerPreview] = useState('');
   const [message, setMessage] = useState('');
-  const { changePassword } = useAuth();
+  const { user, changePassword } = useAuth();
 
   const getFullUrl = (url) => {
     if (!url) return '';
@@ -38,14 +38,16 @@ export default function AdminSettings() {
   };
 
   useEffect(() => {
-    api.get('/settings').then((data) => {
-      setSettings(data);
-      setForm(data);
-      setLogoPreview(data.logo_url || '');
-      setUnionLogoPreview(data.union_logo || '');
-      setBannerPreview(data.banner_url || '');
-    });
-  }, []);
+    if (user && user.role !== 'team') {
+      api.get('/settings').then((data) => {
+        setSettings(data);
+        setForm(data);
+        setLogoPreview(data.logo_url || '');
+        setUnionLogoPreview(data.union_logo || '');
+        setBannerPreview(data.banner_url || '');
+      });
+    }
+  }, [user]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -81,6 +83,21 @@ export default function AdminSettings() {
     { key: 'banner_url', label: 'URL Banner Giải Đấu' },
   ];
 
+  if (user?.role === 'team') {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold text-primary mb-6">Đổi mật khẩu</h1>
+        {message && <div className="bg-green-50 text-green-700 p-3 rounded-lg mb-4 text-sm">{message}</div>}
+
+        <form onSubmit={handleChangePassword} className="card p-6 space-y-4">
+          <input type="password" className="input-field" placeholder="Mật khẩu hiện tại" value={pwForm.currentPassword} onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })} required />
+          <input type="password" className="input-field" placeholder="Mật khẩu mới" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} required />
+          <button type="submit" className="btn-primary text-sm px-6">Đổi mật khẩu</button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-primary mb-6">Cài đặt giải đấu</h1>
@@ -89,7 +106,7 @@ export default function AdminSettings() {
       <form onSubmit={handleSave} className="card p-6 mb-8 space-y-4">
         {fields.map(({ key, label }) => (
           <div key={key}>
-            {key === 'logo_url' || key === 'banner_url' || key === 'union_logo' ? (
+            {key === 'logo_url' || key === 'union_logo' || key === 'banner_url' ? (
               <div>
                 <label className="block text-sm font-medium mb-1">{label}</label>
                 <input className="input-field" type="file" accept="image/*" onChange={e => handleFileUpload(key, e.target.files[0])} />
@@ -120,7 +137,7 @@ export default function AdminSettings() {
       </form>
 
       <form onSubmit={handleChangePassword} className="card p-6 space-y-4">
-        <h3 className="font-bold">Đổi mật khẩu</h3>
+        <h3 className="font-bold">Đổi mật khẩu admin</h3>
         <input type="password" className="input-field" placeholder="Mật khẩu hiện tại" value={pwForm.currentPassword} onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })} required />
         <input type="password" className="input-field" placeholder="Mật khẩu mới" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} required />
         <button type="submit" className="btn-outline text-sm">Đổi mật khẩu</button>

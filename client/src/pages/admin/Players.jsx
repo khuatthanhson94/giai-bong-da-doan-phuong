@@ -60,6 +60,26 @@ export default function AdminPlayers() {
     }
   }, [user]);
 
+  const exportPlayers = () => {
+    const headers = ['Số áo', 'Họ tên', 'Ngày sinh', 'Vị trí', 'Đội bóng chủ quản', 'Giới thiệu'];
+    const rows = players.map((p) => {
+      const teamName = teams.find(t => t.id === p.team_id)?.name || '';
+      return [
+        p.jersey_number,
+        p.name,
+        p.dob || '',
+        p.position,
+        teamName,
+        p.description || ''
+      ];
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh sách cầu thủ');
+    XLSX.writeFile(wb, 'danh_sach_cau_thu.xlsx');
+  };
+
 
 
   const downloadTemplate = () => {
@@ -224,6 +244,9 @@ export default function AdminPlayers() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-primary">Quản lý cầu thủ</h1>
         <div className="flex gap-2">
+          <button onClick={exportPlayers} className="btn-outline text-sm flex items-center gap-1">
+            📥 Xuất Excel
+          </button>
           <button
             onClick={() => setShowImportSection(!showImportSection)}
             className="btn-outline text-sm"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import * as XLSX from 'xlsx';
 
 export default function AdminMatches() {
   const [matches, setMatches] = useState([]);
@@ -27,6 +28,29 @@ export default function AdminMatches() {
     load();
     api.get('/teams').then(setTeams);
   }, []);
+
+  const exportMatches = () => {
+    const headers = ['Vòng/Lượt', 'Bảng đấu', 'Ngày thi đấu', 'Giờ thi đấu', 'Đội A', 'Đội B', 'Địa điểm (Sân)', 'Trạng thái'];
+    const rows = matches.map((m) => {
+      const groupName = m.group?.name || m.group_name || 'Knockout';
+      const statusText = m.published ? 'Đã công bố' : m.status === 'finished' ? 'Đã kết quả' : 'Chưa đấu';
+      return [
+        m.round,
+        groupName,
+        m.match_date,
+        m.match_time,
+        m.team_a?.name || '',
+        m.team_b?.name || '',
+        m.venue,
+        statusText
+      ];
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Lịch thi đấu');
+    XLSX.writeFile(wb, 'lich_thi_dau.xlsx');
+  };
 
   const handleRoundChange = (val) => {
     const isKO = val ? !/bảng|lượt|group/i.test(val) : false;
@@ -183,8 +207,13 @@ export default function AdminMatches() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-primary">Quản lý lịch thi đấu</h1>
-        <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">+ Tạo lịch</button>
-        <button onClick={handleAutoGenerate} className="btn-secondary text-sm ml-2">Tự động tạo lịch</button>
+        <div className="flex gap-2">
+          <button onClick={exportMatches} className="btn-outline text-sm flex items-center gap-1">
+            📥 Xuất Excel
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">+ Tạo lịch</button>
+          <button onClick={handleAutoGenerate} className="btn-secondary text-sm">Tự động tạo lịch</button>
+        </div>
       </div>
 
       {showForm && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import * as XLSX from 'xlsx';
 
 const roles = [
   { value: 'super_admin', label: 'Super Admin - Toàn quyền' },
@@ -35,9 +36,38 @@ export default function AdminUsers() {
     loadUsers();
   };
 
+  const handleResetPassword = async (id) => {
+    if (!confirm('Đặt lại mật khẩu tài khoản này về mặc định (admin123)?')) return;
+    try {
+      await api.post(`/auth/users/${id}/reset-password`);
+      alert('Đã reset mật khẩu thành công về admin123!');
+    } catch (err) {
+      alert(err.message || 'Lỗi khi đặt lại mật khẩu');
+    }
+  };
+
+  const exportUsers = () => {
+    const headers = ['Username', 'Phân quyền', 'Gán cho đội', 'Ngày tạo'];
+    const rows = users.map((u) => {
+      const roleLabel = roles.find((r) => r.value === u.role)?.label || u.role;
+      const teamName = u.team_id ? (teams.find(t => t.id === u.team_id)?.name || `ID: ${u.team_id}`) : '-';
+      return [u.username, roleLabel, teamName, new Date(u.created_at).toLocaleDateString('vi-VN')];
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh sách tài khoản');
+    XLSX.writeFile(wb, 'danh_sach_tai_khoan.xlsx');
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-primary mb-6">Quản lý tài khoản</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-primary">Quản lý tài khoản</h1>
+        <button onClick={exportUsers} className="btn-outline text-sm flex items-center gap-1">
+          📥 Xuất Excel
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit} className="card p-6 mb-6 grid md:grid-cols-3 gap-4">
         <input className="input-field" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
@@ -71,10 +101,16 @@ export default function AdminUsers() {
                   <td>{roles.find((r) => r.value === u.role)?.label || u.role}</td>
                   <td>{teamName}</td>
                   <td>{new Date(u.created_at).toLocaleDateString('vi-VN')}</td>
-                  <td>
+                  <td className="space-x-4">
+                    <button
+                      onClick={() => handleResetPassword(u.id)}
+                      className="text-primary text-sm hover:underline"
+                    >
+                      Reset mật khẩu
+                    </button>
                     <button
                       onClick={async () => { if (confirm('Xóa?')) { await api.delete(`/auth/users/${u.id}`); loadUsers(); } }}
-                      className="text-red-500 text-sm"
+                      className="text-red-500 text-sm hover:underline"
                     >
                       Xóa
                     </button>

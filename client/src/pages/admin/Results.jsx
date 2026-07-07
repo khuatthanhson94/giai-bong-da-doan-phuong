@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import * as XLSX from 'xlsx';
 
 function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false }) {
   return (
@@ -77,6 +78,32 @@ export default function AdminResults() {
     api.get('/matches').then(setMatches);
     api.get('/players').then(setPlayers); api.get('/groups').then(setGroups);
   }, []);
+
+  const exportResults = () => {
+    const finishedMatches = matches.filter(m => m.status === 'finished' || m.score_a !== null);
+    const headers = ['Vòng/Lượt', 'Bảng đấu', 'Ngày thi đấu', 'Giờ thi đấu', 'Đội A', 'Tỷ số A', 'Tỷ số B', 'Đội B', 'Địa điểm', 'Trạng thái'];
+    const rows = finishedMatches.map((m) => {
+      const groupName = m.group?.name || m.group_name || 'Knockout';
+      const statusText = m.published ? 'Đã công bố' : 'Lưu nháp';
+      return [
+        m.round,
+        groupName,
+        m.match_date,
+        m.match_time,
+        m.team_a?.name || '',
+        m.score_a,
+        m.score_b,
+        m.team_b?.name || '',
+        m.venue,
+        statusText
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kết quả trận đấu');
+    XLSX.writeFile(wb, 'ket_qua_tran_dau.xlsx');
+  };
 
   useEffect(() => {
     if (!selectedId || players.length === 0) return;
@@ -191,9 +218,14 @@ export default function AdminResults() {
 
   return (
     <div>
-<h1 className="text-2xl font-bold text-primary mb-2">Nhập kết quả trận đấu</h1>
-<p className="text-sm text-gray-500 mb-6">Nhập tỷ số và chi tiết sự kiện cho trận đấu. Sau khi "Công bố", hệ thống sẽ tự động cập nhật Bảng xếp hạng và Danh sách vua phá lưới.</p>
-<div className="flex items-center gap-4 mb-6">
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-2xl font-bold text-primary">Nhập kết quả trận đấu</h1>
+        <button onClick={exportResults} className="btn-outline text-sm flex items-center gap-1">
+          📥 Xuất Excel
+        </button>
+      </div>
+      <p className="text-sm text-gray-500 mb-6">Nhập tỷ số và chi tiết sự kiện cho trận đấu. Sau khi "Công bố", hệ thống sẽ tự động cập nhật Bảng xếp hạng và Danh sách vua phá lưới.</p>
+      <div className="flex items-center gap-4 mb-6">
   <select className="input-field" value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
     <option value="">-- Tất cả bảng --</option>
     {groups.map((g) => (
