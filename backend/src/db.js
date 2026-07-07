@@ -8,7 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let dataDir;
 let dbPath;
 
-if (process.env.VERCEL) {
+const isVercel = process.env.VERCEL || process.env.NOW_BUILDER;
+const isRender = process.env.RENDER || process.env.RENDER_SERVICE_ID || fs.existsSync('/opt/render');
+
+if (isVercel) {
   dataDir = '/tmp/data';
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, 'tournament.db');
@@ -22,11 +25,25 @@ if (process.env.VERCEL) {
       console.error('Failed to copy database template:', e);
     }
   }
-} else if (process.env.RENDER) {
+} else if (isRender) {
   // Use persistent disk on Render
   dataDir = '/opt/render/project/backend/data';
+  // Fallback if backend folder doesn't exist
+  if (!fs.existsSync('/opt/render/project/backend')) {
+    dataDir = '/opt/render/project/data';
+  }
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, 'tournament.db');
+
+  const templateDbPath = path.join(__dirname, '..', 'data', 'tournament.db');
+  if (!fs.existsSync(dbPath) && fs.existsSync(templateDbPath)) {
+    try {
+      fs.copyFileSync(templateDbPath, dbPath);
+      console.log(`Copied database template to Render persistent disk: ${dbPath}`);
+    } catch (e) {
+      console.error('Failed to copy database template to Render persistent disk:', e);
+    }
+  }
   console.log('Using persistent disk on Render:', dbPath);
 } else {
   dataDir = path.join(__dirname, '..', 'data');
