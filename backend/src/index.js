@@ -140,7 +140,22 @@ app.post('/api/admin/restore-database', upload.single('database'), async (req, r
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+
+    // Keep-alive: tự ping mỗi 14 phút để Render free tier không sleep
+    if (process.env.RENDER) {
+      const KEEP_ALIVE_URL = `https://giai-bong-da-doan-phuong-backend.onrender.com/api/health`;
+      setInterval(async () => {
+        try {
+          const res = await fetch(KEEP_ALIVE_URL);
+          console.log(`[keep-alive] ping OK: ${res.status}`);
+        } catch (e) {
+          console.warn(`[keep-alive] ping failed: ${e.message}`);
+        }
+      }, 14 * 60 * 1000); // 14 phút
+      console.log('[keep-alive] Self-ping enabled (every 14 minutes)');
+    }
   });
 }
 
 export default app;
+
