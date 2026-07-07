@@ -4,7 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
-import { initDatabase } from './db.js';
+import { initDatabase, uploadDir } from './db.js';
 import authRoutes from './routes/auth.js';
 import teamRoutes from './routes/teams.js';
 import playerRoutes from './routes/players.js';
@@ -19,15 +19,6 @@ const app = express();
 const PORT = process.env.PORT || 3004;
 
 initDatabase();
-
-let uploadDir;
-if (process.env.VERCEL) {
-  uploadDir = '/tmp/uploads';
-} else if (process.env.RENDER) {
-  uploadDir = '/opt/render/project/backend/data/uploads';
-} else {
-  uploadDir = path.join(__dirname, '..', 'uploads');
-}
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });

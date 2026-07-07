@@ -111,7 +111,7 @@ export const db = new Proxy(rawDb, {
   }
 });
 
-export { dbPath };
+export { dbPath, uploadDir };
 // Enable foreign key constraints for cascade deletes
 db.exec('PRAGMA foreign_keys = ON');
 
