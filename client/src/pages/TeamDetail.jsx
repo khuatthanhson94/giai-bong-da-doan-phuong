@@ -2,16 +2,20 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 import { getFullUrl } from '../utils/url';
+import { useSettings } from '../context/SettingsContext';
 
 export default function TeamDetail() {
   const { id } = useParams();
   const [team, setTeam] = useState(null);
+  const { settings } = useSettings();
 
   useEffect(() => {
     api.get(`/teams/${id}`).then(setTeam).catch(() => setTeam(null));
   }, [id]);
 
   if (!team) return <div className="text-center py-20 text-gray-500">Đang tải...</div>;
+
+  const logo = team.logo || team.logo_url || settings?.logo_url;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 animate-fade-in">
@@ -20,8 +24,8 @@ export default function TeamDetail() {
         <div className="flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${team.jersey_color}, ${team.jersey_color}aa)` }}>
           <div className="text-center text-white">
             <div className="w-[400px] h-[400px] mx-auto rounded-full overflow-hidden">
-              {team.logo || team.logo_url ? (
-                <img src={getFullUrl(team.logo || team.logo_url)} alt="Team Logo" className="team-logo" />
+              {logo ? (
+                <img src={getFullUrl(logo)} alt="Team Logo" className="team-logo" />
               ) : (
                 <div className="w-full h-full bg-white/20 flex items-center justify-center text-4xl font-bold border-4 border-white/30">
                   {team.name.charAt(0)}
