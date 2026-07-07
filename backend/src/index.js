@@ -116,6 +116,75 @@ app.get('/api/debug/uploads', (req, res) => {
   });
 });
 
+app.get('/api/debug/sync', async (req, res) => {
+  const url = process.env.SYNC_DATABASE_URL;
+  if (!url) {
+    return res.json({
+      configured: false,
+      message: 'SYNC_DATABASE_URL is not set on Render dashboard environment variables.'
+    });
+  }
+
+  const { dbPath } = await import('./db.js');
+  const localExists = fs.existsSync(dbPath);
+  const localSize = localExists ? fs.statSync(dbPath).size : 0;
+
+  let dbPathDebug = dbPath;
+  let connectionStatus = 'unknown';
+  let cloudDbInfo = null;
+  let error = null;
+
+  try {
+    const pg = await import('pg');
+    const client = new pg.default.Client({ connectionString: url });
+    await client.connect();
+    connectionStatus = 'connected';
+
+    try {
+      const tableCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'sqlite_sync'
+        );
+      `);
+      
+      const hasTable = tableCheck.rows[0].exists;
+      if (hasTable) {
+        const metadata = await client.query('SELECT LENGTH(data) as size, updated_at FROM sqlite_sync WHERE key = $1', ['tournament.db']);
+        if (metadata.rows.length > 0) {
+          cloudDbInfo = {
+            found: true,
+            sizeBytes: parseInt(metadata.rows[0].size),
+            updatedAt: metadata.rows[0].updated_at
+          };
+        } else {
+          cloudDbInfo = { found: false, message: 'Table exists but tournament.db key not found.' };
+        }
+      } else {
+        cloudDbInfo = { found: false, message: 'sqlite_sync table does not exist.' };
+      }
+    } finally {
+      await client.end();
+    }
+  } catch (err) {
+    connectionStatus = 'failed';
+    error = err.message;
+  }
+
+  res.json({
+    configured: true,
+    maskedUrl: url.replace(/:([^:@]+)@/, ':****@'),
+    connectionStatus,
+    localDb: {
+      path: dbPathDebug,
+      exists: localExists,
+      sizeBytes: localSize
+    },
+    cloudDb: cloudDbInfo,
+    error
+  });
+});
+
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Admin endpoint to restore database from uploaded file (for initial setup)
