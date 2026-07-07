@@ -46,6 +46,7 @@ export default function Teams() {
               </div>
             <div className="p-5">
               <h3 className="font-bold text-lg group-hover:text-primary transition">{t.name}</h3>
+              {t.coach && <p className="text-xs text-gray-400 mt-1">📋 HLV: {t.coach}</p>}
               <div className="flex gap-4 mt-3 text-sm text-gray-500">
                 <span>{t.played || 0} trận</span>
                 <span className="font-semibold text-primary">{t.points || 0} điểm</span>

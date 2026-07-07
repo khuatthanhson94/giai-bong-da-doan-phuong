@@ -17,6 +17,8 @@ export default function AdminTeams() {
     jersey_color: '#0066CC',
     description: '',
     logo: '',
+    coach: '',
+    stadium: '',
   });
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -163,7 +165,7 @@ export default function AdminTeams() {
       await api.post('/teams', form);
     }
     // Reset form
-    setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '' });
+    setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '', coach: '', stadium: '' });
     setEditId(null);
     setShowForm(false);
     setLogoPreview('');
@@ -176,6 +178,8 @@ export default function AdminTeams() {
       jersey_color: team.jersey_color,
       description: team.description,
       logo: team.logo || '',
+      coach: team.coach || '',
+      stadium: team.stadium || '',
     });
     setEditId(team.id);
     setShowForm(true);
@@ -226,7 +230,7 @@ export default function AdminTeams() {
               onClick={() => {
                 setShowForm(true);
                 setEditId(null);
-                setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '' });
+                setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '', coach: '', stadium: '' });
                 setLogoPreview('');
               }}
               className="btn-primary text-sm"
@@ -268,6 +272,22 @@ export default function AdminTeams() {
             placeholder="Giới thiệu"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+
+          <label className="form-label">Huấn luyện viên trưởng</label>
+          <input
+            className="input-field"
+            placeholder="Huấn luyện viên trưởng"
+            value={form.coach}
+            onChange={(e) => setForm({ ...form, coach: e.target.value })}
+          />
+
+          <label className="form-label">Sân nhà</label>
+          <input
+            className="input-field"
+            placeholder="Sân nhà"
+            value={form.stadium}
+            onChange={(e) => setForm({ ...form, stadium: e.target.value })}
           />
 
           <label className="form-label">URL Logo</label>

@@ -37,6 +37,24 @@ export default function TeamDetail() {
         </div>
         <div className="p-6 md:p-8">
           <p className="text-gray-600 mb-6">{team.description}</p>
+          
+          {(team.coach || team.stadium) && (
+            <div className="flex flex-wrap gap-6 mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100 text-sm">
+              {team.coach && (
+                <div>
+                  <span className="text-gray-500 font-medium">📋 Huấn luyện viên trưởng:</span>{' '}
+                  <span className="font-bold text-gray-800">{team.coach}</span>
+                </div>
+              )}
+              {team.stadium && (
+                <div>
+                  <span className="text-gray-500 font-medium">🏟️ Sân nhà:</span>{' '}
+                  <span className="font-bold text-gray-800">{team.stadium}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { l: 'Số trận', v: team.played },

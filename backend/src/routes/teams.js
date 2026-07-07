@@ -123,13 +123,13 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
 // ---------- POST ----------
 router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
-    const { name, logo, jersey_color, description, image } = req.body;
+    const { name, logo, jersey_color, description, image, coach, stadium } = req.body;
     if (!name) return res.status(400).json({ error: 'Tên đội không được trống' });
     const result = db.prepare(`
-      INSERT INTO teams (name, logo, jersey_color, description, image)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null);
-    res.status(201).json({ id: result.lastInsertRowid, name, logo, jersey_color, description, image });
+      INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, coach || null, stadium || null);
+    res.status(201).json({ id: result.lastInsertRowid, name, logo, jersey_color, description, image, coach, stadium });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -145,20 +145,20 @@ router.put('/:id', authRequired, (req, res) => {
       return res.status(403).json({ error: 'Không có quyền chỉnh sửa đội này' });
     }
 
-    const { name, logo, jersey_color, description, image } = req.body;
+    const { name, logo, jersey_color, description, image, coach, stadium } = req.body;
 
     let info;
     if (isTeamAdmin) {
-      // Team representative can only modify logo, jersey color, and description
+      // Team representative can modify logo, jersey color, description, coach, and stadium
       info = db.prepare(`
-        UPDATE teams SET logo=?, jersey_color=?, description=? WHERE id=?
-      `).run(logo || null, jersey_color || '#0066CC', description || '', req.params.id);
+        UPDATE teams SET logo=?, jersey_color=?, description=?, coach=?, stadium=? WHERE id=?
+      `).run(logo || null, jersey_color || '#0066CC', description || '', coach || null, stadium || null, req.params.id);
     } else {
       // Admin/Super Admin can update all
       if (!name) return res.status(400).json({ error: 'Tên đội không được trống' });
       info = db.prepare(`
-        UPDATE teams SET name=?, logo=?, jersey_color=?, description=?, image=? WHERE id=?
-      `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, req.params.id);
+        UPDATE teams SET name=?, logo=?, jersey_color=?, description=?, image=?, coach=?, stadium=? WHERE id=?
+      `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, coach || null, stadium || null, req.params.id);
     }
 
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy đội' });
