@@ -196,6 +196,17 @@ export default function AdminTeams() {
     }
   };
 
+  const handleGenerateAccounts = async () => {
+    if (!confirm('Tự động tạo tài khoản đại diện cho các đội bóng chưa có tài khoản? Mật khẩu mặc định sẽ là admin123.')) return;
+    try {
+      const res = await api.post('/teams/generate-accounts');
+      alert(res.message || 'Cấp tài khoản thành công!');
+      load();
+    } catch (err) {
+      alert(err.message || 'Có lỗi xảy ra khi cấp tài khoản.');
+    }
+  };
+
   return (
     <div>
       {/* Header */}
@@ -225,18 +236,23 @@ export default function AdminTeams() {
             📥 Xuất Excel
           </button>
           {user?.role !== 'team' && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(true);
-                setEditId(null);
-                setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '', coach: '', stadium: '' });
-                setLogoPreview('');
-              }}
-              className="btn-primary text-sm"
-            >
-              + Thêm đội
-            </button>
+            <>
+              <button type="button" onClick={handleGenerateAccounts} className="btn-outline text-sm flex items-center gap-1">
+                🔑 Cấp tài khoản
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(true);
+                  setEditId(null);
+                  setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '', coach: '', stadium: '' });
+                  setLogoPreview('');
+                }}
+                className="btn-primary text-sm"
+              >
+                + Thêm đội
+              </button>
+            </>
           )}
         </div>
       </div>

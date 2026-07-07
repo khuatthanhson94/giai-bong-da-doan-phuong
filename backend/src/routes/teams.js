@@ -80,6 +80,53 @@ function getSlugifiedUsername(name) {
     .replace(/[^a-z0-9]/g, ''); // keep alphanumeric only
 }
 
+// ---------- POST GENERATE ACCOUNTS ----------
+router.post('/generate-accounts', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
+  try {
+    const teams = db.prepare('SELECT id, name FROM teams').all();
+    const checkUserByTeam = db.prepare('SELECT id FROM users WHERE team_id = ?');
+    const checkUserExists = db.prepare('SELECT id FROM users WHERE username = ?');
+    const insertUser = db.prepare(`
+      INSERT INTO users (username, password_hash, role, team_id)
+      VALUES (?, ?, 'team', ?)
+    `);
+    const passwordHash = bcrypt.hashSync('admin123', 10);
+
+    let generatedCount = 0;
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const t of teams) {
+        // Check if team already has an account
+        const existing = checkUserByTeam.get(t.id);
+        if (existing) continue;
+
+        // Auto create user for team
+        let baseUsername = getSlugifiedUsername(t.name);
+        let finalUsername = baseUsername;
+        let suffix = 1;
+        while (checkUserExists.get(finalUsername)) {
+          finalUsername = `${baseUsername}${suffix}`;
+          suffix++;
+        }
+
+        insertUser.run(finalUsername, passwordHash, t.id);
+        generatedCount++;
+      }
+      db.exec('COMMIT');
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
+    }
+
+    res.json({
+      message: `Đã tự động tạo thành công ${generatedCount} tài khoản mới cho các đội bóng chưa có tài khoản`,
+      generatedCount
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------- POST IMPORT ----------
 router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
