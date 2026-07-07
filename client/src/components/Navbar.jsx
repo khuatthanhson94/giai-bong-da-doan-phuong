@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import api from '../api/client';
+import { useSettings } from '../context/SettingsContext';
 
 const primaryNavItems = [
   { to: '/', label: 'Trang chủ' },
@@ -8,12 +9,12 @@ const primaryNavItems = [
   { to: '/ket-qua', label: 'Kết quả' },
   { to: '/bang-xep-hang', label: 'BXH' },
   { to: '/doi-bong', label: 'Đội bóng' },
+  { to: '/thong-ke', label: 'Thống kê' },
   { to: '/tin-tuc', label: 'Tin tức' },
 ];
 
 const secondaryNavItems = [
   { to: '/cau-thu', label: 'Cầu thủ' },
-  { to: '/thong-ke', label: 'Thống kê' },
   { to: '/thu-vien-anh', label: 'Thư viện ảnh' },
   { to: '/gioi-thieu', label: 'Giới thiệu giải' },
   { to: '/lien-he', label: 'Liên hệ' },
@@ -35,13 +36,7 @@ const mobileNavItems = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const [settings, setSettings] = useState({});
-
-  useEffect(() => {
-    api.get('/settings')
-      .then(setSettings)
-      .catch(err => console.error('Failed to load settings in navbar:', err));
-  }, []);
+  const { settings } = useSettings();
 
   const getFullUrl = (url) => {
     if (!url) return '';
