@@ -51,7 +51,59 @@ if (isVercel) {
   dbPath = path.join(dataDir, 'tournament.db');
 }
 
-export const db = new DatabaseSync(dbPath);
+import { restoreDatabase, scheduleSync } from './services/sync.js';
+
+// Top-level await to restore SQLite database from PostgreSQL cloud storage on startup
+if (process.env.SYNC_DATABASE_URL) {
+  try {
+    await restoreDatabase(dbPath);
+  } catch (err) {
+    console.error('[Sync] Error during startup restore:', err.message);
+  }
+}
+
+const rawDb = new DatabaseSync(dbPath);
+
+// Helper to check if a query modifies data
+function triggerSyncIfWrite(sql) {
+  const isWrite = /insert|update|delete|replace|create|drop|alter/i.test(sql);
+  if (isWrite) {
+    scheduleSync(dbPath);
+  }
+}
+
+// Proxy wrapper for SQLite DatabaseSync to automatically backup changes
+export const db = new Proxy(rawDb, {
+  get(target, prop) {
+    if (prop === 'exec') {
+      return function (sql) {
+        const result = target.exec(sql);
+        triggerSyncIfWrite(sql);
+        return result;
+      };
+    }
+    if (prop === 'prepare') {
+      return function (sql) {
+        const stmt = target.prepare(sql);
+        const rawRun = stmt.run;
+        
+        stmt.run = function (...args) {
+          const result = rawRun.apply(stmt, args);
+          triggerSyncIfWrite(sql);
+          return result;
+        };
+        
+        return stmt;
+      };
+    }
+    const value = target[prop];
+    if (typeof value === 'function') {
+      return value.bind(target);
+    }
+    return value;
+  }
+});
+
 export { dbPath };
 // Enable foreign key constraints for cascade deletes
 db.exec('PRAGMA foreign_keys = ON');

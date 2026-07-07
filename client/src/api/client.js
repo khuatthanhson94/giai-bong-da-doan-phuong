@@ -1,4 +1,7 @@
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_BASE = (
+  import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? '' : 'https://giai-bong-da-doan-phuong-backend.onrender.com')
+).replace(/\/$/, '');
 const API = `${API_BASE}/api`;
 
 function getToken() {

@@ -130,6 +130,14 @@ app.post('/api/admin/restore-database', upload.single('database'), async (req, r
     
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
+
+    // Sync to cloud backup immediately
+    try {
+      const { backupDatabase } = await import('./services/sync.js');
+      await backupDatabase(dbPath);
+    } catch (syncErr) {
+      console.error('[Sync] Failed to sync to cloud after restore:', syncErr.message);
+    }
     
     res.json({ message: 'Database restored successfully' });
   } catch (error) {
