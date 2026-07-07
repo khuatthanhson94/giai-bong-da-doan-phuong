@@ -243,70 +243,113 @@ export default function AdminTeams() {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4">
-          <label className="form-label">Tên đội</label>
-          <input
-            className="input-field"
-            placeholder="Tên đội"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-            disabled={user?.role === 'team'}
-          />
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-6 bg-white shadow-lg rounded-2xl border border-gray-100">
+          <h2 className="text-lg font-bold text-primary border-b pb-2">
+            {editId ? '📝 Chỉnh sửa thông tin đội bóng' : '➕ Thêm đội bóng mới'}
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Tên đội */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Tên đội <span className="text-red-500">*</span></label>
+              <input
+                className="input-field"
+                placeholder="Nhập tên đội bóng"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                disabled={user?.role === 'team'}
+              />
+            </div>
 
-          <label className="form-label">Màu áo</label>
-          <div className="flex items-center gap-2">
-            <input
-              className="input-field"
-              type="color"
-              value={form.jersey_color}
-              onChange={(e) => setForm({ ...form, jersey_color: e.target.value })}
-            />
-            <div className="w-6 h-6 rounded border" style={{ backgroundColor: form.jersey_color }}></div>
+            {/* Màu áo */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Màu áo chủ đạo</label>
+              <div className="flex items-center gap-3">
+                <input
+                  className="w-12 h-10 p-0.5 rounded border border-gray-200 cursor-pointer"
+                  type="color"
+                  value={form.jersey_color}
+                  onChange={(e) => setForm({ ...form, jersey_color: e.target.value })}
+                />
+                <div className="text-xs text-gray-500 font-mono uppercase bg-gray-100 px-2 py-1.5 rounded">
+                  {form.jersey_color}
+                </div>
+              </div>
+            </div>
+
+            {/* Huấn luyện viên trưởng */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Huấn luyện viên trưởng</label>
+              <input
+                className="input-field"
+                placeholder="Tên HLV trưởng (Không bắt buộc)"
+                value={form.coach}
+                onChange={(e) => setForm({ ...form, coach: e.target.value })}
+              />
+            </div>
+
+            {/* Sân nhà */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Sân nhà</label>
+              <input
+                className="input-field"
+                placeholder="Tên sân nhà (Không bắt buộc)"
+                value={form.stadium}
+                onChange={(e) => setForm({ ...form, stadium: e.target.value })}
+              />
+            </div>
           </div>
 
-          <label className="form-label">Giới thiệu</label>
-          <textarea
-            className="input-field"
-            rows={3}
-            placeholder="Giới thiệu"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
+          {/* Giới thiệu */}
+          <div className="space-y-1">
+            <label className="form-label font-semibold text-gray-700">Giới thiệu đội bóng</label>
+            <textarea
+              className="input-field"
+              rows={2}
+              placeholder="Mô tả sơ lược về lịch sử, thành tích hoặc mục tiêu đội bóng (Không bắt buộc)"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
 
-          <label className="form-label">Huấn luyện viên trưởng</label>
-          <input
-            className="input-field"
-            placeholder="Huấn luyện viên trưởng"
-            value={form.coach}
-            onChange={(e) => setForm({ ...form, coach: e.target.value })}
-          />
+          {/* Logo Upload Section */}
+          <div className="grid md:grid-cols-2 gap-4 items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Logo đội bóng</label>
+              <input
+                className="input-field bg-white"
+                placeholder="Đường dẫn URL ảnh logo"
+                value={form.logo}
+                onChange={(e) => setForm({ ...form, logo: e.target.value })}
+              />
+              <div className="mt-2">
+                <span className="text-xs text-gray-400 block mb-1">Hoặc tải file ảnh lên trực tiếp:</span>
+                <input type="file" accept="image/*" onChange={handleLogoChange} className="text-xs text-gray-500" />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center p-2">
+              {logoPreview ? (
+                <div className="text-center">
+                  <img src={getFullUrl(logoPreview)} alt="Logo preview" className="w-24 h-24 object-contain rounded-lg border bg-white p-1 shadow-sm" />
+                  <span className="text-[10px] text-gray-400 mt-1 block">Ảnh xem trước</span>
+                </div>
+              ) : (
+                <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs text-center bg-white p-2">
+                  Chưa có logo
+                </div>
+              )}
+            </div>
+          </div>
 
-          <label className="form-label">Sân nhà</label>
-          <input
-            className="input-field"
-            placeholder="Sân nhà"
-            value={form.stadium}
-            onChange={(e) => setForm({ ...form, stadium: e.target.value })}
-          />
-
-          <label className="form-label">URL Logo</label>
-          <input
-            className="input-field"
-            placeholder="URL Logo"
-            value={form.logo}
-            onChange={(e) => setForm({ ...form, logo: e.target.value })}
-          />
-          <input type="file" accept="image/*" onChange={handleLogoChange} className="mt-2" />
-          {logoPreview && (
-            <img src={getFullUrl(logoPreview)} alt="Logo preview" className="mt-2 w-24 h-24 object-contain" />
-          )}
-          <div className="flex gap-2">
-            <button type="submit" className="btn-primary text-sm">
-              {editId ? 'Cập nhật' : 'Thêm'}
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2 justify-end">
+            <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm px-5 py-2">
+              Hủy bỏ
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm">
-              Hủy
+            <button type="submit" className="btn-primary text-sm px-6 py-2 shadow-md shadow-blue-500/10">
+              {editId ? 'Cập nhật' : 'Lưu lại'}
             </button>
           </div>
         </form>
