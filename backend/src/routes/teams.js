@@ -67,6 +67,59 @@ router.get('/:id', (req, res) => {
   }
 });
 
+// ---------- POST IMPORT ----------
+router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
+  try {
+    const { teams } = req.body;
+    if (!Array.isArray(teams)) return res.status(400).json({ error: 'Dữ liệu đội bóng không hợp lệ' });
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const insertTeam = db.prepare(`
+        INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const findGroup = db.prepare('SELECT id FROM groups WHERE name = ?');
+      const insertGroup = db.prepare('INSERT INTO groups (name) VALUES (?)');
+      const insertGroupTeam = db.prepare('INSERT OR IGNORE INTO group_teams (group_id, team_id) VALUES (?, ?)');
+
+      for (const t of teams) {
+        if (!t.name) continue;
+        const result = insertTeam.run(
+          t.name,
+          t.logo || null,
+          t.jersey_color || '#0066CC',
+          t.description || '',
+          t.image || null,
+          t.coach || null,
+          t.stadium || null
+        );
+        const teamId = result.lastInsertRowid;
+
+        if (t.group_name && t.group_name.trim()) {
+          const gName = t.group_name.trim();
+          let g = findGroup.get(gName);
+          let groupId;
+          if (!g) {
+            const groupResult = insertGroup.run(gName);
+            groupId = groupResult.lastInsertRowid;
+          } else {
+            groupId = g.id;
+          }
+          insertGroupTeam.run(groupId, teamId);
+        }
+      }
+      db.exec('COMMIT');
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
+    }
+    res.json({ message: 'Nhập danh sách đội bóng thành công' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------- POST ----------
 router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {

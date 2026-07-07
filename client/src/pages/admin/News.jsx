@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import RichTextEditor from '../../components/RichTextEditor';
 
 export default function AdminNews() {
   const [news, setNews] = useState([]);
@@ -16,6 +17,7 @@ export default function AdminNews() {
     else await api.post('/news', form);
     setShowForm(false);
     setEditId(null);
+    setForm({ title: '', content: '', category: 'general', image: '', video_url: '', published: 1 });
     load();
   };
 
@@ -23,21 +25,37 @@ export default function AdminNews() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-primary">Quản lý tin tức</h1>
-        <button onClick={() => setShowForm(true)} className="btn-primary text-sm">+ Thêm bài viết</button>
+        <button onClick={() => {
+          setShowForm(true);
+          setEditId(null);
+          setForm({ title: '', content: '', category: 'general', image: '', video_url: '', published: 1 });
+        }} className="btn-primary text-sm">+ Thêm bài viết</button>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4">
+          <label className="form-label font-semibold">Tiêu đề bài viết</label>
           <input className="input-field" placeholder="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          
+          <label className="form-label font-semibold">Chuyên mục</label>
           <select className="input-field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             <option value="general">Chung</option>
             <option value="khai-mac">Khai mạc</option>
             <option value="vong-dau">Vòng đấu</option>
             <option value="tong-ket">Tổng kết</option>
           </select>
-          <textarea className="input-field" placeholder="Nội dung (HTML)" rows={8} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+          
+          <div className="space-y-1">
+            <label className="form-label font-semibold text-gray-700">Nội dung bài viết</label>
+            <RichTextEditor value={form.content} onChange={(html) => setForm({ ...form, content: html })} />
+          </div>
+          
+          <label className="form-label font-semibold">URL Ảnh bìa (Không bắt buộc)</label>
           <input className="input-field" placeholder="URL ảnh" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+          
+          <label className="form-label font-semibold">URL Video Youtube (Nhúng - Không bắt buộc)</label>
           <input className="input-field" placeholder="URL video (YouTube embed)" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />
+          
           <div className="flex gap-2">
             <button type="submit" className="btn-primary text-sm">Lưu</button>
             <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm">Hủy</button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +21,7 @@ export default function AdminTeams() {
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
+  const fileInputRef = useRef(null);
 
   // Load teams on mount
   const load = () => {
@@ -38,6 +39,67 @@ export default function AdminTeams() {
       load();
     }
   }, [user]);
+
+  const downloadTemplate = () => {
+    const headers = ['Tên đội', 'Màu áo', 'Bảng đấu', 'Huấn luyện viên', 'Sân nhà', 'Giới thiệu'];
+    const sampleRows = [
+      ['Đội bóng Đoàn phường A', '#FF0000', 'Bảng A', 'Nguyễn Văn Hùng', 'Sân cỏ nhân tạo Phường', 'Đội bóng thanh niên khối phố 1'],
+      ['Đội bóng Đoàn phường B', '#0000FF', 'Bảng A', 'Trần Văn Cường', 'Sân cỏ nhân tạo Phường', 'Đội bóng thanh niên khối phố 2'],
+      ['Đội bóng Đoàn phường C', '#FFA500', 'Bảng B', 'Lê Văn Tuấn', 'Sân cỏ nhân tạo Phường', 'Đội bóng liên chi đoàn cơ quan']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mẫu Nhập Đội');
+    XLSX.writeFile(wb, 'mau_nhap_doi_bong.xlsx');
+  };
+
+  const handleExcelImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) {
+          alert('Không tìm thấy dữ liệu đội bóng trong tệp Excel.');
+          return;
+        }
+
+        const mappedTeams = data.map((row) => ({
+          name: row['Tên đội'] || row['Tên đội bóng'] || row['Name'] || '',
+          jersey_color: row['Màu áo'] || row['Jersey Color'] || '#0066CC',
+          description: row['Giới thiệu'] || row['Mô tả'] || row['Description'] || '',
+          coach: row['Huấn luyện viên'] || row['Coach'] || '',
+          stadium: row['Sân nhà'] || row['Stadium'] || '',
+          group_name: row['Bảng đấu'] || row['Group'] || ''
+        })).filter(t => t.name.toString().trim() !== '');
+
+        if (mappedTeams.length === 0) {
+          alert('Không tìm thấy bản ghi đội bóng hợp lệ (cần có cột "Tên đội").');
+          return;
+        }
+
+        const confirmMsg = `Bạn có chắc chắn muốn nhập ${mappedTeams.length} đội bóng từ tệp Excel vào hệ thống?`;
+        if (!confirm(confirmMsg)) return;
+
+        await api.post('/teams/import', { teams: mappedTeams });
+        alert(`Nhập dữ liệu thành công! Đã chèn ${mappedTeams.length} đội bóng.`);
+        load();
+      } catch (err) {
+        console.error('Failed to parse and import Excel file:', err);
+        alert('Lỗi nhập Excel: ' + (err.message || err));
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   const exportTeams = () => {
     const headers = ['Tên đội bóng', 'Màu áo', 'Điểm số', 'Giới thiệu'];
@@ -137,12 +199,30 @@ export default function AdminTeams() {
         <h1 className="text-2xl font-bold text-primary">
           {user?.role === 'team' ? 'Thông tin đội bóng' : 'Quản lý đội bóng'}
         </h1>
-        <div className="flex gap-2">
-          <button onClick={exportTeams} className="btn-outline text-sm flex items-center gap-1">
+        <div className="flex flex-wrap gap-2">
+          {user?.role !== 'team' && (
+            <>
+              <button type="button" onClick={downloadTemplate} className="btn-outline text-sm flex items-center gap-1 bg-gray-50 hover:bg-gray-100">
+                📄 Mẫu Excel
+              </button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-outline text-sm flex items-center gap-1 bg-green-50 text-green-700 border-green-300 hover:bg-green-100">
+                📤 Nhập Excel
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleExcelImport} 
+                accept=".xlsx, .xls" 
+                className="hidden" 
+              />
+            </>
+          )}
+          <button type="button" onClick={exportTeams} className="btn-outline text-sm flex items-center gap-1">
             📥 Xuất Excel
           </button>
           {user?.role !== 'team' && (
             <button
+              type="button"
               onClick={() => {
                 setShowForm(true);
                 setEditId(null);
