@@ -197,6 +197,44 @@ app.get('/api/debug/sync', async (req, res) => {
   });
 });
 
+app.get('/api/debug/cloud-uploads', async (req, res) => {
+  const url = process.env.SYNC_DATABASE_URL;
+  if (!url) {
+    return res.json({ configured: false, count: 0, files: [] });
+  }
+
+  try {
+    const pg = await import('pg');
+    const client = new pg.default.Client({ connectionString: url });
+    await client.connect();
+
+    try {
+      const tableCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'uploaded_files'
+        );
+      `);
+      
+      const hasTable = tableCheck.rows[0].exists;
+      if (!hasTable) {
+        return res.json({ configured: true, count: 0, message: 'uploaded_files table does not exist yet.', files: [] });
+      }
+
+      const dbRes = await client.query("SELECT filename, length(data) as size_bytes, mime_type, created_at FROM uploaded_files");
+      res.json({
+        configured: true,
+        count: dbRes.rows.length,
+        files: dbRes.rows
+      });
+    } finally {
+      await client.end();
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Admin endpoint to restore database from uploaded file (for initial setup)
