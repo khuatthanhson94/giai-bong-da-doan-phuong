@@ -234,6 +234,7 @@ router.delete('/all', authRequired, requireRole('admin', 'super_admin'), (req, r
       db.prepare('DELETE FROM matches').run();
       db.prepare('DELETE FROM group_teams').run();
       db.prepare('DELETE FROM players').run();
+      db.prepare('DELETE FROM users WHERE role = \'team\'').run();
       db.prepare('DELETE FROM teams').run();
       db.exec('COMMIT');
     } catch (e) {
@@ -267,6 +268,7 @@ router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, r
       db.prepare('DELETE FROM matches WHERE team_a_id = ? OR team_b_id = ?').run(teamId, teamId);
       db.prepare('DELETE FROM group_teams WHERE team_id = ?').run(teamId);
       db.prepare('DELETE FROM players WHERE team_id = ?').run(teamId);
+      db.prepare('DELETE FROM users WHERE team_id = ?').run(teamId);
       db.prepare('DELETE FROM teams WHERE id = ?').run(teamId);
       db.exec('COMMIT');
     } catch (e) {
