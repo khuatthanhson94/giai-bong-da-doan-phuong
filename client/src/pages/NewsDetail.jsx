@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
+import { useSettings } from '../context/SettingsContext';
 
 import { getFullUrl } from '../utils/url';
 
 export default function NewsDetail() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
+  const { settings } = useSettings();
 
   useEffect(() => {
     api.get(`/news/${id}`).then(setItem);
@@ -20,7 +22,9 @@ export default function NewsDetail() {
       <span className="text-xs text-youth font-medium uppercase">{item.category}</span>
       <h1 className="text-3xl font-bold text-primary mt-2 mb-4">{item.title}</h1>
       <p className="text-sm text-gray-400 mb-8">{new Date(item.created_at).toLocaleDateString('vi-VN')}</p>
-      {item.image && <img src={getFullUrl(item.image)} alt="" className="w-full rounded-xl mb-8" />}
+      {(item.image || settings?.logo_url) && (
+        <img src={getFullUrl(item.image || settings.logo_url)} alt="" className="w-full rounded-xl mb-8 object-cover max-h-[400px]" />
+      )}
       <div className="prose max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.content }} />
       {item.video_url && (
         <div className="mt-8">

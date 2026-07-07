@@ -1,4 +1,5 @@
 import { getFullUrl } from '../utils/url';
+import { useSettings } from '../context/SettingsContext';
 
 export default function MatchCard({ match, showScore = false }) {
   const teamA = match.team_a || { name: match.team_a_name, logo: match.team_a_logo };
@@ -45,8 +46,11 @@ export default function MatchCard({ match, showScore = false }) {
 }
 
 function TeamBadge({ team }) {
-  if (team?.logo) {
-    return <img src={getFullUrl(team.logo)} alt="" className="w-12 h-12 mx-auto rounded-full object-cover" />;
+  const { settings } = useSettings();
+  const logo = team?.logo || settings?.logo_url;
+
+  if (logo) {
+    return <img src={getFullUrl(logo)} alt="" className="w-12 h-12 mx-auto rounded-full object-cover" />;
   }
   return (
     <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold">

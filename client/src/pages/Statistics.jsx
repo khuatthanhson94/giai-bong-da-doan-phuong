@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import api from '../api/client';
+import { getFullUrl } from '../utils/url';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -12,11 +13,18 @@ function TopList({ title, items, valueKey, color }) {
       {items.slice(0, 5).map((p, i) => (
         <div key={p.id} className="flex items-center gap-3 py-2 border-b last:border-0">
           <span className="w-6 text-center font-bold text-gray-400">{i + 1}</span>
-          <div className="flex-1">
-            <p className="font-medium text-sm">{p.name}</p>
-            <p className="text-xs text-gray-500">{p.team_name}</p>
+          {p.photo ? (
+            <img src={getFullUrl(p.photo)} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 font-bold flex-shrink-0">
+              {p.name?.charAt(0) || '?'}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{p.name}</p>
+            <p className="text-xs text-gray-500 truncate">{p.team_name}</p>
           </div>
-          <span className="font-bold" style={{ color }}>{p[valueKey]}</span>
+          <span className="font-bold text-sm flex-shrink-0" style={{ color }}>{p[valueKey]}</span>
         </div>
       ))}
     </div>

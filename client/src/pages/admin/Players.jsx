@@ -459,6 +459,7 @@ export default function AdminPlayers() {
                   }}
                 />
               </th>
+              <th>Ảnh</th>
               <th>Số áo</th>
               <th>Họ tên</th>
               <th>Đội</th>
@@ -479,6 +480,15 @@ export default function AdminPlayers() {
                       else setSelectedIds(selectedIds.filter((id) => id !== p.id));
                     }}
                   />
+                </td>
+                <td>
+                  {p.photo ? (
+                    <img src={getFullUrl(p.photo)} alt="" className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 font-bold">
+                      {p.name?.charAt(0) || '?'}
+                    </div>
+                  )}
                 </td>
                 <td>{p.jersey_number}</td>
                 <td>{p.name}</td>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { getFullUrl } from '../utils/url';
 
 export default function Players() {
   const [players, setPlayers] = useState([]);
@@ -23,9 +24,17 @@ export default function Players() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {players.map((p) => (
           <div key={p.id} className="card p-5 text-center hover:shadow-lg transition">
-            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white text-2xl font-bold mb-3">
-              {p.jersey_number}
-            </div>
+            {p.photo ? (
+              <img
+                src={getFullUrl(p.photo)}
+                alt=""
+                className="w-20 h-20 mx-auto rounded-full object-cover mb-3"
+              />
+            ) : (
+              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white text-2xl font-bold mb-3">
+                {p.jersey_number}
+              </div>
+            )}
             <h3 className="font-bold">{p.name}</h3>
             <p className="text-sm text-youth font-medium">{p.team_name}</p>
             <p className="text-xs text-gray-500 mt-1">{p.position}</p>

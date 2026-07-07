@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import RichTextEditor from '../../components/RichTextEditor';
+import { getFullUrl } from '../../utils/url';
 
 export default function AdminNews() {
   const [news, setNews] = useState([]);
@@ -19,6 +20,19 @@ export default function AdminNews() {
     setEditId(null);
     setForm({ title: '', content: '', category: 'general', image: '', video_url: '', published: 1 });
     load();
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const res = await api.upload(file);
+      const url = res.url || `/uploads/${res.filename}`;
+      setForm((prev) => ({ ...prev, image: url }));
+    } catch (err) {
+      console.error('Failed to upload news cover image:', err);
+      alert('Tải ảnh bìa thất bại: ' + err.message);
+    }
   };
 
   return (
@@ -50,8 +64,12 @@ export default function AdminNews() {
             <RichTextEditor value={form.content} onChange={(html) => setForm({ ...form, content: html })} />
           </div>
           
-          <label className="form-label font-semibold">URL Ảnh bìa (Không bắt buộc)</label>
+          <label className="form-label font-semibold">Ảnh đại diện tin bài (Không bắt buộc)</label>
           <input className="input-field" placeholder="URL ảnh" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+          <input type="file" accept="image/*" onChange={handleImageUpload} className="mt-1 block text-sm" />
+          {form.image && (
+            <img src={getFullUrl(form.image)} alt="Cover preview" className="mt-2 w-32 h-20 object-cover rounded border" />
+          )}
           
           <label className="form-label font-semibold">URL Video Youtube (Nhúng - Không bắt buộc)</label>
           <input className="input-field" placeholder="URL video (YouTube embed)" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />

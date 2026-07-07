@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useSettings } from '../context/SettingsContext';
 
 import { getFullUrl } from '../utils/url';
 
@@ -14,6 +15,7 @@ const categories = [
 export default function News() {
   const [news, setNews] = useState([]);
   const [category, setCategory] = useState('');
+  const { settings } = useSettings();
 
   useEffect(() => {
     const params = category ? `?category=${category}` : '';
@@ -39,8 +41,12 @@ export default function News() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {news.map((n) => (
           <Link key={n.id} to={`/tin-tuc/${n.id}`} className="card group">
-            <div className="h-48 bg-gradient-to-br from-primary/10 to-youth/10 flex items-center justify-center">
-              {n.image ? <img src={getFullUrl(n.image)} alt="" className="w-full h-full object-cover" /> : <span className="text-5xl">📰</span>}
+            <div className="h-48 bg-gradient-to-br from-primary/10 to-youth/10 flex items-center justify-center overflow-hidden">
+              {n.image || settings?.logo_url ? (
+                <img src={getFullUrl(n.image || settings.logo_url)} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-5xl">📰</span>
+              )}
             </div>
             <div className="p-5">
               <span className="text-xs text-youth font-medium uppercase">{n.category}</span>

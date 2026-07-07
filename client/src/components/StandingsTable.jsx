@@ -1,6 +1,8 @@
 import { getFullUrl } from '../utils/url';
+import { useSettings } from '../context/SettingsContext';
 
 export default function StandingsTable({ standings, compact = false }) {
+  const { settings } = useSettings();
   const cols = compact
     ? ['#', 'Đội', 'Tr', 'Đ']
     : ['#', 'Đội', 'Tr', 'T', 'H', 'B', 'BT', 'BB', 'HS', 'Đ'];
@@ -19,9 +21,9 @@ export default function StandingsTable({ standings, compact = false }) {
               <td className="font-bold">{i + 1}</td>
               <td>
                 <div className="flex items-center gap-2">
-                  {s.logo ? (
+                  {s.logo || settings?.logo_url ? (
                     <img
-                      src={getFullUrl(s.logo)}
+                      src={getFullUrl(s.logo || settings.logo_url)}
                       alt=""
                       className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                     />
