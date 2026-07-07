@@ -7,10 +7,20 @@ const { Client } = pg;
 let syncTimeout = null;
 let isReadyToBackup = !process.env.SYNC_DATABASE_URL;
 
+export let lastSyncStatus = {
+  lastBackupAttempt: null,
+  lastBackupSuccess: null,
+  lastBackupError: null,
+  lastRestoreAttempt: null,
+  lastRestoreSuccess: null,
+  lastRestoreError: null
+};
+
 // Helper to delay execution
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function restoreDatabase(dbPath) {
+  lastSyncStatus.lastRestoreAttempt = new Date().toISOString();
   const url = process.env.SYNC_DATABASE_URL;
   if (!url) {
     console.log("[Sync] SYNC_DATABASE_URL is not set. Running database locally without cloud backup.");
@@ -45,7 +55,9 @@ export async function restoreDatabase(dbPath) {
   }
 
   if (!connected) {
-    throw new Error(`Failed to connect to PostgreSQL database after ${attempts} attempts.`);
+    const errorMsg = `Failed to connect to PostgreSQL database after ${attempts} attempts.`;
+    lastSyncStatus.lastRestoreError = errorMsg;
+    throw new Error(errorMsg);
   }
 
   try {
@@ -66,13 +78,16 @@ export async function restoreDatabase(dbPath) {
       }
       fs.writeFileSync(dbPath, res.rows[0].data);
       console.log(`[Sync] Successfully restored database size: ${res.rows[0].data.length} bytes`);
+      lastSyncStatus.lastRestoreSuccess = new Date().toISOString();
     } else {
       console.log("[Sync] No database backup found in cloud, starting with fresh template");
+      lastSyncStatus.lastRestoreSuccess = new Date().toISOString() + " (No backup found)";
     }
     
     // Set flag to allow future backups since we successfully connected and restored (or verified no backup exists)
     isReadyToBackup = true;
   } catch (err) {
+    lastSyncStatus.lastRestoreError = err.message;
     throw new Error(`Error querying sync table: ${err.message}`);
   } finally {
     try {
@@ -82,16 +97,19 @@ export async function restoreDatabase(dbPath) {
 }
 
 export async function backupDatabase(dbPath) {
+  lastSyncStatus.lastBackupAttempt = new Date().toISOString();
   const url = process.env.SYNC_DATABASE_URL;
   if (!url) return;
 
   if (!isReadyToBackup) {
     console.warn("[Sync] Backup skipped: database was not successfully restored on startup. Protecting cloud data from being overwritten by template.");
+    lastSyncStatus.lastBackupError = "Backup skipped: restore failed on startup.";
     return;
   }
 
   if (!fs.existsSync(dbPath)) {
     console.log("[Sync] Database file not found to backup:", dbPath);
+    lastSyncStatus.lastBackupError = "Database file not found.";
     return;
   }
 
@@ -109,11 +127,14 @@ export async function backupDatabase(dbPath) {
         SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP;
       `, ["tournament.db", data]);
       console.log(`[Sync] Successfully backed up database size: ${data.length} bytes`);
+      lastSyncStatus.lastBackupSuccess = new Date().toISOString();
+      lastSyncStatus.lastBackupError = null;
     } finally {
       await client.end();
     }
   } catch (err) {
     console.error("[Sync] Backup failed:", err.message);
+    lastSyncStatus.lastBackupError = err.message;
   }
 }
 
@@ -134,10 +155,15 @@ export function scheduleSync(dbPath) {
   syncTimeout = setTimeout(() => {
     backupDatabase(dbPath).catch((err) => {
       console.error("[Sync] Background backup error:", err.message);
+      lastSyncStatus.lastBackupError = err.message;
     });
   }, 2000); // sync 2 seconds after last write
 }
 
-
-export function getSyncStatus() { return { isReadyToBackup }; }
+export function getSyncStatus() {
+  return {
+    isReadyToBackup,
+    ...lastSyncStatus
+  };
+}
 
