@@ -67,6 +67,19 @@ router.get('/:id', (req, res) => {
   }
 });
 
+import bcrypt from 'bcryptjs';
+
+function getSlugifiedUsername(name) {
+  if (!name) return '';
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, ''); // keep alphanumeric only
+}
+
 // ---------- POST IMPORT ----------
 router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
@@ -82,6 +95,12 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
       const findGroup = db.prepare('SELECT id FROM groups WHERE name = ?');
       const insertGroup = db.prepare('INSERT INTO groups (name) VALUES (?)');
       const insertGroupTeam = db.prepare('INSERT OR IGNORE INTO group_teams (group_id, team_id) VALUES (?, ?)');
+      const checkUserExists = db.prepare('SELECT id FROM users WHERE username = ?');
+      const insertUser = db.prepare(`
+        INSERT INTO users (username, password_hash, role, team_id)
+        VALUES (?, ?, 'team', ?)
+      `);
+      const passwordHash = bcrypt.hashSync('admin123', 10);
 
       for (const t of teams) {
         if (!t.name) continue;
@@ -95,6 +114,16 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
           t.stadium || null
         );
         const teamId = result.lastInsertRowid;
+
+        // Auto create user for team
+        let baseUsername = getSlugifiedUsername(t.name);
+        let finalUsername = baseUsername;
+        let suffix = 1;
+        while (checkUserExists.get(finalUsername)) {
+          finalUsername = `${baseUsername}${suffix}`;
+          suffix++;
+        }
+        insertUser.run(finalUsername, passwordHash, teamId);
 
         if (t.group_name && t.group_name.trim()) {
           const gName = t.group_name.trim();
@@ -125,11 +154,35 @@ router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) =
   try {
     const { name, logo, jersey_color, description, image, coach, stadium } = req.body;
     if (!name) return res.status(400).json({ error: 'Tên đội không được trống' });
-    const result = db.prepare(`
-      INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, coach || null, stadium || null);
-    res.status(201).json({ id: result.lastInsertRowid, name, logo, jersey_color, description, image, coach, stadium });
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = db.prepare(`
+        INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, coach || null, stadium || null);
+      const teamId = result.lastInsertRowid;
+
+      // Auto create user for team
+      let baseUsername = getSlugifiedUsername(name);
+      let finalUsername = baseUsername;
+      let suffix = 1;
+      while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+        finalUsername = `${baseUsername}${suffix}`;
+        suffix++;
+      }
+      const passwordHash = bcrypt.hashSync('admin123', 10);
+      db.prepare(`
+        INSERT INTO users (username, password_hash, role, team_id)
+        VALUES (?, ?, 'team', ?)
+      `).run(finalUsername, passwordHash, teamId);
+
+      db.exec('COMMIT');
+      res.status(201).json({ id: teamId, name, logo, jersey_color, description, image, coach, stadium, username: finalUsername });
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
