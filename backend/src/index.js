@@ -171,10 +171,14 @@ app.get('/api/debug/sync', async (req, res) => {
     error = err.message;
   }
 
+  const { getSyncStatus } = await import('./services/sync.js');
+  const syncStatus = getSyncStatus();
+
   res.json({
     configured: true,
     maskedUrl: url.replace(/:([^:@]+)@/, ':****@'),
     connectionStatus,
+    syncStatus,
     localDb: {
       path: dbPathDebug,
       exists: localExists,
