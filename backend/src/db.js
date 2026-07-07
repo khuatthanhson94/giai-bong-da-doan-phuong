@@ -261,6 +261,20 @@ export function initDatabase() {
     // Column already exists, ignore
   }
 
+  // Migration: Add coach and stadium columns to teams if they don't exist
+  try {
+    db.exec('ALTER TABLE teams ADD COLUMN coach TEXT');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  // Migration: Add stadium column to teams if it doesn't exist
+  try {
+    db.exec('ALTER TABLE teams ADD COLUMN stadium TEXT');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
   // Automatically seed users if empty
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
   if (!userCount || userCount.count === 0) {
