@@ -106,8 +106,7 @@ app.use('/api', publicRoutes);
 
 // Debug endpoint to list uploaded files (for development)
 app.get('/api/debug/uploads', (req, res) => {
-  const dir = path.join(__dirname, '..', 'uploads');
-  fs.readdir(dir, (err, files) => {
+  fs.readdir(uploadDir, (err, files) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
