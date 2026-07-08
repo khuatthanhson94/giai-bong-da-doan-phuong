@@ -86,10 +86,10 @@ router.delete('/users/:id', authRequired, requireRole(ROLES.SUPER_ADMIN), (req, 
 });
 
 // Reset password to admin123 (super_admin only)
-router.post('/users/:id/reset-password', authRequired, requireRole(ROLES.SUPER_ADMIN), async (req, res) => {
+router.post('/users/:id/reset-password', authRequired, requireRole(ROLES.SUPER_ADMIN), (req, res) => {
   try {
-    const hash = await bcrypt.hash('admin123', 10);
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, req.params.id);
+    const hash = bcrypt.hashSync('admin123', 10);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, req.params.id);
     res.json({ message: 'Đặt lại mật khẩu thành công về mặc định (admin123)' });
   } catch (err) {
     res.status(500).json({ error: err.message });
