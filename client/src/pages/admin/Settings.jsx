@@ -81,6 +81,15 @@ export default function AdminSettings() {
     { key: 'union_logo', label: 'Logo Đoàn phường' },
     { key: 'logo_url', label: 'URL Logo Giải Đấu' },
     { key: 'banner_url', label: 'URL Banner Giải Đấu' },
+    { key: 'feature_1_icon', label: 'Tính năng 1: Icon (Emoji / Biểu tượng)' },
+    { key: 'feature_1_title', label: 'Tính năng 1: Tiêu đề' },
+    { key: 'feature_1_desc', label: 'Tính năng 1: Mô tả ngắn' },
+    { key: 'feature_2_icon', label: 'Tính năng 2: Icon (Emoji / Biểu tượng)' },
+    { key: 'feature_2_title', label: 'Tính năng 2: Tiêu đề' },
+    { key: 'feature_2_desc', label: 'Tính năng 2: Mô tả ngắn' },
+    { key: 'feature_3_icon', label: 'Tính năng 3: Icon (Emoji / Biểu tượng)' },
+    { key: 'feature_3_title', label: 'Tính năng 3: Tiêu đề' },
+    { key: 'feature_3_desc', label: 'Tính năng 3: Mô tả ngắn' },
   ];
 
   if (user?.role === 'team') {

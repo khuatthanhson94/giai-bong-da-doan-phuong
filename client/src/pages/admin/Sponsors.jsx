@@ -22,6 +22,7 @@ export default function AdminSponsors() {
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
+  const [settings, setSettings] = useState({});
   const fileInputRef = useRef(null);
 
   const load = () => {
@@ -30,6 +31,7 @@ export default function AdminSponsors() {
 
   useEffect(() => {
     load();
+    api.get('/settings').then(setSettings).catch(console.error);
   }, []);
 
   const handleLogoChange = async (e) => {
@@ -193,14 +195,16 @@ export default function AdminSponsors() {
             </div>
 
             <div className="flex items-center justify-center p-2">
-              {logoPreview ? (
+              {logoPreview || settings?.logo_url ? (
                 <div className="text-center">
                   <img
-                    src={getFullUrl(logoPreview)}
+                    src={logoPreview ? getFullUrl(logoPreview) : getFullUrl(settings?.logo_url)}
                     alt="Logo preview"
                     className="w-24 h-24 object-contain rounded-lg border bg-white p-1 shadow-sm mx-auto"
                   />
-                  <span className="text-[10px] text-gray-400 mt-1 block">Ảnh xem trước</span>
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    {logoPreview ? 'Ảnh xem trước' : 'Mặc định (Logo giải đấu)'}
+                  </span>
                 </div>
               ) : (
                 <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs text-center bg-white p-2">
@@ -243,9 +247,9 @@ export default function AdminSponsors() {
                   <td className="text-center text-gray-500 font-medium">{idx + 1}</td>
                   <td>
                     <div className="flex items-center gap-3">
-                      {s.logo ? (
+                      {s.logo || settings?.logo_url ? (
                         <img
-                          src={getFullUrl(s.logo)}
+                          src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)}
                           alt={s.name}
                           className="w-12 h-12 object-contain rounded border bg-white p-0.5 shadow-sm flex-shrink-0"
                         />
