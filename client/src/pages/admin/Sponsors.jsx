@@ -24,10 +24,28 @@ export default function AdminSponsors() {
   const [showForm, setShowForm] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
   const [settings, setSettings] = useState({});
+  const [selectedIds, setSelectedIds] = useState([]);
   const fileInputRef = useRef(null);
 
   const load = () => {
-    api.get('/sponsors').then(setSponsors);
+    api.get('/sponsors').then((data) => {
+      setSponsors(data);
+      setSelectedIds([]);
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} nhà tài trợ đã chọn?`)) return;
+    try {
+      for (const id of selectedIds) {
+        await api.delete(`/sponsors/${id}`);
+      }
+      alert('Đã xóa thành công các nhà tài trợ được chọn.');
+      load();
+    } catch (err) {
+      alert(err.message || 'Có lỗi xảy ra khi xóa các nhà tài trợ.');
+    }
   };
 
   useEffect(() => {
@@ -239,11 +257,37 @@ export default function AdminSponsors() {
         </form>
       )}
 
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl p-4 mb-4 animate-fade-in">
+          <span className="text-sm font-semibold text-red-700">
+            Đang chọn <span className="font-bold">{selectedIds.length}</span> nhà tài trợ
+          </span>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-sm transition duration-200"
+          >
+            🗑️ Xóa các mục đã chọn
+          </button>
+        </div>
+      )}
+
       {/* Sponsors list table */}
       <div className="card overflow-x-auto">
         <table className="table-styled">
           <thead>
             <tr>
+              <th className="w-10">
+                <input
+                  type="checkbox"
+                  checked={sponsors.length > 0 && selectedIds.length === sponsors.length}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(sponsors.map(s => s.id));
+                    else setSelectedIds([]);
+                  }}
+                  className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                />
+              </th>
               <th className="w-16 text-center">STT</th>
               <th>Nhà tài trợ</th>
               <th>Hạng</th>
@@ -257,6 +301,17 @@ export default function AdminSponsors() {
               const tierLabel = TIERS.find(t => t.value === s.tier)?.label || s.tier;
               return (
                 <tr key={s.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(s.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedIds([...selectedIds, s.id]);
+                        else setSelectedIds(selectedIds.filter(id => id !== s.id));
+                      }}
+                      className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                    />
+                  </td>
                   <td className="text-center text-gray-500 font-medium">{idx + 1}</td>
                   <td>
                     <div className="flex items-center gap-3">

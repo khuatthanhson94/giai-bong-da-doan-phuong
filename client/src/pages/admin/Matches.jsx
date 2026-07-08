@@ -22,10 +22,28 @@ export default function AdminMatches() {
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedMatchIdForResults, setSelectedMatchIdForResults] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const load = () => {
-    api.get('/matches').then(setMatches);
+    api.get('/matches').then((data) => {
+      setMatches(data);
+      setSelectedIds([]);
+    });
     api.get('/groups').then(setGroups);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} trận đấu đã chọn?`)) return;
+    try {
+      for (const id of selectedIds) {
+        await api.delete(`/matches/${id}`);
+      }
+      alert('Đã xóa thành công các trận đấu được chọn.');
+      load();
+    } catch (err) {
+      alert(err.message || 'Có lỗi xảy ra khi xóa các trận đấu.');
+    }
   };
 
   useEffect(() => {
@@ -337,10 +355,38 @@ export default function AdminMatches() {
         </form>
       )}
 
+      {selectedIds.length > 0 && user?.role !== 'scorekeeper' && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl p-4 mb-4 animate-fade-in">
+          <span className="text-sm font-semibold text-red-700">
+            Đang chọn <span className="font-bold">{selectedIds.length}</span> trận đấu
+          </span>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-sm transition duration-200"
+          >
+            🗑️ Xóa các mục đã chọn
+          </button>
+        </div>
+      )}
+
       <div className="card overflow-x-auto">
         <table className="table-styled">
           <thead>
             <tr>
+              {user?.role !== 'scorekeeper' && (
+                <th className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={matches.length > 0 && selectedIds.length === matches.length}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedIds(matches.map(m => m.id));
+                      else setSelectedIds([]);
+                    }}
+                    className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                  />
+                </th>
+              )}
               <th>Vòng</th>
               <th>Bảng</th>
               <th>Ngày</th>
@@ -354,6 +400,19 @@ export default function AdminMatches() {
           <tbody>
             {matches.map((m) => (
               <tr key={m.id}>
+                {user?.role !== 'scorekeeper' && (
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(m.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedIds([...selectedIds, m.id]);
+                        else setSelectedIds(selectedIds.filter(id => id !== m.id));
+                      }}
+                      className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                    />
+                  </td>
+                )}
                 <td className="font-semibold text-sm">{m.round}</td>
                 <td className="text-sm font-medium text-gray-600">
                   {m.group?.name || m.group_name || <span className="text-gray-400 italic">Knockout</span>}
@@ -388,7 +447,7 @@ export default function AdminMatches() {
             ))}
             {matches.length === 0 && (
               <tr>
-                <td colSpan="8" className="text-center text-gray-400 py-8 italic">Chưa có lịch thi đấu nào được tạo.</td>
+                <td colSpan={user?.role !== 'scorekeeper' ? "9" : "8"} className="text-center text-gray-400 py-8 italic">Chưa có lịch thi đấu nào được tạo.</td>
               </tr>
             )}
           </tbody>

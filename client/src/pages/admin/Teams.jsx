@@ -23,6 +23,7 @@ export default function AdminTeams() {
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
   const fileInputRef = useRef(null);
 
   // Load teams on mount
@@ -33,6 +34,7 @@ export default function AdminTeams() {
       } else {
         setTeams(data);
       }
+      setSelectedIds([]);
     });
   };
 
@@ -193,6 +195,20 @@ export default function AdminTeams() {
       load();
     } catch (err) {
       alert(err.message || 'Có lỗi xảy ra khi xóa đội bóng.');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} đội bóng đã chọn? Hành động này sẽ xóa toàn bộ dữ liệu liên quan!`)) return;
+    try {
+      for (const id of selectedIds) {
+        await api.delete(`/teams/${id}`);
+      }
+      alert('Đã xóa các đội bóng được chọn.');
+      load();
+    } catch (err) {
+      alert(err.message || 'Có lỗi xảy ra khi xóa các đội bóng.');
     }
   };
 
@@ -371,11 +387,39 @@ export default function AdminTeams() {
         </form>
       )}
 
+      {selectedIds.length > 0 && user?.role !== 'team' && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl p-4 mb-4 animate-fade-in">
+          <span className="text-sm font-semibold text-red-700">
+            Đang chọn <span className="font-bold">{selectedIds.length}</span> đội bóng
+          </span>
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-sm transition duration-200"
+          >
+            🗑️ Xóa các mục đã chọn
+          </button>
+        </div>
+      )}
+
       {/* Teams table */}
       <div className="card overflow-x-auto">
         <table className="table-styled">
           <thead>
             <tr>
+              {user?.role !== 'team' && (
+                <th className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={teams.length > 0 && selectedIds.length === teams.length}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedIds(teams.map(t => t.id));
+                      else setSelectedIds([]);
+                    }}
+                    className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                  />
+                </th>
+              )}
               <th>Tên</th>
               <th>Màu áo</th>
               <th>Logo</th>
@@ -386,6 +430,19 @@ export default function AdminTeams() {
           <tbody>
             {teams.map((t) => (
               <tr key={t.id}>
+                {user?.role !== 'team' && (
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(t.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedIds([...selectedIds, t.id]);
+                        else setSelectedIds(selectedIds.filter(id => id !== t.id));
+                      }}
+                      className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                    />
+                  </td>
+                )}
                 <td className="font-medium">{t.name}</td>
                 <td>
                   <div className="w-6 h-6 rounded" style={{ backgroundColor: t.jersey_color }} />
