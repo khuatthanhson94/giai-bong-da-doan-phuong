@@ -42,6 +42,12 @@ const ACTION_MAP = {
   'ASSIGN_TEAMS_TO_GROUP': { label: 'Xếp đội vào bảng', color: 'bg-blue-100 text-blue-800' },
   'REMOVE_TEAM_FROM_GROUP': { label: 'Xóa đội khỏi bảng', color: 'bg-red-100 text-red-800' },
   'AUTO_GENERATE_GROUPS': { label: 'Tự động chia bảng', color: 'bg-indigo-100 text-indigo-800' },
+  // News & Gallery
+  'CREATE_NEWS': { label: 'Tạo tin tức', color: 'bg-green-100 text-green-800' },
+  'UPDATE_NEWS': { label: 'Cập nhật tin tức', color: 'bg-yellow-100 text-yellow-800' },
+  'DELETE_NEWS': { label: 'Xóa tin tức', color: 'bg-red-100 text-red-800' },
+  'CREATE_GALLERY': { label: 'Thêm ảnh/video thư viện', color: 'bg-green-100 text-green-800' },
+  'DELETE_GALLERY': { label: 'Xóa ảnh/video thư viện', color: 'bg-red-100 text-red-800' },
 };
 
 export default function ActionLogs() {

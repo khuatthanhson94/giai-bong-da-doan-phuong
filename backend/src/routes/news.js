@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, canManageNews } from '../middleware/auth.js';
 
 const router = Router();
@@ -42,6 +42,7 @@ router.post('/', authRequired, (req, res, next) => {
     INSERT INTO news (title, slug, content, image, video_url, category, published)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(title, slug, content, image, video_url, category || 'general', published ?? 1);
+  logAction(req.user.username, 'CREATE_NEWS', `Tạo tin tức mới: ${title}`);
   res.status(201).json({ id: result.lastInsertRowid, slug });
 });
 
@@ -50,9 +51,11 @@ router.put('/:id', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   const { title, content, image, video_url, category, published } = req.body;
+  const item = db.prepare('SELECT title FROM news WHERE id = ?').get(req.params.id);
   db.prepare(`
     UPDATE news SET title=?, content=?, image=?, video_url=?, category=?, published=? WHERE id=?
   `).run(title, content, image, video_url, category, published, req.params.id);
+  logAction(req.user.username, 'UPDATE_NEWS', `Cập nhật tin tức: ${item?.title || title}`);
   res.json({ message: 'Cập nhật thành công' });
 });
 
@@ -60,7 +63,9 @@ router.delete('/:id', authRequired, (req, res, next) => {
   if (!canManageNews(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
+  const item = db.prepare('SELECT title FROM news WHERE id = ?').get(req.params.id);
   db.prepare('DELETE FROM news WHERE id = ?').run(req.params.id);
+  logAction(req.user.username, 'DELETE_NEWS', `Xóa tin tức: ${item?.title || req.params.id}`);
   res.json({ message: 'Đã xóa' });
 });
 
