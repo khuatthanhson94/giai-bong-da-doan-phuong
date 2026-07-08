@@ -13,6 +13,7 @@ import newsRoutes from './routes/news.js';
 import galleryRoutes from './routes/gallery.js';
 import publicRoutes from './routes/public.js';
 import groupsRoutes from './routes/groups.js';
+import sponsorsRoutes from './routes/sponsors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -102,6 +103,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/groups', groupsRoutes);
+app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api', publicRoutes);
 
 // Debug endpoint to list uploaded files (for development)

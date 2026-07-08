@@ -8,12 +8,14 @@ import { getFullUrl } from '../utils/url';
 export default function Home() {
   const [data, setData] = useState(null);
   const [teams, setTeams] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
   const [activeHomeTab, setActiveHomeTab] = useState('group');
 
-  // Fetch home data and teams list
+  // Fetch home data, teams list and sponsors
   useEffect(() => {
     api.get('/home').then(setData).catch(console.error);
     api.get('/teams').then(setTeams).catch(console.error);
+    api.get('/sponsors').then(setSponsors).catch(console.error);
   }, []);
 
   if (!data) {
@@ -212,8 +214,138 @@ export default function Home() {
                 </div>
               </Link>
             ))}
-          </div>
-        </section>
+        {/* Sponsors Section */}
+        {sponsors?.length > 0 && (
+          <section className="border-t pt-12 mt-16 bg-gradient-to-b from-transparent to-gray-50/50 -mx-4 px-4 pb-12 rounded-t-[32px]">
+            <div className="max-w-6xl mx-auto text-center space-y-10">
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 tracking-tight">NHÀ TÀI TRỢ & ĐỒNG HÀNH</h2>
+                <div className="h-1.5 w-16 bg-primary mx-auto rounded-full"></div>
+                <p className="text-xs text-gray-400 font-medium">Sự đồng hành tạo nên thành công của giải đấu</p>
+              </div>
+
+              {/* Diamond Tier */}
+              {sponsors.some(s => s.tier === 'diamond') && (
+                <div className="space-y-4">
+                  <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-cyan-50 text-cyan-700 border border-cyan-200">
+                    💎 Nhà Tài Trợ Kim Cương
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
+                    {sponsors.filter(s => s.tier === 'diamond').map(s => (
+                      <a
+                        key={s.id}
+                        href={s.link || undefined}
+                        target={s.link ? "_blank" : undefined}
+                        rel={s.link ? "noopener noreferrer" : undefined}
+                        className="bg-white p-4 rounded-2xl border border-cyan-100 shadow-sm hover:shadow-cyan-200/50 hover:shadow-lg hover:-translate-y-1 transition duration-300 w-44 h-24 flex items-center justify-center group"
+                      >
+                        <img src={getFullUrl(s.logo)} alt={s.name} className="max-h-full max-w-full object-contain filter group-hover:brightness-105 duration-300" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Gold & Silver Tiers in Grid/Flex */}
+              {(sponsors.some(s => s.tier === 'gold') || sponsors.some(s => s.tier === 'silver')) && (
+                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                  {/* Gold Tier */}
+                  {sponsors.some(s => s.tier === 'gold') && (
+                    <div className="space-y-4">
+                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-yellow-50 text-yellow-700 border border-yellow-200">
+                        🥇 Nhà Tài Trợ Vàng
+                      </span>
+                      <div className="flex flex-wrap justify-center gap-4">
+                        {sponsors.filter(s => s.tier === 'gold').map(s => (
+                          <a
+                            key={s.id}
+                            href={s.link || undefined}
+                            target={s.link ? "_blank" : undefined}
+                            rel={s.link ? "noopener noreferrer" : undefined}
+                            className="bg-white p-3 rounded-xl border border-yellow-100 shadow-sm hover:shadow-yellow-150/50 hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 h-20 flex items-center justify-center"
+                          >
+                            <img src={getFullUrl(s.logo)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Silver Tier */}
+                  {sponsors.some(s => s.tier === 'silver') && (
+                    <div className="space-y-4">
+                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-gray-100 text-gray-700 border border-gray-300">
+                        🥈 Nhà Tài Trợ Bạc
+                      </span>
+                      <div className="flex flex-wrap justify-center gap-4">
+                        {sponsors.filter(s => s.tier === 'silver').map(s => (
+                          <a
+                            key={s.id}
+                            href={s.link || undefined}
+                            target={s.link ? "_blank" : undefined}
+                            rel={s.link ? "noopener noreferrer" : undefined}
+                            className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 h-20 flex items-center justify-center"
+                          >
+                            <img src={getFullUrl(s.logo)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Bronze & General Tiers */}
+              {(sponsors.some(s => s.tier === 'bronze') || sponsors.some(s => s.tier === 'general')) && (
+                <div className="space-y-6 max-w-4xl mx-auto pt-4 border-t border-dashed border-gray-200">
+                  {/* Bronze Tier */}
+                  {sponsors.some(s => s.tier === 'bronze') && (
+                    <div className="space-y-3">
+                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-amber-50 text-amber-800 border border-amber-200">
+                        🥉 Nhà Tài Trợ Đồng
+                      </span>
+                      <div className="flex flex-wrap justify-center gap-4">
+                        {sponsors.filter(s => s.tier === 'bronze').map(s => (
+                          <a
+                            key={s.id}
+                            href={s.link || undefined}
+                            target={s.link ? "_blank" : undefined}
+                            rel={s.link ? "noopener noreferrer" : undefined}
+                            className="bg-white p-2.5 rounded-lg border border-amber-100 shadow-sm hover:shadow-md transition duration-300 w-28 h-16 flex items-center justify-center"
+                          >
+                            <img src={getFullUrl(s.logo)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* General / Companion Tier */}
+                  {sponsors.some(s => s.tier === 'general') && (
+                    <div className="space-y-3">
+                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-gray-50 text-gray-500 border border-gray-200">
+                        🤝 Đơn vị Đồng Hành
+                      </span>
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {sponsors.filter(s => s.tier === 'general').map(s => (
+                          <a
+                            key={s.id}
+                            href={s.link || undefined}
+                            target={s.link ? "_blank" : undefined}
+                            rel={s.link ? "noopener noreferrer" : undefined}
+                            className="bg-white p-2 rounded-lg border border-gray-100 shadow-sm hover:shadow hover:-translate-y-0.5 transition duration-300 w-24 h-14 flex items-center justify-center"
+                          >
+                            <img src={getFullUrl(s.logo)} alt={s.name} className="max-h-full max-w-full object-contain grayscale hover:grayscale-0 transition duration-300" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

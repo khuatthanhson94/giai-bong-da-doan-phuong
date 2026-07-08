@@ -30,6 +30,7 @@ import AdminNews from './pages/admin/News';
 import AdminGallery from './pages/admin/GalleryAdmin';
 import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
+import AdminSponsors from './pages/admin/Sponsors';
 
 export default function App() {
   return (
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="gallery" element={<AdminGallery />} />
         <Route path="users" element={<AdminUsers />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="sponsors" element={<AdminSponsors />} />
       </Route>
     </Routes>
   );

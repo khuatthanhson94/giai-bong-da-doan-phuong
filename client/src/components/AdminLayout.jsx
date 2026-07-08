@@ -14,6 +14,7 @@ const menuItems = [
   { to: '/admin/gallery', label: 'Thư viện', roles: ['super_admin', 'admin', 'editor'] },
   { to: '/admin/users', label: 'Tài khoản', roles: ['super_admin'] },
   { to: '/admin/settings', label: 'Cài đặt', roles: ['super_admin', 'admin', 'team'] },
+  { to: '/admin/sponsors', label: 'Nhà tài trợ', roles: ['super_admin', 'admin'] },
   { to: '/admin/schedule', label: 'Lịch thi đấu (Knockout)', roles: ['super_admin', 'admin'] },
 ];
 

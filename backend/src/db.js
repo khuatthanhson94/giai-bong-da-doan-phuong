@@ -252,6 +252,16 @@ export function initDatabase() {
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (player_id) REFERENCES players(id)
     );
+
+    CREATE TABLE IF NOT EXISTS sponsors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      logo TEXT,
+      link TEXT,
+      tier TEXT DEFAULT 'general',
+      order_index INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migration: Add team_id to users if it doesn't exist
