@@ -558,6 +558,13 @@ export default function AdminPlayers() {
                 </td>
               </tr>
             ))}
+            {players.length === 0 && (
+              <tr>
+                <td colSpan="8" className="text-center text-gray-400 py-8 italic">
+                  Chưa có cầu thủ nào trong danh sách.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

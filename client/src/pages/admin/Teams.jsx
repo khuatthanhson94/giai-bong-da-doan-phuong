@@ -465,6 +465,13 @@ export default function AdminTeams() {
                 </td>
               </tr>
             ))}
+            {teams.length === 0 && (
+              <tr>
+                <td colSpan={user?.role === 'team' ? 5 : 6} className="text-center text-gray-400 py-8 italic">
+                  Chưa có đội bóng nào trong danh sách.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

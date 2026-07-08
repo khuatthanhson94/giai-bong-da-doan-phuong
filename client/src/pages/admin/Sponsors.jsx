@@ -371,7 +371,7 @@ export default function AdminSponsors() {
             })}
             {sponsors.length === 0 && (
               <tr>
-                <td colSpan="6" className="text-center text-gray-400 py-8 italic">
+                <td colSpan="7" className="text-center text-gray-400 py-8 italic">
                   Chưa có nhà tài trợ nào được thêm vào danh sách.
                 </td>
               </tr>
