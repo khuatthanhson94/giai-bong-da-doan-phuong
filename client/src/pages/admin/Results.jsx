@@ -226,7 +226,7 @@ export default function AdminResults() {
           <option value="">Chọn trận đấu</option>
           {matches.filter((m) => !groupFilter || (m.group && m.group.id === Number(groupFilter))).map((m) => (
             <option key={m.id} value={m.id}>
-              {m.match_date} — {m.group?.name ? `[Bảng ${m.group.name}] ` : ''}{m.team_a?.name} vs {m.team_b?.name} {m.published ? '(Đã công bố)' : ''}
+              [{m.round}] {m.group?.name ? `— [${m.group.name}] ` : ''}— {m.team_a?.name} vs {m.team_b?.name} ({m.match_date}) {m.published ? '(Đã công bố)' : ''}
             </option>
           ))}
         </select>
