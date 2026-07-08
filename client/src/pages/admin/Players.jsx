@@ -169,6 +169,15 @@ export default function AdminPlayers() {
     setPhotoPreview(url);
   };
 
+  const handleTeamChange = (teamId) => {
+    const selectedTeam = teams.find((t) => t.id === Number(teamId));
+    setForm((prev) => ({
+      ...prev,
+      team_id: teamId,
+      jersey_color: selectedTeam ? selectedTeam.jersey_color : prev.jersey_color
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = {
@@ -343,96 +352,140 @@ export default function AdminPlayers() {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 grid md:grid-cols-2 gap-4">
-          <label className="form-label">Đội</label>
-          <select
-            className="input-field"
-            value={form.team_id}
-            onChange={(e) => setForm({ ...form, team_id: e.target.value })}
-            required
-            disabled={user?.role === 'team'}
-          >
-            <option value="">Chọn đội</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4 max-w-2xl bg-white shadow-lg rounded-2xl border border-gray-100 animate-fade-in">
+          <h2 className="text-lg font-bold text-primary border-b pb-2">
+            {editId ? '📝 Sửa thông tin cầu thủ' : '➕ Thêm cầu thủ mới'}
+          </h2>
 
-          <label className="form-label">Tên cầu thủ</label>
-          <input
-            className="input-field"
-            placeholder="Tên cầu thủ"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Đội bóng */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Đội bóng <span className="text-red-500">*</span></label>
+              <select
+                className="input-field bg-white"
+                value={form.team_id}
+                onChange={(e) => handleTeamChange(e.target.value)}
+                required
+                disabled={user?.role === 'team'}
+              >
+                <option value="">Chọn đội</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <label className="form-label">Màu áo</label>
-          <div className="flex items-center gap-2">
-            <input
-              className="input-field"
-              type="color"
-              value={form.jersey_color}
-              onChange={(e) => setForm({ ...form, jersey_color: e.target.value })}
-            />
-            <div className="w-6 h-6 rounded border" style={{ backgroundColor: form.jersey_color }}></div>
+            {/* Họ tên */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Tên cầu thủ <span className="text-red-500">*</span></label>
+              <input
+                className="input-field bg-white"
+                placeholder="Nhập tên cầu thủ"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+            </div>
+
+            {/* Số áo */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Số áo <span className="text-red-500">*</span></label>
+              <input
+                className="input-field bg-white"
+                type="number"
+                placeholder="Số áo"
+                value={form.jersey_number}
+                onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
+                required
+              />
+            </div>
+
+            {/* Vị trí */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Vị trí</label>
+              <select
+                className="input-field bg-white"
+                value={form.position}
+                onChange={(e) => setForm({ ...form, position: e.target.value })}
+              >
+                <option value="">Chọn vị trí</option>
+                {positions.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Ngày sinh */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Ngày sinh</label>
+              <input
+                className="input-field bg-white"
+                type="date"
+                value={form.dob}
+                onChange={(e) => setForm({ ...form, dob: e.target.value })}
+              />
+            </div>
+
+            {/* Màu áo */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Màu áo chủ đạo</label>
+              <div className="flex items-center gap-3">
+                <input
+                  className="w-12 h-10 p-0.5 rounded border border-gray-200 cursor-pointer bg-white"
+                  type="color"
+                  value={form.jersey_color}
+                  onChange={(e) => setForm({ ...form, jersey_color: e.target.value })}
+                />
+                <div className="text-xs text-gray-500 font-mono uppercase bg-gray-100 px-2 py-1.5 rounded">
+                  {form.jersey_color}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <label className="form-label">Số áo</label>
-          <input
-            className="input-field"
-            type="number"
-            placeholder="Số áo"
-            value={form.jersey_number}
-            onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
-            required
-          />
+          {/* Giới thiệu */}
+          <div className="space-y-1">
+            <label className="form-label font-semibold text-gray-700">Giới thiệu cầu thủ</label>
+            <textarea
+              className="input-field bg-white"
+              rows={2}
+              placeholder="Mô tả sơ lược về cầu thủ (Không bắt buộc)"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </div>
 
-          <label className="form-label">Vị trí</label>
-          <select
-            className="input-field"
-            value={form.position}
-            onChange={(e) => setForm({ ...form, position: e.target.value })}
-          >
-            <option value="">Chọn vị trí</option>
-            {positions.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
+          {/* Ảnh */}
+          <div className="grid md:grid-cols-2 gap-4 items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Ảnh đại diện</label>
+              <input type="file" accept="image/*" onChange={handlePhotoChange} className="text-xs text-gray-500" />
+            </div>
+            
+            <div className="flex items-center justify-center p-2">
+              {photoPreview ? (
+                <div className="text-center">
+                  <img src={getFullUrl(photoPreview)} alt="Photo preview" className="w-20 h-20 object-cover rounded-lg border bg-white p-0.5 shadow-sm" />
+                  <span className="text-[10px] text-gray-400 mt-1 block">Ảnh xem trước</span>
+                </div>
+              ) : (
+                <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs text-center bg-white p-2">
+                  Chưa có ảnh
+                </div>
+              )}
+            </div>
+          </div>
 
-          <label className="form-label">Ngày sinh</label>
-          <input
-            className="input-field"
-            type="date"
-            value={form.dob}
-            onChange={(e) => setForm({ ...form, dob: e.target.value })}
-          />
-
-          <label className="form-label">Giới thiệu</label>
-          <textarea
-            className="input-field"
-            rows={3}
-            placeholder="Giới thiệu"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-
-          <label className="form-label">Ảnh</label>
-          <input type="file" accept="image/*" onChange={handlePhotoChange} className="mt-2" />
-          {photoPreview && (
-            <img src={getFullUrl(photoPreview)} alt="Photo preview" className="mt-2 w-24 h-24 object-cover" />
-          )}
-
-          <div className="md:col-span-2 flex gap-2">
-            <button type="submit" className="btn-primary text-sm">
-              {editId ? 'Cập nhật' : 'Thêm'}
+          <div className="flex gap-2 pt-2 justify-end">
+            <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm px-5 py-2">
+              Hủy bỏ
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm">
-              Hủy
+            <button type="submit" className="btn-primary text-sm px-6 py-2 shadow-md shadow-blue-500/10">
+              {editId ? 'Cập nhật' : 'Lưu lại'}
             </button>
           </div>
         </form>
