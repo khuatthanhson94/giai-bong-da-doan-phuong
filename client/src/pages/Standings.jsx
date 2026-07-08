@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 import StandingsTable from '../components/StandingsTable';
-import { getFullUrl } from '../utils/url';
+import * as XLSX from 'xlsx';
 
 export default function Standings() {
   const [standings, setStandings] = useState([]);
@@ -19,19 +19,47 @@ export default function Standings() {
 
   const groupNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
 
+  const exportExcel = () => {
+    const dataRows = [];
+    
+    groupNames.forEach((groupName) => {
+      // Add group title
+      dataRows.push([groupName]);
+      // Add headers
+      dataRows.push(['Hạng', 'Đội bóng', 'Trận', 'Thắng', 'Hòa', 'Thua', 'Hiệu số', 'Điểm']);
+      // Add teams
+      grouped[groupName].forEach((t, index) => {
+        dataRows.push([
+          index + 1,
+          t.name,
+          t.played || 0,
+          t.won || 0,
+          t.drawn || 0,
+          t.lost || 0,
+          t.goal_diff || 0,
+          t.points || 0
+        ]);
+      });
+      // Add empty separator row
+      dataRows.push([]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(dataRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bảng xếp hạng');
+    XLSX.writeFile(wb, 'bang_xep_hang_giai_dau.xlsx');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-primary">Bảng xếp hạng</h1>
-        <a
-          href={getFullUrl('/api/export/standings')}
-          className="btn-outline text-sm"
-          target="_blank"
-          rel="noopener noreferrer"
-          download
+        <button
+          onClick={exportExcel}
+          className="btn-outline text-sm flex items-center gap-1 py-2 px-3"
         >
-          Xuất Excel (CSV)
-        </a>
+          📥 Xuất Excel
+        </button>
       </div>
 
       <div className="space-y-8">
