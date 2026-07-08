@@ -256,6 +256,7 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS sponsors (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
+      short_name TEXT,
       logo TEXT,
       link TEXT,
       tier TEXT DEFAULT 'general',
@@ -281,6 +282,13 @@ export function initDatabase() {
   // Migration: Add stadium column to teams if it doesn't exist
   try {
     db.exec('ALTER TABLE teams ADD COLUMN stadium TEXT');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  // Migration: Add short_name column to sponsors if it doesn't exist
+  try {
+    db.exec('ALTER TABLE sponsors ADD COLUMN short_name TEXT');
   } catch (e) {
     // Ignore error if column already exists
   }

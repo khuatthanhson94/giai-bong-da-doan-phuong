@@ -240,9 +240,14 @@ export default function Home() {
                         href={s.link || undefined}
                         target={s.link ? "_blank" : undefined}
                         rel={s.link ? "noopener noreferrer" : undefined}
-                        className="bg-white p-4 rounded-2xl border border-cyan-100 shadow-sm hover:shadow-cyan-200/50 hover:shadow-lg hover:-translate-y-1 transition duration-300 w-44 h-24 flex items-center justify-center group"
+                        className="bg-white p-3 rounded-2xl border border-cyan-100 shadow-sm hover:shadow-cyan-200/50 hover:shadow-lg hover:-translate-y-1 transition duration-300 w-44 min-h-[96px] flex flex-col items-center justify-center group"
                       >
-                        <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain filter group-hover:brightness-105 duration-300" />
+                        <div className="h-12 w-full flex items-center justify-center">
+                          <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain filter group-hover:brightness-105 duration-300" />
+                        </div>
+                        <span className="text-[11px] font-bold text-cyan-800 mt-2 truncate w-full px-1 text-center group-hover:text-primary transition-colors">
+                          {s.short_name || s.name}
+                        </span>
                       </a>
                     ))}
                   </div>
@@ -265,9 +270,14 @@ export default function Home() {
                             href={s.link || undefined}
                             target={s.link ? "_blank" : undefined}
                             rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-3 rounded-xl border border-yellow-100 shadow-sm hover:shadow-yellow-150/50 hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 h-20 flex items-center justify-center"
+                            className="bg-white p-3 rounded-xl border border-yellow-100 shadow-sm hover:shadow-yellow-150/50 hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 min-h-[84px] flex flex-col items-center justify-center group"
                           >
-                            <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                            <div className="h-10 w-full flex items-center justify-center">
+                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                            </div>
+                            <span className="text-[10px] font-bold text-yellow-800 mt-1.5 truncate w-full px-1 text-center group-hover:text-primary transition-colors">
+                              {s.short_name || s.name}
+                            </span>
                           </a>
                         ))}
                       </div>
@@ -287,9 +297,14 @@ export default function Home() {
                             href={s.link || undefined}
                             target={s.link ? "_blank" : undefined}
                             rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 h-20 flex items-center justify-center"
+                            className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 min-h-[84px] flex flex-col items-center justify-center group"
                           >
-                            <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                            <div className="h-10 w-full flex items-center justify-center">
+                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 mt-1.5 truncate w-full px-1 text-center group-hover:text-primary transition-colors">
+                              {s.short_name || s.name}
+                            </span>
                           </a>
                         ))}
                       </div>
@@ -314,9 +329,14 @@ export default function Home() {
                             href={s.link || undefined}
                             target={s.link ? "_blank" : undefined}
                             rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-2.5 rounded-lg border border-amber-100 shadow-sm hover:shadow-md transition duration-300 w-28 h-16 flex items-center justify-center"
+                            className="bg-white p-2.5 rounded-lg border border-amber-100 shadow-sm hover:shadow-md transition duration-300 w-28 min-h-[72px] flex flex-col items-center justify-center group"
                           >
-                            <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                            <div className="h-8 w-full flex items-center justify-center">
+                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain" />
+                            </div>
+                            <span className="text-[9px] font-bold text-amber-800 mt-1 truncate w-full px-0.5 text-center group-hover:text-primary transition-colors">
+                              {s.short_name || s.name}
+                            </span>
                           </a>
                         ))}
                       </div>
@@ -336,9 +356,14 @@ export default function Home() {
                             href={s.link || undefined}
                             target={s.link ? "_blank" : undefined}
                             rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-2 rounded-lg border border-gray-100 shadow-sm hover:shadow hover:-translate-y-0.5 transition duration-300 w-24 h-14 flex items-center justify-center"
+                            className="bg-white p-2 rounded-lg border border-gray-100 shadow-sm hover:shadow hover:-translate-y-0.5 transition duration-300 w-24 min-h-[64px] flex flex-col items-center justify-center group"
                           >
-                            <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain grayscale hover:grayscale-0 transition duration-300" />
+                            <div className="h-6 w-full flex items-center justify-center">
+                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain grayscale hover:grayscale-0 transition duration-300" />
+                            </div>
+                            <span className="text-[8px] font-bold text-gray-500 mt-1 truncate w-full px-0.5 text-center group-hover:text-primary transition-colors">
+                              {s.short_name || s.name}
+                            </span>
                           </a>
                         ))}
                       </div>

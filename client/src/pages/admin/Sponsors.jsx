@@ -14,6 +14,7 @@ export default function AdminSponsors() {
   const [sponsors, setSponsors] = useState([]);
   const [form, setForm] = useState({
     name: '',
+    short_name: '',
     logo: '',
     link: '',
     tier: 'general',
@@ -61,7 +62,7 @@ export default function AdminSponsors() {
       }
       load();
       setShowForm(false);
-      setForm({ name: '', logo: '', link: '', tier: 'general', order_index: 0 });
+      setForm({ name: '', short_name: '', logo: '', link: '', tier: 'general', order_index: 0 });
       setLogoPreview('');
       setEditId(null);
     } catch (err) {
@@ -73,6 +74,7 @@ export default function AdminSponsors() {
     setEditId(sponsor.id);
     setForm({
       name: sponsor.name,
+      short_name: sponsor.short_name || '',
       logo: sponsor.logo || '',
       link: sponsor.link || '',
       tier: sponsor.tier || 'general',
@@ -102,7 +104,7 @@ export default function AdminSponsors() {
           onClick={() => {
             setShowForm(true);
             setEditId(null);
-            setForm({ name: '', logo: '', link: '', tier: 'general', order_index: 0 });
+            setForm({ name: '', short_name: '', logo: '', link: '', tier: 'general', order_index: 0 });
             setLogoPreview('');
           }}
           className="btn-primary text-sm py-2 px-4 self-center sm:self-auto"
@@ -128,6 +130,17 @@ export default function AdminSponsors() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
+              />
+            </div>
+
+            {/* Tên rút gọn */}
+            <div className="space-y-1">
+              <label className="form-label font-semibold text-gray-700">Tên rút gọn</label>
+              <input
+                className="input-field w-full max-w-full"
+                placeholder="Tên viết tắt (VD: Bia Hà Nội)"
+                value={form.short_name}
+                onChange={(e) => setForm({ ...form, short_name: e.target.value })}
               />
             </div>
 
@@ -258,7 +271,12 @@ export default function AdminSponsors() {
                           No Logo
                         </div>
                       )}
-                      <span className="font-semibold text-gray-800">{s.name}</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-800">{s.name}</span>
+                        {s.short_name && (
+                          <span className="text-xs text-gray-400">Tên rút gọn: {s.short_name}</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="font-medium text-gray-700">{tierLabel}</td>
