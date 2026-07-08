@@ -454,31 +454,29 @@ export default function KnockoutBuilder() {
                       </div>
                     </td>
 
-                    <td className="py-4 px-4 space-y-2">
+                    <td className="py-4 px-4 space-y-1.5 min-w-[180px]">
                       <input
                         type="date"
-                        className="input-field text-xs py-1"
+                        className="input-field text-xs py-1 w-full"
                         value={m.match_date}
                         onChange={(e) => updateMatchValue(m.id, 'match_date', e.target.value)}
                         required
                       />
-                      <div className="grid grid-cols-2 gap-1">
-                        <input
-                          type="time"
-                          className="input-field text-xs py-1"
-                          value={m.match_time}
-                          onChange={(e) => updateMatchValue(m.id, 'match_time', e.target.value)}
-                          required
-                        />
-                        <input
-                          type="text"
-                          placeholder="Sân đấu"
-                          className="input-field text-xs py-1"
-                          value={m.venue}
-                          onChange={(e) => updateMatchValue(m.id, 'venue', e.target.value)}
-                          required
-                        />
-                      </div>
+                      <input
+                        type="time"
+                        className="input-field text-xs py-1 w-full"
+                        value={m.match_time}
+                        onChange={(e) => updateMatchValue(m.id, 'match_time', e.target.value)}
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Sân đấu"
+                        className="input-field text-xs py-1 w-full"
+                        value={m.venue}
+                        onChange={(e) => updateMatchValue(m.id, 'venue', e.target.value)}
+                        required
+                      />
                     </td>
                   </tr>
                 ))}
@@ -546,31 +544,29 @@ export default function KnockoutBuilder() {
                       </div>
                     </td>
 
-                    <td className="py-4 px-4 space-y-2">
+                    <td className="py-4 px-4 space-y-1.5 min-w-[180px]">
                       <input
                         type="date"
-                        className="input-field text-xs py-1"
+                        className="input-field text-xs py-1 w-full"
                         value={m.match_date}
                         onChange={(e) => updateNextRoundMatchValue(roundIdx, m.id, 'match_date', e.target.value)}
                         required
                       />
-                      <div className="grid grid-cols-2 gap-1">
-                        <input
-                          type="time"
-                          className="input-field text-xs py-1"
-                          value={m.match_time}
-                          onChange={(e) => updateNextRoundMatchValue(roundIdx, m.id, 'match_time', e.target.value)}
-                          required
-                        />
-                        <input
-                          type="text"
-                          placeholder="Sân đấu"
-                          className="input-field text-xs py-1"
-                          value={m.venue}
-                          onChange={(e) => updateNextRoundMatchValue(roundIdx, m.id, 'venue', e.target.value)}
-                          required
-                        />
-                      </div>
+                      <input
+                        type="time"
+                        className="input-field text-xs py-1 w-full"
+                        value={m.match_time}
+                        onChange={(e) => updateNextRoundMatchValue(roundIdx, m.id, 'match_time', e.target.value)}
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Sân đấu"
+                        className="input-field text-xs py-1 w-full"
+                        value={m.venue}
+                        onChange={(e) => updateNextRoundMatchValue(roundIdx, m.id, 'venue', e.target.value)}
+                        required
+                      />
                     </td>
                   </tr>
                 ))}
