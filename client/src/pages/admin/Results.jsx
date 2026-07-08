@@ -10,21 +10,21 @@ function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false
         <button type="button" onClick={onAdd} className="text-primary text-xs font-semibold hover:underline">+ Thêm</button>
       </div>
       {items.map((item, i) => (
-        <div key={i} className="flex gap-1.5 items-center mb-1.5">
+        <div key={i} className="flex gap-1 items-center mb-1.5">
           <select
-            className="input-field flex-1 text-xs py-1 px-1.5"
+            className="input-field flex-1 text-xs py-1 px-1 min-w-[90px]"
             value={item.player_id}
             onChange={(e) => onRemove(i, { ...item, player_id: Number(e.target.value) }, true)}
             required
           >
-            <option value="">Chọn cầu thủ</option>
+            <option value="">Cầu thủ</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>{p.name} (#{p.jersey_number})</option>
             ))}
           </select>
           <input
             type="number"
-            className="input-field w-14 text-xs py-1 text-center"
+            className="input-field w-11 text-xs py-1 px-0.5 text-center"
             placeholder="Phút"
             min="1"
             value={item.minute || ''}
@@ -32,17 +32,17 @@ function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false
             required
           />
           {showOwnGoal && (
-            <label className="flex items-center gap-1 text-[11px] font-semibold text-red-600 border border-red-200 rounded px-1.5 py-0.5 bg-red-50/50 cursor-pointer select-none">
+            <label className="flex items-center gap-0.5 text-[9px] sm:text-[11px] font-semibold text-red-600 border border-red-200 rounded px-1 py-0.5 bg-red-50/50 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={!!item.is_own_goal}
                 onChange={(e) => onRemove(i, { ...item, is_own_goal: e.target.checked }, true)}
-                className="w-3.5 h-3.5 accent-red-600"
+                className="w-3 h-3 accent-red-600"
               />
               OG
             </label>
           )}
-          <button type="button" onClick={() => onRemove(i, null, false)} className="text-red-500 text-sm px-1.5 hover:text-red-700">✕</button>
+          <button type="button" onClick={() => onRemove(i, null, false)} className="text-red-500 text-sm px-1 hover:text-red-700">✕</button>
         </div>
       ))}
       {items.length === 0 && (
@@ -218,29 +218,29 @@ export default function AdminResults() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-2xl font-bold text-primary">Nhập kết quả trận đấu</h1>
-        <button onClick={exportResults} className="btn-outline text-sm flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Nhập kết quả trận đấu</h1>
+        <button onClick={exportResults} className="btn-outline text-sm flex items-center justify-center gap-1 py-2 px-3 self-center sm:self-auto">
           📥 Xuất Excel
         </button>
       </div>
-      <p className="text-sm text-gray-500 mb-6">Nhập tỷ số và chi tiết sự kiện cho trận đấu. Sau khi "Công bố", hệ thống sẽ tự động cập nhật Bảng xếp hạng và Danh sách vua phá lưới.</p>
-      <div className="flex items-center gap-4 mb-6">
-  <select className="input-field" value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
-    <option value="">-- Tất cả bảng --</option>
-    {groups.map((g) => (
-      <option key={g.id} value={g.id}> {g.name} </option>
-    ))}
-  </select>
-  <select className="input-field max-w-lg" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-    <option value="">Chọn trận đấu</option>
-    {matches.filter((m) => !groupFilter || (m.group && m.group.id === Number(groupFilter))).map((m) => (
-      <option key={m.id} value={m.id}>
-        {m.match_date} — {m.group?.name ? `[Bảng ${m.group.name}] ` : ''}{m.team_a?.name} vs {m.team_b?.name} {m.published ? '(Đã công bố)' : ''}
-      </option>
-    ))}
-  </select>
-</div>
+      <p className="text-sm text-gray-500 mb-6 text-center sm:text-left">Nhập tỷ số và chi tiết sự kiện cho trận đấu. Sau khi "Công bố", hệ thống sẽ tự động cập nhật Bảng xếp hạng và Danh sách vua phá lưới.</p>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
+        <select className="input-field w-full sm:max-w-[200px]" value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+          <option value="">-- Tất cả bảng --</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}> {g.name} </option>
+          ))}
+        </select>
+        <select className="input-field w-full sm:max-w-lg" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+          <option value="">Chọn trận đấu</option>
+          {matches.filter((m) => !groupFilter || (m.group && m.group.id === Number(groupFilter))).map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.match_date} — {m.group?.name ? `[Bảng ${m.group.name}] ` : ''}{m.team_a?.name} vs {m.team_b?.name} {m.published ? '(Đã công bố)' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {match && (
         <div className="space-y-6 animate-fade-in">
@@ -250,24 +250,24 @@ export default function AdminResults() {
             </h3>
 
             {/* Score inputs */}
-            <div className="flex items-center justify-center gap-8 mb-8">
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700 mb-2">{match.team_a?.name}</p>
+            <div className="flex items-center justify-center gap-4 sm:gap-8 mb-8">
+              <div className="text-center flex-1 max-w-[140px]">
+                <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 truncate">{match.team_a?.name}</p>
                 <input
                   type="number"
                   min="0"
-                  className="input-field w-24 text-center text-3xl font-bold text-primary bg-gray-50 focus:ring-primary"
+                  className="input-field w-20 sm:w-24 text-center text-2xl sm:text-3xl font-bold text-primary bg-gray-50 focus:ring-primary mx-auto"
                   value={form.score_a}
                   onChange={(e) => setForm({ ...form, score_a: Number(e.target.value) })}
                 />
               </div>
-              <span className="text-3xl font-bold text-gray-400 mt-6">VS</span>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700 mb-2">{match.team_b?.name}</p>
+              <span className="text-2xl sm:text-3xl font-bold text-gray-400 mt-6 flex-shrink-0">VS</span>
+              <div className="text-center flex-1 max-w-[140px]">
+                <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 truncate">{match.team_b?.name}</p>
                 <input
                   type="number"
                   min="0"
-                  className="input-field w-24 text-center text-3xl font-bold text-primary bg-gray-50 focus:ring-primary"
+                  className="input-field w-20 sm:w-24 text-center text-2xl sm:text-3xl font-bold text-primary bg-gray-50 focus:ring-primary mx-auto"
                   value={form.score_b}
                   onChange={(e) => setForm({ ...form, score_b: Number(e.target.value) })}
                 />
@@ -277,10 +277,10 @@ export default function AdminResults() {
             {/* Event list - Divided into Two Columns (Team A vs Team B) */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               {/* Team A Columns */}
-              <div className="space-y-4 p-4 border border-blue-100 rounded-xl bg-blue-50/10">
+              <div className="space-y-4 p-3 sm:p-4 border border-blue-100 rounded-xl bg-blue-50/10">
                 <h4 className="font-bold text-sm text-primary border-b pb-2 flex justify-between items-center">
-                  <span>{match.team_a?.name}</span>
-                  <span className="text-xs font-normal text-gray-500 bg-blue-50 px-2 py-0.5 rounded">Đội chủ nhà</span>
+                  <span className="truncate max-w-[150px]">{match.team_a?.name}</span>
+                  <span className="text-[10px] font-normal text-gray-500 bg-blue-50 px-2 py-0.5 rounded flex-shrink-0">Đội chủ nhà</span>
                 </h4>
                 
                 <EventList
@@ -308,10 +308,10 @@ export default function AdminResults() {
               </div>
 
               {/* Team B Columns */}
-              <div className="space-y-4 p-4 border border-orange-100 rounded-xl bg-orange-50/10">
+              <div className="space-y-4 p-3 sm:p-4 border border-orange-100 rounded-xl bg-orange-50/10">
                 <h4 className="font-bold text-sm text-orange-600 border-b pb-2 flex justify-between items-center">
-                  <span>{match.team_b?.name}</span>
-                  <span className="text-xs font-normal text-gray-500 bg-orange-50 px-2 py-0.5 rounded">Đội khách</span>
+                  <span className="truncate max-w-[150px]">{match.team_b?.name}</span>
+                  <span className="text-[10px] font-normal text-gray-500 bg-orange-50 px-2 py-0.5 rounded flex-shrink-0">Đội khách</span>
                 </h4>
                 
                 <EventList
@@ -344,7 +344,7 @@ export default function AdminResults() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">⭐ Cầu thủ xuất sắc nhất trận (MOTM)</label>
                 <select
-                  className="input-field"
+                  className="input-field w-full max-w-full"
                   value={form.motm_player_id}
                   onChange={(e) => setForm({ ...form, motm_player_id: e.target.value })}
                 >
@@ -359,7 +359,7 @@ export default function AdminResults() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Ghi chú / Biên bản trận đấu</label>
                 <textarea
-                  className="input-field"
+                  className="input-field w-full max-w-full"
                   rows={2}
                   value={form.notes}
                   placeholder="Ghi chú diễn biến trận đấu, chấn thương, sự cố nếu có..."
@@ -376,11 +376,11 @@ export default function AdminResults() {
               </div>
             )}
 
-            <div className="flex gap-3 justify-end pt-2">
-              <button onClick={handleSave} className="btn-outline text-sm px-6 py-2">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-2">
+              <button onClick={handleSave} className="btn-outline text-sm px-6 py-2 w-full sm:w-auto order-2 sm:order-1">
                 Lưu nháp
               </button>
-              <button onClick={handlePublish} className="btn-secondary text-sm px-6 py-2">
+              <button onClick={handlePublish} className="btn-secondary text-sm px-6 py-2 w-full sm:w-auto order-1 sm:order-2">
                 Công bố kết quả
               </button>
             </div>

@@ -37,13 +37,13 @@ export default function AdminNews() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Quản lý tin tức</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Quản lý tin tức</h1>
         <button onClick={() => {
           setShowForm(true);
           setEditId(null);
           setForm({ title: '', content: '', category: 'general', image: '', video_url: '', published: 1 });
-        }} className="btn-primary text-sm">+ Thêm bài viết</button>
+        }} className="btn-primary text-sm py-2 px-4 self-center sm:self-auto">+ Thêm bài viết</button>
       </div>
 
       {showForm && (

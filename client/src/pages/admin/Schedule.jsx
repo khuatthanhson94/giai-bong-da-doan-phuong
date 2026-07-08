@@ -56,10 +56,9 @@ export default function AdminSchedule() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Quản lý lịch thi đấu</h1>
-        <button onClick={addMatch} className="btn-primary text-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Quản lý lịch thi đấu</h1>
+        <button onClick={addMatch} className="btn-primary text-sm py-2 px-4 self-center sm:self-auto">
           + Thêm vòng knockout
         </button>
       </div>

@@ -62,9 +62,9 @@ export default function AdminUsers() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Quản lý tài khoản</h1>
-        <button onClick={exportUsers} className="btn-outline text-sm flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Quản lý tài khoản</h1>
+        <button onClick={exportUsers} className="btn-outline text-sm flex items-center justify-center gap-1 py-2 px-3 self-center sm:self-auto">
           📥 Xuất Excel
         </button>
       </div>

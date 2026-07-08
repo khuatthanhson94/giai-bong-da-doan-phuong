@@ -210,17 +210,17 @@ export default function AdminTeams() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">
           {user?.role === 'team' ? 'Thông tin đội bóng' : 'Quản lý đội bóng'}
         </h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center sm:justify-end gap-2">
           {user?.role !== 'team' && (
             <>
-              <button type="button" onClick={downloadTemplate} className="btn-outline text-sm flex items-center gap-1 bg-gray-50 hover:bg-gray-100">
+              <button type="button" onClick={downloadTemplate} className="btn-outline text-sm flex items-center gap-1 bg-gray-50 hover:bg-gray-100 py-2 px-3">
                 📄 Mẫu Excel
               </button>
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-outline text-sm flex items-center gap-1 bg-green-50 text-green-700 border-green-300 hover:bg-green-100">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-outline text-sm flex items-center gap-1 bg-green-50 text-green-700 border-green-300 hover:bg-green-100 py-2 px-3">
                 📤 Nhập Excel
               </button>
               <input 
@@ -232,12 +232,12 @@ export default function AdminTeams() {
               />
             </>
           )}
-          <button type="button" onClick={exportTeams} className="btn-outline text-sm flex items-center gap-1">
+          <button type="button" onClick={exportTeams} className="btn-outline text-sm flex items-center gap-1 py-2 px-3">
             📥 Xuất Excel
           </button>
           {user?.role !== 'team' && (
             <>
-              <button type="button" onClick={handleGenerateAccounts} className="btn-outline text-sm flex items-center gap-1">
+              <button type="button" onClick={handleGenerateAccounts} className="btn-outline text-sm flex items-center gap-1 py-2 px-3">
                 🔑 Cấp tài khoản
               </button>
               <button
@@ -248,7 +248,7 @@ export default function AdminTeams() {
                   setForm({ name: '', jersey_color: '#0066CC', description: '', logo: '', coach: '', stadium: '' });
                   setLogoPreview('');
                 }}
-                className="btn-primary text-sm"
+                className="btn-primary text-sm py-2 px-4"
               >
                 + Thêm đội
               </button>

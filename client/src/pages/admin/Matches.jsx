@@ -205,14 +205,14 @@ export default function AdminMatches() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Quản lý lịch thi đấu</h1>
-        <div className="flex gap-2">
-          <button onClick={exportMatches} className="btn-outline text-sm flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Quản lý lịch thi đấu</h1>
+        <div className="flex flex-wrap justify-center sm:justify-end gap-2">
+          <button onClick={exportMatches} className="btn-outline text-sm flex items-center gap-1 py-2 px-3">
             📥 Xuất Excel
           </button>
-          <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">+ Tạo lịch</button>
-          <button onClick={handleAutoGenerate} className="btn-secondary text-sm">Tự động tạo lịch</button>
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm py-2 px-4">+ Tạo lịch</button>
+          <button onClick={handleAutoGenerate} className="btn-secondary text-sm py-2 px-4">Tự động tạo lịch</button>
         </div>
       </div>
 

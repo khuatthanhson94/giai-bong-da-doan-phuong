@@ -241,15 +241,15 @@ export default function AdminPlayers() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Quản lý cầu thủ</h1>
-        <div className="flex gap-2">
-          <button onClick={exportPlayers} className="btn-outline text-sm flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Quản lý cầu thủ</h1>
+        <div className="flex flex-wrap justify-center sm:justify-end gap-2">
+          <button onClick={exportPlayers} className="btn-outline text-sm flex items-center gap-1 py-2 px-3">
             📥 Xuất Excel
           </button>
           <button
             onClick={() => setShowImportSection(!showImportSection)}
-            className="btn-outline text-sm"
+            className="btn-outline text-sm py-2 px-3"
           >
             {showImportSection ? 'Đóng Import' : 'Nhập từ file Excel'}
           </button>
@@ -269,7 +269,7 @@ export default function AdminPlayers() {
               });
               setPhotoPreview('');
             }}
-            className="btn-primary text-sm"
+            className="btn-primary text-sm py-2 px-4"
           >
             + Thêm cầu thủ
           </button>
