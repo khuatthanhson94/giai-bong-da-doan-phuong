@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, canManageTournament, canManageResults } from '../middleware/auth.js';
 import { publishMatchResult, computeStandings } from '../services/standings.js';
 
@@ -132,11 +132,12 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
       }
 
       db.exec('COMMIT');
-      res.json({ message: 'Tạo lịch thi đấu vòng bảng tự động thành công' });
+      logAction(req.user.username, 'GENERATE_GROUP_SCHEDULE', 'Tự động khởi tạo lịch thi đấu vòng bảng');
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
     }
+    res.json({ message: 'Tạo lịch thi đấu vòng bảng tự động thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -213,11 +214,12 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
       }
 
       db.exec('COMMIT');
-      res.json({ message: 'Khởi tạo vòng loại trực tiếp và cấu hình nhánh đấu thành công' });
+      logAction(req.user.username, 'GENERATE_KNOCKOUT_SCHEDULE', `Khởi tạo lịch thi đấu loại trực tiếp (Bắt đầu từ: ${config.startingRound})`);
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
     }
+    res.json({ message: 'Khởi tạo vòng loại trực tiếp và cấu hình nhánh đấu thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -232,6 +234,9 @@ router.post('/', authRequired, (req, res, next) => {
     INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(round, match_date, match_time, venue, team_a_id, team_b_id);
+  const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_a_id);
+  const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_b_id);
+  logAction(req.user.username, 'CREATE_MATCH', `Tạo trận đấu mới: ${teamA?.name || team_a_id} vs ${teamB?.name || team_b_id} (Vòng: ${round})`);
   res.status(201).json({ id: result.lastInsertRowid, ...req.body, status: 'scheduled' });
 });
 
@@ -242,10 +247,14 @@ router.put('/:id', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   const { round, match_date, match_time, venue, team_a_id, team_b_id } = req.body;
+  const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(req.params.id);
   db.prepare(`
     UPDATE matches SET round=?, match_date=?, match_time=?, venue=?, team_a_id=?, team_b_id=?
     WHERE id=?
   `).run(round, match_date, match_time, venue, team_a_id, team_b_id, req.params.id);
+  const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
+  const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
+  logAction(req.user.username, 'UPDATE_MATCH', `Cập nhật lịch trận đấu ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
   res.json({ message: 'Cập nhật thành công' });
 });
 
@@ -253,7 +262,13 @@ router.delete('/:id', authRequired, (req, res, next) => {
   if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
+  const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(req.params.id);
+  const teamA = m ? db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id) : null;
+  const teamB = m ? db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id) : null;
   db.prepare('DELETE FROM matches WHERE id = ?').run(req.params.id);
+  if (m) {
+    logAction(req.user.username, 'DELETE_MATCH', `Xóa lịch trận đấu ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
+  }
   res.json({ message: 'Đã xóa' });
 });
 
@@ -291,9 +306,10 @@ router.post('/:id/result', authRequired, (req, res, next) => {
         insertRed.run(matchId, r.player_id, r.minute);
       }
 
-      db.prepare('INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)').run(
-        req.user.id, 'save_result', JSON.stringify({ match_id: matchId })
-      );
+      const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(matchId);
+      const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
+      const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
+      logAction(req.user.username, 'UPDATE_MATCH_RESULT', `Cập nhật kết quả trận đấu ${teamA?.name} vs ${teamB?.name}: ${score_a} - ${score_b}`);
       db.exec('COMMIT');
     } catch (e) {
       db.exec('ROLLBACK');
@@ -311,7 +327,11 @@ router.post('/:id/publish', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   try {
+    const m = db.prepare('SELECT team_a_id, team_b_id FROM matches WHERE id = ?').get(req.params.id);
+    const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
+    const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
     const match = publishMatchResult(req.params.id, req.user.id);
+    logAction(req.user.username, 'PUBLISH_MATCH_RESULT', `Công bố kết quả trận đấu ${teamA?.name} vs ${teamB?.name}`);
     res.json(enrichMatch(match));
   } catch (e) {
     res.status(400).json({ error: e.message });

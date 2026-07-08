@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import QRCode from 'qrcode';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
 import { computeStandings, getTopScorers, getStatistics } from '../services/standings.js';
 
@@ -76,6 +76,7 @@ router.put('/settings', authRequired, requireRole(ROLES.SUPER_ADMIN, ROLES.ADMIN
   for (const [key, value] of Object.entries(req.body)) {
     upsert.run(key, String(value));
   }
+  logAction(req.user.username, 'UPDATE_SETTINGS', 'Cập nhật cấu hình giải đấu');
   res.json({ message: 'Cập nhật thành công' });
 });
 

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, requireRole } from '../middleware/auth.js';
 
 const router = Router();
@@ -118,6 +118,7 @@ router.post('/generate-accounts', authRequired, requireRole('admin', 'super_admi
       throw e;
     }
 
+    logAction(req.user.username, 'GENERATE_TEAM_ACCOUNTS', `Tự động tạo tài khoản đại diện cho ${generatedCount} đội bóng`);
     res.json({
       message: `Đã tự động tạo thành công ${generatedCount} tài khoản mới cho các đội bóng chưa có tài khoản`,
       generatedCount
@@ -186,6 +187,7 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
         }
       }
       db.exec('COMMIT');
+      logAction(req.user.username, 'IMPORT_TEAMS', `Nhập danh sách ${teams.length} đội bóng từ tệp Excel`);
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
@@ -225,6 +227,7 @@ router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) =
       `).run(finalUsername, passwordHash, teamId);
 
       db.exec('COMMIT');
+      logAction(req.user.username, 'CREATE_TEAM', `Tạo đội bóng mới: ${name}`);
       res.status(201).json({ id: teamId, name, logo, jersey_color, description, image, coach, stadium, username: finalUsername });
     } catch (e) {
       db.exec('ROLLBACK');
@@ -246,6 +249,7 @@ router.put('/:id', authRequired, (req, res) => {
     }
 
     const { name, logo, jersey_color, description, image, coach, stadium } = req.body;
+    const originalTeam = db.prepare('SELECT name FROM teams WHERE id = ?').get(req.params.id);
 
     let info;
     if (isTeamAdmin) {
@@ -262,6 +266,7 @@ router.put('/:id', authRequired, (req, res) => {
     }
 
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy đội' });
+    logAction(req.user.username, 'UPDATE_TEAM', `Cập nhật thông tin đội bóng ${originalTeam?.name || req.params.id}`);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -284,6 +289,7 @@ router.delete('/all', authRequired, requireRole('admin', 'super_admin'), (req, r
       db.prepare('DELETE FROM users WHERE role = \'team\'').run();
       db.prepare('DELETE FROM teams').run();
       db.exec('COMMIT');
+      logAction(req.user.username, 'DELETE_ALL_TEAMS', 'Xóa toàn bộ các đội bóng và dữ liệu liên quan khỏi hệ thống');
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
@@ -298,7 +304,7 @@ router.delete('/all', authRequired, requireRole('admin', 'super_admin'), (req, r
 router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
     const teamId = req.params.id;
-    const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(teamId);
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId);
     if (!team) return res.status(404).json({ error: 'Không tìm thấy đội' });
 
     db.exec('BEGIN IMMEDIATE');
@@ -318,6 +324,7 @@ router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, r
       db.prepare('DELETE FROM users WHERE team_id = ?').run(teamId);
       db.prepare('DELETE FROM teams WHERE id = ?').run(teamId);
       db.exec('COMMIT');
+      logAction(req.user.username, 'DELETE_TEAM', `Xóa đội bóng: ${team.name}`);
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;

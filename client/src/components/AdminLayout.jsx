@@ -16,6 +16,7 @@ const menuItems = [
   { to: '/admin/settings', label: 'Cài đặt', roles: ['super_admin', 'admin', 'team'] },
   { to: '/admin/sponsors', label: 'Nhà tài trợ', roles: ['super_admin', 'admin'] },
   { to: '/admin/schedule', label: 'Lịch thi đấu (Knockout)', roles: ['super_admin', 'admin'] },
+  { to: '/admin/action-logs', label: 'Nhật ký hoạt động', roles: ['super_admin'] },
 ];
 
 export default function AdminLayout() {
@@ -25,6 +26,11 @@ export default function AdminLayout() {
 
   if (loading) return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
   if (!user) return <Navigate to="/admin/login" state={{ from: location }} replace />;
+
+  const currentMenuItem = menuItems.find((m) => location.pathname === m.to);
+  if (currentMenuItem && !currentMenuItem.roles.includes(user.role)) {
+    return <Navigate to="/admin" replace />;
+  }
 
   const visibleMenu = menuItems
     .filter((m) => m.roles.includes(user.role))

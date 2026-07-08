@@ -1,6 +1,6 @@
 // server/src/routes/players.js
 import { Router } from 'express';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, canManageTournament } from '../middleware/auth.js';
 
 const router = Router();
@@ -45,6 +45,7 @@ router.post('/', authRequired, (req, res) => {
       INSERT INTO players (team_id, name, dob, jersey_number, position, photo)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(Number(team_id), name, dob, Number(jersey_number), position, photo);
+    logAction(req.user.username, 'CREATE_PLAYER', `Thêm cầu thủ mới: ${name} (Số áo: ${jersey_number})`);
     res.status(201).json({ id: result.lastInsertRowid, ...req.body });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -57,7 +58,7 @@ router.put('/:id', authRequired, (req, res) => {
   const id = req.params.id;
 
   try {
-    const player = db.prepare('SELECT team_id FROM players WHERE id = ?').get(id);
+    const player = db.prepare('SELECT team_id, name FROM players WHERE id = ?').get(id);
     if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
 
     const isTeamAdmin = req.user.role === 'team' && 
@@ -71,6 +72,7 @@ router.put('/:id', authRequired, (req, res) => {
     db.prepare(`
       UPDATE players SET team_id=?, name=?, dob=?, jersey_number=?, position=?, photo=? WHERE id=?
     `).run(Number(team_id), name, dob, Number(jersey_number), position, photo, id);
+    logAction(req.user.username, 'UPDATE_PLAYER', `Cập nhật thông tin cầu thủ: ${player.name} (ID: ${id})`);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -82,7 +84,7 @@ router.delete('/:id', authRequired, (req, res) => {
   const id = req.params.id;
 
   try {
-    const player = db.prepare('SELECT team_id FROM players WHERE id = ?').get(id);
+    const player = db.prepare('SELECT team_id, name FROM players WHERE id = ?').get(id);
     if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
 
     const isTeamAdmin = req.user.role === 'team' && Number(player.team_id) === Number(req.user.team_id);
@@ -92,6 +94,7 @@ router.delete('/:id', authRequired, (req, res) => {
     }
 
     db.prepare('DELETE FROM players WHERE id = ?').run(id);
+    logAction(req.user.username, 'DELETE_PLAYER', `Xóa cầu thủ: ${player.name}`);
     res.json({ message: 'Đã xóa' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -130,6 +133,8 @@ router.post('/import', authRequired, (req, res) => {
       );
     }
     db.exec('COMMIT');
+    const team = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_id);
+    logAction(req.user.username, 'IMPORT_PLAYERS', `Nhập danh sách ${players.length} cầu thủ cho đội ${team?.name || team_id} từ Excel`);
     res.json({ message: 'Nhập danh sách cầu thủ thành công' });
   } catch (err) {
     db.exec('ROLLBACK');

@@ -263,6 +263,14 @@ export function initDatabase() {
       order_index INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL,
+      action TEXT NOT NULL,
+      details TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Migration: Add team_id to users if it doesn't exist
@@ -324,5 +332,16 @@ export function initDatabase() {
     console.log('- admin / admin123 (super_admin)');
     console.log('- bientap / bientap123 (editor)');
     console.log('- nhapketqua / ketqua123 (scorekeeper)');
+  }
+}
+
+export function logAction(username, action, details) {
+  try {
+    db.prepare(`
+      INSERT INTO audit_logs (username, action, details)
+      VALUES (?, ?, ?)
+    `).run(username, action, details || null);
+  } catch (err) {
+    console.error('[AuditLog] Failed to write log:', err);
   }
 }

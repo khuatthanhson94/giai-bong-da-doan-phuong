@@ -1,5 +1,5 @@
 import express from 'express';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -29,6 +29,7 @@ router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) =
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Tên bảng không được trống' });
     const result = db.prepare('INSERT INTO groups (name) VALUES (?)').run(name);
+    logAction(req.user.username, 'CREATE_GROUP', `Tạo bảng đấu mới: ${name}`);
     res.status(201).json({ id: result.lastInsertRowid, name, teams: [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -40,8 +41,10 @@ router.put('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res)
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Tên bảng không được trống' });
+    const originalGroup = db.prepare('SELECT name FROM groups WHERE id = ?').get(req.params.id);
     const info = db.prepare('UPDATE groups SET name = ? WHERE id = ?').run(name, req.params.id);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy bảng' });
+    logAction(req.user.username, 'UPDATE_GROUP', `Cập nhật tên bảng đấu từ ${originalGroup?.name || req.params.id} thành ${name}`);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -51,6 +54,7 @@ router.put('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res)
 // ---------- DELETE A GROUP ----------
 router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
+    const originalGroup = db.prepare('SELECT name FROM groups WHERE id = ?').get(req.params.id);
     db.exec('BEGIN IMMEDIATE');
     try {
       // Find all team IDs in this group to delete their group stage matches
@@ -73,6 +77,7 @@ router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, r
         return res.status(404).json({ error: 'Không tìm thấy bảng' });
       }
       db.exec('COMMIT');
+      logAction(req.user.username, 'DELETE_GROUP', `Xóa bảng đấu: ${originalGroup?.name || req.params.id} và lịch thi đấu liên quan`);
       res.json({ message: 'Xóa bảng thành công và lịch thi đấu liên quan' });
     } catch (err) {
       db.exec('ROLLBACK');
@@ -100,6 +105,8 @@ router.post('/:groupId/teams', authRequired, requireRole('admin', 'super_admin')
         insert.run(groupId, teamId);
       }
       db.exec('COMMIT');
+      const g = db.prepare('SELECT name FROM groups WHERE id = ?').get(groupId);
+      logAction(req.user.username, 'ASSIGN_TEAMS_TO_GROUP', `Gán ${teamIds.length} đội bóng vào bảng đấu ${g?.name || groupId}`);
       res.json({ message: 'Gán đội vào bảng thành công' });
     } catch (err) {
       db.exec('ROLLBACK');
@@ -114,8 +121,11 @@ router.post('/:groupId/teams', authRequired, requireRole('admin', 'super_admin')
 router.delete('/:groupId/teams/:teamId', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
     const { groupId, teamId } = req.params;
+    const g = db.prepare('SELECT name FROM groups WHERE id = ?').get(groupId);
+    const t = db.prepare('SELECT name FROM teams WHERE id = ?').get(teamId);
     const info = db.prepare('DELETE FROM group_teams WHERE group_id = ? AND team_id = ?').run(groupId, teamId);
     if (info.changes === 0) return res.status(404).json({ error: 'Không tìm thấy mối liên kết' });
+    logAction(req.user.username, 'REMOVE_TEAM_FROM_GROUP', `Xóa đội bóng ${t?.name || teamId} khỏi bảng đấu ${g?.name || groupId}`);
     res.json({ message: 'Xóa đội khỏi bảng thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -166,11 +176,12 @@ router.post('/generate', authRequired, requireRole('admin', 'super_admin'), (req
       });
 
       db.exec('COMMIT');
-      res.json({ message: 'Tạo bảng đấu tự động thành công' });
+      logAction(req.user.username, 'AUTO_GENERATE_GROUPS', `Tự động chia đều các đội bóng vào ${count} bảng đấu`);
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
     }
+    res.json({ message: 'Tạo bảng đấu tự động thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

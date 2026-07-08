@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db.js';
+import { db, logAction } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
 
 const router = Router();
@@ -26,7 +26,7 @@ router.post('/', authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN), (req
       INSERT INTO sponsors (name, short_name, logo, link, tier, order_index)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(name, short_name || null, logo || null, link || '', tier || 'general', Number(order_index) || 0);
-    
+    logAction(req.user.username, 'CREATE_SPONSOR', `Thêm nhà tài trợ mới: ${name} (Hạng: ${tier || 'general'})`);
     res.status(201).json({
       id: result.lastInsertRowid,
       name,
@@ -51,6 +51,7 @@ router.put('/:id', authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN), (r
   }
   
   try {
+    const targetSponsor = db.prepare('SELECT name FROM sponsors WHERE id = ?').get(id);
     const result = db.prepare(`
       UPDATE sponsors SET name = ?, short_name = ?, logo = ?, link = ?, tier = ?, order_index = ?
       WHERE id = ?
@@ -59,7 +60,7 @@ router.put('/:id', authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN), (r
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Không tìm thấy nhà tài trợ' });
     }
-    
+    logAction(req.user.username, 'UPDATE_SPONSOR', `Cập nhật nhà tài trợ: ${targetSponsor?.name || name}`);
     res.json({ message: 'Cập nhật nhà tài trợ thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -71,10 +72,12 @@ router.delete('/:id', authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN),
   const { id } = req.params;
   
   try {
+    const targetSponsor = db.prepare('SELECT name FROM sponsors WHERE id = ?').get(id);
     const result = db.prepare('DELETE FROM sponsors WHERE id = ?').run(id);
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Không tìm thấy nhà tài trợ' });
     }
+    logAction(req.user.username, 'DELETE_SPONSOR', `Xóa nhà tài trợ: ${targetSponsor?.name || id}`);
     res.json({ message: 'Xóa nhà tài trợ thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
