@@ -24,6 +24,7 @@ export default function AdminTeams() {
   const [showForm, setShowForm] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedTeamForPlayers, setSelectedTeamForPlayers] = useState(null);
   const fileInputRef = useRef(null);
 
   // Load teams on mount
@@ -450,6 +451,9 @@ export default function AdminTeams() {
                 <td>{t.logo && <img src={getFullUrl(t.logo)} className="w-10 h-10 object-contain" alt="logo" />}</td>
                 <td>{t.points || 0}</td>
                 <td className="space-x-2">
+                  <button onClick={() => setSelectedTeamForPlayers(t)} className="text-emerald-600 text-sm hover:underline">
+                    👥 Cầu thủ
+                  </button>
                   <button onClick={() => handleEdit(t)} className="text-primary text-sm hover:underline">
                     Sửa
                   </button>
@@ -463,6 +467,286 @@ export default function AdminTeams() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {selectedTeamForPlayers && (
+        <TeamPlayersModal
+          team={selectedTeamForPlayers}
+          onClose={() => setSelectedTeamForPlayers(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TeamPlayersModal({ team, onClose }) {
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editId, setEditId] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [form, setForm] = useState({
+    name: '',
+    jersey_number: '',
+    position: 'Tiền vệ',
+    dob: '',
+    photo: '',
+    description: ''
+  });
+
+  const positions = ['Thủ môn', 'Hậu vệ', 'Tiền vệ', 'Tiền đạo'];
+
+  const loadPlayers = async () => {
+    try {
+      setLoading(true);
+      const data = await api.get(`/players?teamId=${team.id}`);
+      setPlayers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPlayers();
+  }, [team.id]);
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const res = await api.upload(file);
+      const url = res.url || `/uploads/${res.filename}`;
+      setForm((prev) => ({ ...prev, photo: url }));
+      setPhotoPreview(url);
+    } catch (err) {
+      alert('Lỗi tải ảnh: ' + (err.message || err));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      ...form,
+      team_id: Number(team.id),
+      jersey_number: Number(form.jersey_number),
+      jersey_color: team.jersey_color || '#0066CC'
+    };
+
+    try {
+      if (editId) {
+        await api.put(`/players/${editId}`, payload);
+      } else {
+        await api.post('/players', payload);
+      }
+      
+      // Reset form
+      setForm({
+        name: '',
+        jersey_number: '',
+        position: 'Tiền vệ',
+        dob: '',
+        photo: '',
+        description: ''
+      });
+      setEditId(null);
+      setPhotoPreview('');
+      loadPlayers();
+    } catch (err) {
+      alert('Lỗi lưu thông tin: ' + (err.message || err));
+    }
+  };
+
+  const handleEdit = (p) => {
+    setForm({
+      name: p.name,
+      jersey_number: p.jersey_number,
+      position: p.position || 'Tiền vệ',
+      dob: p.dob || '',
+      photo: p.photo || '',
+      description: p.description || ''
+    });
+    setEditId(p.id);
+    setPhotoPreview(p.photo || '');
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa cầu thủ này?')) return;
+    try {
+      await api.delete(`/players/${id}`);
+      loadPlayers();
+    } catch (err) {
+      alert('Lỗi xóa cầu thủ: ' + (err.message || err));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div>
+            <h2 className="text-xl font-bold text-primary flex items-center gap-2">
+              <span>👥 Cầu thủ đội: {team.name}</span>
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">Quản lý danh sách cầu thủ thuộc biên chế đội bóng</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition">
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 grid md:grid-cols-5 gap-6">
+          {/* List Section */}
+          <div className="md:col-span-3 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Danh sách cầu thủ</h3>
+            {loading ? (
+              <div className="text-center py-10 text-gray-400 text-sm">Đang tải danh sách...</div>
+            ) : players.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-sm border-2 border-dashed rounded-xl">
+                Chưa có cầu thủ nào trong danh sách. Hãy thêm cầu thủ bên phải.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-gray-100 rounded-xl">
+                <table className="min-w-full divide-y divide-gray-100 text-left text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="p-3 font-semibold text-gray-600">Số áo</th>
+                      <th className="p-3 font-semibold text-gray-600">Ảnh</th>
+                      <th className="p-3 font-semibold text-gray-600">Họ tên</th>
+                      <th className="p-3 font-semibold text-gray-600">Vị trí</th>
+                      <th className="p-3 font-semibold text-gray-600">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {players.map((p) => (
+                      <tr key={p.id} className="hover:bg-gray-50/50 transition">
+                        <td className="p-3 font-mono font-bold text-gray-700">#{p.jersey_number}</td>
+                        <td className="p-3">
+                          <img
+                            src={p.photo ? getFullUrl(p.photo) : 'https://placehold.co/100?text=Player'}
+                            alt={p.name}
+                            className="w-10 h-10 rounded-full object-cover border bg-gray-50"
+                          />
+                        </td>
+                        <td className="p-3 font-medium text-gray-900">{p.name}</td>
+                        <td className="p-3">
+                          <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                            {p.position}
+                          </span>
+                        </td>
+                        <td className="p-3 space-x-2">
+                          <button onClick={() => handleEdit(p)} className="text-blue-500 hover:underline">
+                            Sửa
+                          </button>
+                          <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:underline">
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Form Section */}
+          <div className="md:col-span-2 bg-gray-50/50 p-5 rounded-2xl border border-gray-100 self-start">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+              {editId ? '📝 Sửa cầu thủ' : '➕ Thêm cầu thủ mới'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="form-label text-xs font-semibold text-gray-600 mb-1">Họ tên cầu thủ <span className="text-red-500">*</span></label>
+                <input
+                  className="input-field bg-white"
+                  placeholder="Nhập tên cầu thủ"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label text-xs font-semibold text-gray-600 mb-1">Số áo <span className="text-red-500">*</span></label>
+                  <input
+                    className="input-field bg-white"
+                    type="number"
+                    placeholder="Số áo"
+                    value={form.jersey_number}
+                    onChange={(e) => setForm({ ...form, jersey_number: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="form-label text-xs font-semibold text-gray-600 mb-1">Vị trí</label>
+                  <select
+                    className="input-field bg-white"
+                    value={form.position}
+                    onChange={(e) => setForm({ ...form, position: e.target.value })}
+                  >
+                    {positions.map((pos) => (
+                      <option key={pos} value={pos}>{pos}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-gray-600 mb-1">Ngày sinh</label>
+                <input
+                  className="input-field bg-white"
+                  type="date"
+                  value={form.dob}
+                  onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-gray-600 mb-1">Giới thiệu</label>
+                <textarea
+                  className="input-field bg-white"
+                  rows={2}
+                  placeholder="Mô tả sơ lược về cầu thủ"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-gray-600 mb-1">Ảnh đại diện</label>
+                <input type="file" accept="image/*" onChange={handlePhotoChange} className="text-xs text-gray-500" />
+                {photoPreview && (
+                  <div className="mt-2">
+                    <img src={getFullUrl(photoPreview)} alt="Preview" className="w-16 h-16 object-cover rounded-lg border bg-white" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button type="submit" className="btn-primary text-xs py-2 px-4 flex-1">
+                  {editId ? 'Cập nhật' : 'Lưu lại'}
+                </button>
+                {editId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditId(null);
+                      setForm({ name: '', jersey_number: '', position: 'Tiền vệ', dob: '', photo: '', description: '' });
+                      setPhotoPreview('');
+                    }}
+                    className="btn-outline text-xs py-2 px-4"
+                  >
+                    Hủy sửa
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
