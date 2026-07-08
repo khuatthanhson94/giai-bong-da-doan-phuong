@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 import StandingsTable from '../components/StandingsTable';
+import { getFullUrl } from '../utils/url';
 
 export default function Standings() {
   const [standings, setStandings] = useState([]);
@@ -22,7 +23,13 @@ export default function Standings() {
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold text-primary">Bảng xếp hạng</h1>
-        <a href="/api/export/standings" className="btn-outline text-sm" download>
+        <a
+          href={getFullUrl('/api/export/standings')}
+          className="btn-outline text-sm"
+          target="_blank"
+          rel="noopener noreferrer"
+          download
+        >
           Xuất Excel (CSV)
         </a>
       </div>
