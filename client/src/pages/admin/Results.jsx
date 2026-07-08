@@ -106,7 +106,7 @@ export default function AdminResults() {
   };
 
   useEffect(() => {
-    if (!selectedId || players.length === 0) return;
+    if (!selectedId) return;
     api.get(`/matches/${selectedId}`).then((m) => {
       setMatch(m);
 
@@ -140,30 +140,6 @@ export default function AdminResults() {
     });
   }, [selectedId, players]);
 
-  // Effect to automatically calculate Score A and Score B based on entered goals and own goals
-  useEffect(() => {
-    if (!match) return;
-
-    // Score A = Normal goals by A + Own goals by B
-    const normalGoalsA = form.goals_a.filter(g => g.player_id && !g.is_own_goal).length;
-    const ownGoalsB = form.goals_b.filter(g => g.player_id && g.is_own_goal).length;
-    const computedScoreA = normalGoalsA + ownGoalsB;
-
-    // Score B = Normal goals by B + Own goals by A
-    const normalGoalsB = form.goals_b.filter(g => g.player_id && !g.is_own_goal).length;
-    const ownGoalsA = form.goals_a.filter(g => g.player_id && g.is_own_goal).length;
-    const computedScoreB = normalGoalsB + ownGoalsA;
-
-    setForm(prev => {
-      if (prev.score_a === computedScoreA && prev.score_b === computedScoreB) return prev;
-      return {
-        ...prev,
-        score_a: computedScoreA,
-        score_b: computedScoreB
-      };
-    });
-  }, [form.goals_a, form.goals_b, match]);
-
   const teamAPlayers = match ? players.filter((p) => p.team_id === match.team_a_id) : [];
   const teamBPlayers = match ? players.filter((p) => p.team_id === match.team_b_id) : [];
   const matchPlayers = match
@@ -175,7 +151,21 @@ export default function AdminResults() {
       const list = [...prev[field]];
       if (isUpdate) list[index] = value;
       else list.splice(index, 1);
-      return { ...prev, [field]: list };
+      
+      const newForm = { ...prev, [field]: list };
+      
+      // Auto-calculate scores only when updating goals list
+      if (field === 'goals_a' || field === 'goals_b') {
+        const normalGoalsA = newForm.goals_a.filter(g => g.player_id && !g.is_own_goal).length;
+        const ownGoalsB = newForm.goals_b.filter(g => g.player_id && g.is_own_goal).length;
+        newForm.score_a = normalGoalsA + ownGoalsB;
+
+        const normalGoalsB = newForm.goals_b.filter(g => g.player_id && !g.is_own_goal).length;
+        const ownGoalsA = newForm.goals_a.filter(g => g.player_id && g.is_own_goal).length;
+        newForm.score_b = normalGoalsB + ownGoalsA;
+      }
+      
+      return newForm;
     });
   };
 
