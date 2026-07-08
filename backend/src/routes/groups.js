@@ -53,6 +53,19 @@ router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, r
   try {
     db.exec('BEGIN IMMEDIATE');
     try {
+      // Find all team IDs in this group to delete their group stage matches
+      const teamRows = db.prepare('SELECT team_id FROM group_teams WHERE group_id = ?').all(req.params.id);
+      const teamIds = teamRows.map(row => row.team_id);
+      
+      if (teamIds.length > 0) {
+        const placeholders = teamIds.map(() => '?').join(',');
+        db.prepare(`
+          DELETE FROM matches
+          WHERE (team_a_id IN (${placeholders}) OR team_b_id IN (${placeholders}))
+            AND (round LIKE '%Lượt%' OR round LIKE '%Vòng bảng%' OR round LIKE '%Bảng%')
+        `).run(...teamIds, ...teamIds);
+      }
+
       db.prepare('DELETE FROM group_teams WHERE group_id = ?').run(req.params.id);
       const info = db.prepare('DELETE FROM groups WHERE id = ?').run(req.params.id);
       if (info.changes === 0) {
@@ -60,7 +73,7 @@ router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, r
         return res.status(404).json({ error: 'Không tìm thấy bảng' });
       }
       db.exec('COMMIT');
-      res.json({ message: 'Xóa bảng thành công' });
+      res.json({ message: 'Xóa bảng thành công và lịch thi đấu liên quan' });
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
