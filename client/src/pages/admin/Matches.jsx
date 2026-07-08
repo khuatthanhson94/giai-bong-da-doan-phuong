@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../../context/AuthContext';
+import ResultEditorModal from '../../components/ResultEditorModal';
 
 export default function AdminMatches() {
+  const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [teams, setTeams] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -18,6 +21,7 @@ export default function AdminMatches() {
   });
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [selectedMatchIdForResults, setSelectedMatchIdForResults] = useState(null);
 
   const load = () => {
     api.get('/matches').then(setMatches);
@@ -211,8 +215,12 @@ export default function AdminMatches() {
           <button onClick={exportMatches} className="btn-outline text-sm flex items-center gap-1 py-2 px-3">
             📥 Xuất Excel
           </button>
-          <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm py-2 px-4">+ Tạo lịch</button>
-          <button onClick={handleAutoGenerate} className="btn-secondary text-sm py-2 px-4">Tự động tạo lịch</button>
+          {user?.role !== 'scorekeeper' && (
+            <>
+              <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm py-2 px-4">+ Tạo lịch</button>
+              <button onClick={handleAutoGenerate} className="btn-secondary text-sm py-2 px-4">Tự động tạo lịch</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -364,8 +372,17 @@ export default function AdminMatches() {
                   </span>
                 </td>
                 <td>
-                  <button onClick={() => handleEdit(m)} className="text-primary text-sm mr-3 hover:underline">Sửa</button>
-                  <button onClick={async () => { if (confirm('Bạn có chắc chắn muốn xóa lịch thi đấu này?')) { await api.delete(`/matches/${m.id}`); load(); } }} className="text-red-500 text-sm hover:underline">Xóa</button>
+                  <div className="flex flex-wrap gap-2">
+                    {user?.role !== 'scorekeeper' && (
+                      <>
+                        <button onClick={() => handleEdit(m)} className="text-primary text-sm hover:underline">Sửa</button>
+                        <button onClick={async () => { if (confirm('Bạn có chắc chắn muốn xóa lịch thi đấu này?')) { await api.delete(`/matches/${m.id}`); load(); } }} className="text-red-500 text-sm hover:underline">Xóa</button>
+                      </>
+                    )}
+                    <button onClick={() => setSelectedMatchIdForResults(m.id)} className="text-youth-dark text-sm font-semibold hover:underline">
+                      Nhập kết quả
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -377,6 +394,17 @@ export default function AdminMatches() {
           </tbody>
         </table>
       </div>
+
+      {selectedMatchIdForResults && (
+        <ResultEditorModal
+          matchId={selectedMatchIdForResults}
+          onClose={() => setSelectedMatchIdForResults(null)}
+          onSaved={() => {
+            load();
+            setSelectedMatchIdForResults(null);
+          }}
+        />
+      )}
     </div>
   );
 }

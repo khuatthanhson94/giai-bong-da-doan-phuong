@@ -236,8 +236,8 @@ router.post('/', authRequired, (req, res, next) => {
 });
 
 router.put('/:id', authRequired, (req, res, next) => {
-  if (!canManageTournament(req.user.role) && !canManageResults(req.user.role)) {
-    return res.status(403).json({ error: 'Không có quyền' });
+  if (!canManageTournament(req.user.role)) {
+    return res.status(403).json({ error: 'Không có quyền chỉnh sửa lịch thi đấu' });
   }
   next();
 }, (req, res) => {

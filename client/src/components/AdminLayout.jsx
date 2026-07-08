@@ -8,7 +8,7 @@ const menuItems = [
   { to: '/admin/teams', label: 'Đội bóng', roles: ['super_admin', 'admin', 'team'] },
   { to: '/admin/groups', label: 'Bảng (Groups)', roles: ['super_admin', 'admin'] },
   { to: '/admin/players', label: 'Cầu thủ', roles: ['super_admin', 'admin', 'team'] },
-  { to: '/admin/matches', label: 'Lịch thi đấu', roles: ['super_admin', 'admin'] },
+  { to: '/admin/matches', label: 'Lịch thi đấu', roles: ['super_admin', 'admin', 'scorekeeper'] },
   { to: '/admin/results', label: 'Nhập kết quả', roles: ['super_admin', 'admin', 'scorekeeper'] },
   { to: '/admin/news', label: 'Tin tức', roles: ['super_admin', 'admin', 'editor'] },
   { to: '/admin/gallery', label: 'Thư viện', roles: ['super_admin', 'admin', 'editor'] },
