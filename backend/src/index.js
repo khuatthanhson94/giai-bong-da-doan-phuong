@@ -256,6 +256,10 @@ app.post('/api/admin/restore-database', upload.single('database'), async (req, r
   }
 });
 
+app.get('/api/debug/raw-db-url', (req, res) => {
+  res.json({ url: process.env.SYNC_DATABASE_URL || 'not set' });
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
