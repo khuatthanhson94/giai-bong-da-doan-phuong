@@ -214,6 +214,9 @@ export default function Home() {
                 </div>
               </Link>
             ))}
+          </div>
+        </section>
+
         {/* Sponsors Section */}
         {sponsors?.length > 0 && (
           <section className="border-t pt-12 mt-16 bg-gradient-to-b from-transparent to-gray-50/50 -mx-4 px-4 pb-12 rounded-t-[32px]">
