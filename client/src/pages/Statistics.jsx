@@ -67,11 +67,15 @@ export default function Statistics() {
       <div className="grid lg:grid-cols-2 gap-8 mb-8">
         <div className="card p-6">
           <h3 className="font-bold text-primary mb-4">Top ghi bàn</h3>
-          <Bar data={goalsChart} options={{ responsive: true, plugins: { legend: { display: false } } }} />
+          <div className="h-64 sm:h-80 relative">
+            <Bar data={goalsChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+          </div>
         </div>
         <div className="card p-6">
           <h3 className="font-bold text-primary mb-4">Đội ghi nhiều bàn nhất</h3>
-          <Bar data={teamGoalsChart} options={{ responsive: true, plugins: { legend: { display: false } } }} />
+          <div className="h-64 sm:h-80 relative">
+            <Bar data={teamGoalsChart} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+          </div>
         </div>
       </div>
 

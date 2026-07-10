@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '../api/client';
-
+ 
 export default function Results() {
   const [matches, setMatches] = useState([]);
   const [selected, setSelected] = useState(null);
   const [activeTab, setActiveTab] = useState('group'); // 'group' or 'knockout'
+  const detailRef = useRef(null);
 
   useEffect(() => {
     api.get('/matches?status=finished&published=1').then((res) => {
@@ -69,7 +70,14 @@ export default function Results() {
           {displayedMatches.map((m) => (
             <button
               key={m.id}
-              onClick={() => setSelected(m)}
+              onClick={() => {
+                setSelected(m);
+                setTimeout(() => {
+                  if (window.innerWidth < 1024) {
+                    detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 80);
+              }}
               className={`card w-full p-4 text-left transition hover:bg-blue-50/50 ${
                 selected?.id === m.id ? 'ring-2 ring-primary bg-blue-50' : ''
               }`}
@@ -95,18 +103,18 @@ export default function Results() {
         </div>
 
         {selected && (
-          <div className="card p-6 animate-slide-up sticky top-20 border border-gray-100 bg-white shadow-lg">
+          <div ref={detailRef} className="card p-6 animate-slide-up sticky top-20 border border-gray-100 bg-white shadow-lg scroll-mt-24">
             <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">
               {selected.round}
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
-              <span>{selected.team_a?.name}</span>
-              <span className="text-primary bg-blue-50 px-4 py-1.5 rounded-lg border border-blue-100">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span className="text-center sm:text-left w-full sm:w-auto">{selected.team_a?.name}</span>
+              <span className="text-primary bg-blue-50 px-4 py-1.5 rounded-lg border border-blue-100 flex-shrink-0 text-xl font-bold">
                 {selected.score_a} - {selected.score_b}
               </span>
-              <span>{selected.team_b?.name}</span>
+              <span className="text-center sm:text-right w-full sm:w-auto">{selected.team_b?.name}</span>
             </h2>
-            <p className="text-sm text-gray-500 mb-6 flex items-center gap-2">
+            <p className="text-sm text-gray-500 mb-6 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
               <span>🏟️ {selected.venue}</span>
               <span>•</span>
               <span>📅 {selected.match_date} {selected.match_time}</span>
