@@ -202,7 +202,7 @@ export default function Home() {
               <Link key={n.id} to={`/tin-tuc/${n.id}`} className="card group">
                 <div className="h-40 bg-gradient-to-br from-primary/20 to-youth/20 flex items-center justify-center overflow-hidden">
                   {n.image || settings?.logo_url ? (
-                    <img src={getFullUrl(n.image || settings.logo_url)} alt={n.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <img src={getFullUrl(n.image || settings.logo_url)} alt={n.title} className="w-full h-full object-contain bg-gray-50/30 group-hover:scale-105 transition-transform duration-300" />
                   ) : (
                     <span className="text-4xl">⚽</span>
                   )}

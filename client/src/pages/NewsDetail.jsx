@@ -23,7 +23,7 @@ export default function NewsDetail() {
       <h1 className="text-3xl font-bold text-primary mt-2 mb-4">{item.title}</h1>
       <p className="text-sm text-gray-400 mb-8">{new Date(item.created_at).toLocaleDateString('vi-VN')}</p>
       {(item.image || settings?.logo_url) && (
-        <img src={getFullUrl(item.image || settings.logo_url)} alt="" className="w-full rounded-xl mb-8 object-cover max-h-[400px]" />
+        <img src={getFullUrl(item.image || settings.logo_url)} alt="" className="w-full rounded-xl mb-8 object-contain max-h-[500px] bg-gray-50/50" />
       )}
       <div className="prose max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: item.content }} />
       {item.video_url && (

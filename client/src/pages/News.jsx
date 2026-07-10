@@ -43,7 +43,7 @@ export default function News() {
           <Link key={n.id} to={`/tin-tuc/${n.id}`} className="card group">
             <div className="h-48 bg-gradient-to-br from-primary/10 to-youth/10 flex items-center justify-center overflow-hidden">
               {n.image || settings?.logo_url ? (
-                <img src={getFullUrl(n.image || settings.logo_url)} alt="" className="w-full h-full object-cover" />
+                <img src={getFullUrl(n.image || settings.logo_url)} alt="" className="w-full h-full object-contain bg-gray-50/30" />
               ) : (
                 <span className="text-5xl">📰</span>
               )}
