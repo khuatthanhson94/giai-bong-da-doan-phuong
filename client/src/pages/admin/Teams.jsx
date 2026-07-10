@@ -3,6 +3,7 @@ import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
+import { resizeImage } from '../../utils/imageResize';
 
 /**
  * Admin interface for managing teams.
@@ -134,31 +135,6 @@ export default function AdminTeams() {
     setLogoPreview(url);
   };
 
-  // Utility to resize image using canvas
-  const resizeImage = (file, maxWidth, maxHeight) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        const aspectRatio = width / height;
-        if (width > maxWidth) {
-          width = maxWidth;
-          height = Math.round(width / aspectRatio);
-        }
-        if (height > maxHeight) {
-          height = maxHeight;
-          width = Math.round(height * aspectRatio);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => resolve(blob), file.type);
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -522,7 +498,9 @@ function TeamPlayersModal({ team, onClose }) {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const res = await api.upload(file);
+      // Resize to max 300x400 for player photos
+      const resizedFile = await resizeImage(file, 300, 400);
+      const res = await api.upload(resizedFile);
       const url = res.url || `/uploads/${res.filename}`;
       setForm((prev) => ({ ...prev, photo: url }));
       setPhotoPreview(url);

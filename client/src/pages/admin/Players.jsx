@@ -3,6 +3,7 @@ import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
+import { resizeImage } from '../../utils/imageResize';
 
 const positions = ['Thủ môn', 'Hậu vệ', 'Tiền vệ', 'Tiền đạo'];
 
@@ -163,10 +164,16 @@ export default function AdminPlayers() {
   const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const res = await api.upload(file);
-    const url = res.url || `/uploads/${res.filename}`;
-    setForm((prev) => ({ ...prev, photo: url }));
-    setPhotoPreview(url);
+    try {
+      // Resize to max 300x400 for player photos
+      const resizedFile = await resizeImage(file, 300, 400);
+      const res = await api.upload(resizedFile);
+      const url = res.url || `/uploads/${res.filename}`;
+      setForm((prev) => ({ ...prev, photo: url }));
+      setPhotoPreview(url);
+    } catch (err) {
+      alert('Lỗi tải ảnh: ' + (err.message || err));
+    }
   };
 
   const handleTeamChange = (teamId) => {

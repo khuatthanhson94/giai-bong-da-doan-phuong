@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import RichTextEditor from '../../components/RichTextEditor';
 import { getFullUrl } from '../../utils/url';
+import { resizeImage } from '../../utils/imageResize';
 
 export default function AdminNews() {
   const [news, setNews] = useState([]);
@@ -44,7 +45,9 @@ export default function AdminNews() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const res = await api.upload(file);
+      // Resize to max 1200x800 for news cover image
+      const resizedFile = await resizeImage(file, 1200, 800);
+      const res = await api.upload(resizedFile);
       const url = res.url || `/uploads/${res.filename}`;
       setForm((prev) => ({ ...prev, image: url }));
     } catch (err) {

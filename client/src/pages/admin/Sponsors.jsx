@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '../../api/client';
 import { getFullUrl } from '../../utils/url';
+import { resizeImage } from '../../utils/imageResize';
 
 const TIERS = [
   { value: 'diamond', label: '💎 Kim Cương' },
@@ -56,12 +57,10 @@ export default function AdminSponsors() {
   const handleLogoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append('image', file);
     try {
-      const res = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      // Resize to max 300x300 for sponsor logos
+      const resizedFile = await resizeImage(file, 300, 300);
+      const res = await api.upload(resizedFile);
       const url = res.url || `/uploads/${res.filename}`;
       setForm((prev) => ({ ...prev, logo: url }));
       setLogoPreview(url);

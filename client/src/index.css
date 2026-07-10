@@ -41,6 +41,20 @@
 
   .banner-image { @apply w-full h-48 object-cover; }
 
+  /* Ensure images in articles and editors fit their containers responsively */
+  .prose img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 0.5rem;
+    margin: 1.5rem auto;
+    display: block;
+  }
+  .ql-editor img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 0.5rem;
+  }
+
   .form-label {
     @apply block text-sm font-medium text-gray-700 mb-1;
   }

@@ -1,6 +1,7 @@
-﻿import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import api from "../api/client";
 import { getFullUrl } from "../utils/url";
+import { resizeImage } from "../utils/imageResize";
 
 export default function RichTextEditor({ value, onChange }) {
   const containerRef = useRef(null);
@@ -54,8 +55,10 @@ export default function RichTextEditor({ value, onChange }) {
         if (!file) return;
 
         try {
+          // Resize to max 1000x1000 for news content images
+          const resizedFile = await resizeImage(file, 1000, 1000);
           // Upload to server
-          const res = await api.upload(file);
+          const res = await api.upload(resizedFile);
           const url = getFullUrl(res.url);
 
           // Insert into editor
