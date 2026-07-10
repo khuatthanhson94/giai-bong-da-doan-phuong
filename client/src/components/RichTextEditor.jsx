@@ -183,10 +183,15 @@ export default function RichTextEditor({ value, onChange }) {
           color: #1f2937;
         }
         .modern-editor .ql-editor {
-          padding: 2rem;
+          padding: 1.25rem 1rem;
           min-height: 380px;
           max-height: 600px;
           line-height: 1.75;
+        }
+        @media (min-width: 640px) {
+          .modern-editor .ql-editor {
+            padding: 2rem;
+          }
         }
         .modern-editor .ql-snow.ql-toolbar button:hover,
         .modern-editor .ql-snow.ql-toolbar button.ql-active,
@@ -231,12 +236,17 @@ export default function RichTextEditor({ value, onChange }) {
         .modern-editor.fullscreen .ql-editor {
           max-height: none !important;
           height: 100% !important;
-          padding: 3rem 12% !important; /* Centered writing sheet layout */
+          padding: 1.5rem 1rem !important; /* Mobile centered padding */
           background-color: #ffffff !important;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
           max-width: 1000px;
           margin: 0 auto;
           width: 100%;
+        }
+        @media (min-width: 640px) {
+          .modern-editor.fullscreen .ql-editor {
+            padding: 3rem 12% !important; /* Desktop centered sheet padding */
+          }
         }
         .no-scrollbar::-webkit-scrollbar {
           display: none;
@@ -248,7 +258,7 @@ export default function RichTextEditor({ value, onChange }) {
 
       {/* Custom absolute Emoji Popover */}
       {showEmojiPicker && (
-        <div className="absolute top-[48px] right-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-72 animate-fade-in">
+        <div className="absolute top-[48px] right-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-[calc(100vw-32px)] sm:w-72 animate-fade-in">
           <div className="flex justify-between items-center border-b pb-2 mb-2">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ký tự đặc biệt & Emoji</span>
             <button
