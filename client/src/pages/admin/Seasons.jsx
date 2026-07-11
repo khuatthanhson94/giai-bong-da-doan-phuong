@@ -15,6 +15,43 @@ export default function Seasons() {
   const [logo, setLogo] = useState('');
   const [banner, setBanner] = useState('');
 
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+    const baseUrl = API_BASE || window.location.origin;
+    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
+    return `${baseUrl}${cleanUrl}`;
+  };
+
+  const handleUploadLogo = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setError('');
+      const res = await api.post('/upload', formData);
+      setLogo(res.url);
+    } catch (err) {
+      setError('Tải logo lên thất bại: ' + err.message);
+    }
+  };
+
+  const handleUploadBanner = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setError('');
+      const res = await api.post('/upload', formData);
+      setBanner(res.url);
+    } catch (err) {
+      setError('Tải banner lên thất bại: ' + err.message);
+    }
+  };
+
   const loadSeasons = () => {
     setLoading(true);
     api.get('/seasons')
@@ -132,26 +169,44 @@ export default function Seasons() {
                 <option value="inactive">Tạm ngưng</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL (Tùy chọn)</label>
-              <input
-                type="text"
-                placeholder="https://example.com/logo.png"
-                value={logo}
-                onChange={e => setLogo(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Banner URL (Tùy chọn)</label>
-              <input
-                type="text"
-                placeholder="https://example.com/banner.jpg"
-                value={banner}
-                onChange={e => setBanner(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-              />
-            </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Logo Mùa giải (Tùy chọn)</label>
+               <div className="flex gap-2 items-center">
+                 <input
+                   type="text"
+                   placeholder="Đường dẫn logo hoặc tải lên..."
+                   value={logo}
+                   onChange={e => setLogo(e.target.value)}
+                   className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+                 />
+                 <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
+                   Tải lên
+                   <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} />
+                 </label>
+               </div>
+               {logo && (
+                 <img src={getFullUrl(logo)} alt="Logo Preview" className="w-16 h-16 object-contain border rounded mt-2 p-1 bg-white" />
+               )}
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Banner Mùa giải (Tùy chọn)</label>
+               <div className="flex gap-2 items-center">
+                 <input
+                   type="text"
+                   placeholder="Đường dẫn banner hoặc tải lên..."
+                   value={banner}
+                   onChange={e => setBanner(e.target.value)}
+                   className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+                 />
+                 <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
+                   Tải lên
+                   <input type="file" accept="image/*" className="hidden" onChange={handleUploadBanner} />
+                 </label>
+               </div>
+               {banner && (
+                 <img src={getFullUrl(banner)} alt="Banner Preview" className="w-32 h-16 object-cover border rounded mt-2 p-1 bg-white" />
+               )}
+             </div>
 
             <div className="flex gap-2 pt-2">
               <button

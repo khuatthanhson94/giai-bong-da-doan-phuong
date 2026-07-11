@@ -39,6 +39,73 @@ export default function Tournaments() {
   const [wizPointsDraw, setWizPointsDraw] = useState(1);
   const [wizPointsLoss, setWizPointsLoss] = useState(0);
   const [wizAdvanceCount, setWizAdvanceCount] = useState(2);
+  const [wizTourLogo, setWizTourLogo] = useState('');
+  const [wizTourBanner, setWizTourBanner] = useState('');
+
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+    const baseUrl = API_BASE || window.location.origin;
+    const cleanUrl = url.startsWith('/') ? url : `/uploads/${url}`;
+    return `${baseUrl}${cleanUrl}`;
+  };
+
+  const handleUploadLogo = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setError('');
+      const res = await api.post('/upload', formData);
+      setLogo(res.url);
+    } catch (err) {
+      setError('Tải logo lên thất bại: ' + err.message);
+    }
+  };
+
+  const handleUploadBanner = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setError('');
+      const res = await api.post('/upload', formData);
+      setBanner(res.url);
+    } catch (err) {
+      setError('Tải banner lên thất bại: ' + err.message);
+    }
+  };
+
+  const handleUploadWizLogo = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setError('');
+      const res = await api.post('/upload', formData);
+      setWizTourLogo(res.url);
+    } catch (err) {
+      setError('Tải logo lên thất bại: ' + err.message);
+    }
+  };
+
+  const handleUploadWizBanner = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      setError('');
+      const res = await api.post('/upload', formData);
+      setWizTourBanner(res.url);
+    } catch (err) {
+      setError('Tải banner lên thất bại: ' + err.message);
+    }
+  };
 
   const [wizSelectedTeams, setWizSelectedTeams] = useState([]);
   const [wizNewTeamName, setWizNewTeamName] = useState('');
@@ -216,7 +283,9 @@ export default function Tournaments() {
         points_draw: Number(wizPointsDraw),
         points_loss: Number(wizPointsLoss),
         advance_count: Number(wizAdvanceCount),
-        status: 'draft'
+        status: 'draft',
+        logo: wizTourLogo,
+        banner: wizTourBanner
       });
       setWizTourId(res.id);
       setSuccess('Đã tạo dự thảo giải đấu: ' + wizTourName);
@@ -472,6 +541,46 @@ export default function Tournaments() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Logo Giải đấu (Tùy chọn)</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Đường dẫn logo hoặc tải lên..."
+                    value={logo}
+                    onChange={e => setLogo(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+                  />
+                  <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
+                    Tải lên
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} />
+                  </label>
+                </div>
+                {logo && (
+                  <img src={getFullUrl(logo)} alt="Logo Preview" className="w-16 h-16 object-contain border rounded mt-2 p-1 bg-white" />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Banner Giải đấu (Tùy chọn)</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Đường dẫn banner hoặc tải lên..."
+                    value={banner}
+                    onChange={e => setBanner(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+                  />
+                  <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
+                    Tải lên
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadBanner} />
+                  </label>
+                </div>
+                {banner && (
+                  <img src={getFullUrl(banner)} alt="Banner Preview" className="w-32 h-16 object-cover border rounded mt-2 p-1 bg-white" />
+                )}
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
@@ -703,6 +812,48 @@ export default function Tournaments() {
                         onChange={e => setWizPointsLoss(e.target.value)}
                         className="w-full border border-gray-300 rounded-lg p-1.5 text-center bg-white"
                       />
+                    </div>
+                  </div>
+
+                  <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4 mt-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Logo Giải đấu (Tùy chọn)</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          placeholder="Đường dẫn logo hoặc tải lên..."
+                          value={wizTourLogo}
+                          onChange={e => setWizTourLogo(e.target.value)}
+                          className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+                        />
+                        <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
+                          Tải lên
+                          <input type="file" accept="image/*" className="hidden" onChange={handleUploadWizLogo} />
+                        </label>
+                      </div>
+                      {wizTourLogo && (
+                        <img src={getFullUrl(wizTourLogo)} alt="Logo Preview" className="w-16 h-16 object-contain border rounded mt-2 p-1 bg-white" />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Banner Giải đấu (Tùy chọn)</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          placeholder="Đường dẫn banner hoặc tải lên..."
+                          value={wizTourBanner}
+                          onChange={e => setWizTourBanner(e.target.value)}
+                          className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+                        />
+                        <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
+                          Tải lên
+                          <input type="file" accept="image/*" className="hidden" onChange={handleUploadWizBanner} />
+                        </label>
+                      </div>
+                      {wizTourBanner && (
+                        <img src={getFullUrl(wizTourBanner)} alt="Banner Preview" className="w-32 h-16 object-cover border rounded mt-2 p-1 bg-white" />
+                      )}
                     </div>
                   </div>
                 </div>

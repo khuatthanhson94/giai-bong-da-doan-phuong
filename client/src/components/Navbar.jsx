@@ -50,7 +50,8 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md">
+    <>
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-3 flex-shrink-0">
@@ -75,34 +76,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Context Picker: Season & Tournament Selector */}
-          <div className="flex items-center gap-1 md:gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1 text-xs">
-            <select
-              value={selectedSeasonId || ''}
-              onChange={(e) => changeSeason(e.target.value)}
-              className="bg-transparent font-medium text-gray-700 outline-none cursor-pointer hover:text-primary transition-colors py-0.5 px-1 max-w-[90px] sm:max-w-[120px] md:max-w-none"
-            >
-              <option value="" disabled>-- Mùa giải --</option>
-              {seasons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <div className="h-4 w-[1px] bg-gray-300"></div>
-            <select
-              value={selectedTournamentId || ''}
-              onChange={(e) => changeTournament(e.target.value)}
-              className="bg-transparent font-semibold text-primary outline-none cursor-pointer hover:text-primary-dark transition-colors py-0.5 px-1 max-w-[100px] sm:max-w-[150px] md:max-w-none"
-            >
-              <option value="" disabled>-- Giải đấu --</option>
-              {tournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
+
 
           <div className="hidden lg:flex items-center gap-3">
             <nav className="flex items-center gap-1">
@@ -196,5 +170,47 @@ export default function Navbar() {
         )}
       </div>
     </header>
+
+    {/* Sub-header Context Bar */}
+    <div className="bg-gradient-to-r from-primary/5 to-youth/5 border-b border-gray-150 py-2.5 px-4 text-xs select-none">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-gray-600 font-medium text-center md:text-left">
+          <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-youth animate-pulse"></span>
+          <span>Đang xem:</span>
+          <strong className="text-primary font-bold">{seasons.find(s => s.id === Number(selectedSeasonId))?.name || 'Mùa giải'}</strong>
+          <span className="text-gray-300">/</span>
+          <strong className="text-youth font-bold">{tournaments.find(t => t.id === Number(selectedTournamentId))?.name || 'Giải đấu'}</strong>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-sm">
+            <span className="text-gray-500 font-medium pr-1 border-r mr-1">🍂 Mùa</span>
+            <select
+              value={selectedSeasonId || ''}
+              onChange={(e) => changeSeason(e.target.value)}
+              className="bg-transparent font-medium text-gray-700 outline-none cursor-pointer hover:text-primary transition-colors py-0.5"
+            >
+              {seasons.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-1 shadow-sm">
+            <span className="text-gray-500 font-medium pr-1 border-r mr-1">🏆 Giải</span>
+            <select
+              value={selectedTournamentId || ''}
+              onChange={(e) => changeTournament(e.target.value)}
+              className="bg-transparent font-semibold text-primary outline-none cursor-pointer hover:text-primary-dark transition-colors py-0.5 max-w-[150px] sm:max-w-none truncate"
+            >
+              {tournaments.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
   );
 }
