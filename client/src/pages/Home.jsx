@@ -99,90 +99,145 @@ export default function Home() {
               <h2 className="text-xl font-black text-red-600 tracking-wider">🔴 TRẬN ĐẤU ĐANG DIỄN RA (LIVE)</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
-              {liveMatches.map((m) => (
-                <div key={m.id} className="bg-white p-5 rounded-xl border border-red-200 shadow-sm space-y-3">
-                  <div className="flex justify-between items-center text-xs font-semibold text-gray-500">
-                    <span>{m.round}</span>
-                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black tracking-wide">LIVE</span>
-                  </div>
+              {liveMatches.map((m) => {
+                const getEventsForTeam = (teamId) => {
+                  const list = [];
                   
-                  {/* Scoreboard row */}
-                  <div className="flex items-center justify-between gap-2 sm:gap-4 border-b pb-4">
-                    {/* Team A */}
-                    <div className="flex-1 flex flex-col items-center text-center w-1/3">
-                      {m.team_a_logo ? (
-                        <img src={getFullUrl(m.team_a_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2 bg-gray-50 rounded-full p-1 border border-gray-100" />
-                      ) : (
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-lg mb-2">
-                          {m.team_a_name?.charAt(0)}
-                        </div>
-                      )}
-                      <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
-                        {m.team_a_name}
-                      </span>
-                    </div>
+                  // Goals
+                  if (m.goals) {
+                    m.goals.forEach(g => {
+                      const isNormalGoalForThisTeam = g.team_id === teamId && !g.is_own_goal;
+                      const isOwnGoalForOpponent = g.team_id !== teamId && g.is_own_goal;
+                      if (isNormalGoalForThisTeam || isOwnGoalForOpponent) {
+                        list.push({
+                          type: 'goal',
+                          icon: '⚽',
+                          player_name: g.player_name,
+                          minute: g.minute,
+                          suffix: g.is_own_goal ? ' (OG)' : '',
+                        });
+                      }
+                    });
+                  }
 
-                    {/* Score */}
-                    <div className="flex flex-col items-center justify-center px-2 sm:px-4 min-w-[70px] sm:min-w-[100px] text-center">
-                      <div className="text-2xl sm:text-4xl font-black text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl shadow-inner font-mono tracking-tighter">
-                        {m.score_a} - {m.score_b}
+                  // Yellow Cards
+                  if (m.yellow_cards) {
+                    m.yellow_cards.forEach(y => {
+                      if (y.team_id === teamId) {
+                        list.push({
+                          type: 'yellow',
+                          icon: '🟨',
+                          player_name: y.player_name,
+                          minute: y.minute,
+                          suffix: '',
+                        });
+                      }
+                    });
+                  }
+
+                  // Red Cards
+                  if (m.red_cards) {
+                    m.red_cards.forEach(r => {
+                      if (r.team_id === teamId) {
+                        list.push({
+                          type: 'red',
+                          icon: '🟥',
+                          player_name: r.player_name,
+                          minute: r.minute,
+                          suffix: '',
+                        });
+                      }
+                    });
+                  }
+
+                  // Sort chronologically by minute
+                  return list.sort((a, b) => Number(a.minute) - Number(b.minute));
+                };
+
+                const eventsA = getEventsForTeam(m.team_a_id);
+                const eventsB = getEventsForTeam(m.team_b_id);
+
+                return (
+                  <div key={m.id} className="bg-white p-5 rounded-xl border border-red-200 shadow-sm space-y-3">
+                    <div className="flex justify-between items-center text-xs font-semibold text-gray-500">
+                      <span>{m.round}</span>
+                      <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black tracking-wide">LIVE</span>
+                    </div>
+                    
+                    {/* Scoreboard row */}
+                    <div className="flex items-center justify-between gap-2 sm:gap-4 border-b pb-4">
+                      {/* Team A */}
+                      <div className="flex-1 flex flex-col items-center text-center w-1/3">
+                        {m.team_a_logo ? (
+                          <img src={getFullUrl(m.team_a_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2 bg-gray-50 rounded-full p-1 border border-gray-100" />
+                        ) : (
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-lg mb-2">
+                            {m.team_a_name?.charAt(0)}
+                          </div>
+                        )}
+                        <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
+                          {m.team_a_name}
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-red-500 bg-red-100 px-2 py-0.5 rounded-full mt-2 animate-pulse tracking-widest flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span> LIVE
-                      </span>
-                    </div>
 
-                    {/* Team B */}
-                    <div className="flex-1 flex flex-col items-center text-center w-1/3">
-                      {m.team_b_logo ? (
-                        <img src={getFullUrl(m.team_b_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2 bg-gray-50 rounded-full p-1 border border-gray-100" />
-                      ) : (
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-lg mb-2">
-                          {m.team_b_name?.charAt(0)}
+                      {/* Score */}
+                      <div className="flex flex-col items-center justify-center px-2 sm:px-4 min-w-[70px] sm:min-w-[100px] text-center">
+                        <div className="text-2xl sm:text-4xl font-black text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl shadow-inner font-mono tracking-tighter">
+                          {m.score_a} - {m.score_b}
                         </div>
-                      )}
-                      <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
-                        {m.team_b_name}
-                      </span>
-                    </div>
-                  </div>
+                        <span className="text-[10px] font-bold text-red-500 bg-red-100 px-2 py-0.5 rounded-full mt-2 animate-pulse tracking-widest flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span> LIVE
+                        </span>
+                      </div>
 
-                  {/* Goal Scorers list */}
-                  {m.goals && m.goals.length > 0 && (
-                    <div className="grid grid-cols-2 gap-4 text-[11px] sm:text-xs text-gray-600 pt-1">
-                      {/* Team A scorers */}
-                      <div className="space-y-1 text-left border-r pr-2 border-gray-100">
-                        {m.goals
-                          .filter(g => (g.team_id === m.team_a_id && !g.is_own_goal) || (g.team_id === m.team_b_id && g.is_own_goal))
-                          .map((g, idx) => (
+                      {/* Team B */}
+                      <div className="flex-1 flex flex-col items-center text-center w-1/3">
+                        {m.team_b_logo ? (
+                          <img src={getFullUrl(m.team_b_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2 bg-gray-50 rounded-full p-1 border border-gray-100" />
+                        ) : (
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-lg mb-2">
+                            {m.team_b_name?.charAt(0)}
+                          </div>
+                        )}
+                        <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
+                          {m.team_b_name}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Timeline Event list */}
+                    {(eventsA.length > 0 || eventsB.length > 0) && (
+                      <div className="grid grid-cols-2 gap-4 text-[11px] sm:text-xs text-gray-600 pt-1">
+                        {/* Team A events */}
+                        <div className="space-y-1 text-left border-r pr-2 border-gray-100">
+                          {eventsA.map((evt, idx) => (
                             <div key={idx} className="flex items-center gap-1 font-medium truncate">
-                              <span>⚽</span>
-                              <span>{g.player_name}</span>
-                              <span className="text-gray-400">({g.minute}')</span>
-                              {g.is_own_goal && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">OG</span>}
+                              <span className="text-[10px] sm:text-xs">{evt.icon}</span>
+                              <span>{evt.player_name}</span>
+                              <span className="text-gray-400">({evt.minute}')</span>
+                              {evt.suffix && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">{evt.suffix}</span>}
                             </div>
                           ))}
-                      </div>
+                        </div>
 
-                      {/* Team B scorers */}
-                      <div className="space-y-1 text-right pl-2">
-                        {m.goals
-                          .filter(g => (g.team_id === m.team_b_id && !g.is_own_goal) || (g.team_id === m.team_a_id && g.is_own_goal))
-                          .map((g, idx) => (
+                        {/* Team B events */}
+                        <div className="space-y-1 text-right pl-2">
+                          {eventsB.map((evt, idx) => (
                             <div key={idx} className="flex items-center justify-end gap-1 font-medium truncate">
-                              {g.is_own_goal && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">OG</span>}
-                              <span className="text-gray-400">({g.minute}')</span>
-                              <span>{g.player_name}</span>
-                              <span>⚽</span>
+                              {evt.suffix && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">{evt.suffix}</span>}
+                              <span className="text-gray-400">({evt.minute}')</span>
+                              <span>{evt.player_name}</span>
+                              <span className="text-[10px] sm:text-xs">{evt.icon}</span>
                             </div>
                           ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {m.notes && <div className="text-[10px] sm:text-xs text-gray-400 italic text-center pt-2 border-t border-dashed mt-2">{m.notes}</div>}
-                </div>
-              ))}
+                    {m.notes && <div className="text-[10px] sm:text-xs text-gray-400 italic text-center pt-2 border-t border-dashed mt-2">{m.notes}</div>}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

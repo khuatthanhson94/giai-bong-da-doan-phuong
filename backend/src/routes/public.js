@@ -44,7 +44,24 @@ router.get('/home', (req, res) => {
       WHERE g.match_id = ?
       ORDER BY g.minute ASC
     `).all(m.id);
-    return { ...m, goals };
+
+    const yellow_cards = db.prepare(`
+      SELECT y.*, p.name as player_name, p.jersey_number, p.team_id
+      FROM yellow_cards y
+      JOIN players p ON y.player_id = p.id
+      WHERE y.match_id = ?
+      ORDER BY y.minute ASC
+    `).all(m.id);
+
+    const red_cards = db.prepare(`
+      SELECT r.*, p.name as player_name, p.jersey_number, p.team_id
+      FROM red_cards r
+      JOIN players p ON r.player_id = p.id
+      WHERE r.match_id = ?
+      ORDER BY r.minute ASC
+    `).all(m.id);
+
+    return { ...m, goals, yellow_cards, red_cards };
   });
 
   const latestMatch = allMatches.filter((m) => m.status === 'finished').pop();
