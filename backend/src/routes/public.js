@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import QRCode from 'qrcode';
-import { db, logAction } from '../db.js';
+import { db, logAction, autoStartMatches } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
 import { computeStandings, getTopScorers, getStatistics } from '../services/standings.js';
 
 const router = Router();
 
 router.get('/home', (req, res) => {
+  autoStartMatches();
   const { tournament_id } = req.query;
   const settings = {};
   db.prepare('SELECT key, value FROM settings').all().forEach((s) => {

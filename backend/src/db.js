@@ -586,3 +586,23 @@ export function logAction(username, action, details) {
     console.error('[AuditLog] Failed to write log:', err);
   }
 }
+
+export function autoStartMatches() {
+  try {
+    const now = new Date();
+    const scheduled = db.prepare("SELECT * FROM matches WHERE status = 'scheduled' AND deleted_at IS NULL").all();
+    for (const match of scheduled) {
+      const matchStart = new Date(`${match.match_date}T${match.match_time}:00`);
+      if (now >= matchStart) {
+        db.prepare(`
+          UPDATE matches 
+          SET status = 'live', published = 1 
+          WHERE id = ?
+        `).run(match.id);
+        console.log(`[Auto-Start] Match ${match.id} (${match.match_date} ${match.match_time}) has started. Status updated to live.`);
+      }
+    }
+  } catch (err) {
+    console.error('[Auto-Start Error]', err.message);
+  }
+}

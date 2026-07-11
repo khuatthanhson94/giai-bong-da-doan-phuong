@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, logAction } from '../db.js';
+import { db, logAction, autoStartMatches } from '../db.js';
 import { authRequired, canManageTournament, canManageResults } from '../middleware/auth.js';
 import { publishMatchResult, computeStandings } from '../services/standings.js';
 
@@ -37,6 +37,7 @@ function enrichMatch(match) {
 }
 
 router.get('/', (req, res) => {
+  autoStartMatches();
   const { round, date, team_id, status, published, tournament_id } = req.query;
   let sql = 'SELECT * FROM matches WHERE deleted_at IS NULL';
   const params = [];
