@@ -71,6 +71,7 @@ export default function AdminResults() {
     motm_player_id: '',
     notes: '',
     group_id: '',
+    status: 'scheduled',
   });
   const [message, setMessage] = useState('');
 
@@ -136,6 +137,7 @@ export default function AdminResults() {
         red_cards_b: redB,
         motm_player_id: m.motm_player_id || '',
         notes: m.notes || '',
+        status: m.status || 'scheduled',
       });
     });
   }, [selectedId, players]);
@@ -181,6 +183,7 @@ export default function AdminResults() {
       red_cards: [...form.red_cards_a, ...form.red_cards_b],
       motm_player_id: form.motm_player_id ? Number(form.motm_player_id) : null,
       notes: form.notes,
+      status: form.status,
     };
   };
 
@@ -329,34 +332,46 @@ export default function AdminResults() {
               </div>
             </div>
 
-            {/* Other details */}
-            <div className="grid md:grid-cols-2 gap-4 mb-6 pt-4 border-t border-gray-150">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">⭐ Cầu thủ xuất sắc nhất trận (MOTM)</label>
-                <select
-                  className="input-field w-full max-w-full"
-                  value={form.motm_player_id}
-                  onChange={(e) => setForm({ ...form, motm_player_id: e.target.value })}
-                >
-                  <option value="">Chọn cầu thủ...</option>
-                  {matchPlayers.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (#{p.jersey_number}) - {p.team_id === match.team_a_id ? match.team_a?.name : match.team_b?.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Ghi chú / Biên bản trận đấu</label>
-                <textarea
-                  className="input-field w-full max-w-full"
-                  rows={2}
-                  value={form.notes}
-                  placeholder="Ghi chú diễn biến trận đấu, chấn thương, sự cố nếu có..."
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                />
-              </div>
-            </div>
+             {/* Other details */}
+             <div className="grid md:grid-cols-3 gap-4 mb-6 pt-4 border-t border-gray-150">
+               <div>
+                 <label className="block text-xs font-bold text-gray-700 mb-1">⭐ Cầu thủ xuất sắc nhất trận (MOTM)</label>
+                 <select
+                   className="input-field w-full max-w-full"
+                   value={form.motm_player_id}
+                   onChange={(e) => setForm({ ...form, motm_player_id: e.target.value })}
+                 >
+                   <option value="">Chọn cầu thủ...</option>
+                   {matchPlayers.map((p) => (
+                     <option key={p.id} value={p.id}>
+                       {p.name} (#{p.jersey_number}) - {p.team_id === match.team_a_id ? match.team_a?.name : match.team_b?.name}
+                     </option>
+                   ))}
+                 </select>
+               </div>
+               <div>
+                 <label className="block text-xs font-bold text-gray-700 mb-1">📊 Trạng thái trận đấu</label>
+                 <select
+                   className="input-field w-full max-w-full"
+                   value={form.status}
+                   onChange={(e) => setForm({ ...form, status: e.target.value })}
+                 >
+                   <option value="scheduled">Sắp diễn ra (Scheduled)</option>
+                   <option value="live">🔴 Đang diễn ra (Live)</option>
+                   <option value="finished">Đã kết thúc (Finished)</option>
+                 </select>
+               </div>
+               <div>
+                 <label className="block text-xs font-bold text-gray-700 mb-1">Ghi chú / Biên bản trận đấu</label>
+                 <textarea
+                   className="input-field w-full max-w-full"
+                   rows={2}
+                   value={form.notes}
+                   placeholder="Ghi chú diễn biến trận đấu, chấn thương, sự cố nếu có..."
+                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                 />
+               </div>
+             </div>
 
             {message && (
               <div className={`p-3 rounded-lg mb-4 text-sm font-medium ${

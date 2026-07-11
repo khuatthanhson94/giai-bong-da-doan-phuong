@@ -6,14 +6,21 @@ const router = express.Router();
 
 // ---------- GET ALL GROUPS ----------
 router.get('/', (req, res) => {
+  const { tournament_id } = req.query;
   try {
-    const groups = db.prepare('SELECT * FROM groups').all();
+    let sql = 'SELECT * FROM groups WHERE deleted_at IS NULL';
+    const params = [];
+    if (tournament_id) {
+      sql += ' AND tournament_id = ?';
+      params.push(Number(tournament_id));
+    }
+    const groups = db.prepare(sql).all(...params);
     const result = groups.map(g => {
       const teams = db.prepare(`
         SELECT t.id, t.name, t.logo, t.jersey_color
         FROM group_teams gt
         JOIN teams t ON gt.team_id = t.id
-        WHERE gt.group_id = ?
+        WHERE gt.group_id = ? AND t.deleted_at IS NULL
       `).all(g.id);
       return { ...g, teams };
     });
@@ -26,9 +33,17 @@ router.get('/', (req, res) => {
 // ---------- CREATE A GROUP ----------
 router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, tournament_id } = req.body;
     if (!name) return res.status(400).json({ error: 'Tên bảng không được trống' });
-    const result = db.prepare('INSERT INTO groups (name) VALUES (?)').run(name);
+
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
+    }
+    if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để tạo bảng' });
+
+    const result = db.prepare('INSERT INTO groups (name, tournament_id) VALUES (?, ?)').run(name, tId);
     logAction(req.user.username, 'CREATE_GROUP', `Tạo bảng đấu mới: ${name}`);
     res.status(201).json({ id: result.lastInsertRowid, name, teams: [] });
   } catch (err) {
@@ -54,35 +69,12 @@ router.put('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res)
 // ---------- DELETE A GROUP ----------
 router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
-    const originalGroup = db.prepare('SELECT name FROM groups WHERE id = ?').get(req.params.id);
-    db.exec('BEGIN IMMEDIATE');
-    try {
-      // Find all team IDs in this group to delete their group stage matches
-      const teamRows = db.prepare('SELECT team_id FROM group_teams WHERE group_id = ?').all(req.params.id);
-      const teamIds = teamRows.map(row => row.team_id);
-      
-      if (teamIds.length > 0) {
-        const placeholders = teamIds.map(() => '?').join(',');
-        db.prepare(`
-          DELETE FROM matches
-          WHERE (team_a_id IN (${placeholders}) OR team_b_id IN (${placeholders}))
-            AND (round LIKE '%Lượt%' OR round LIKE '%Vòng bảng%' OR round LIKE '%Bảng%')
-        `).run(...teamIds, ...teamIds);
-      }
+    const originalGroup = db.prepare('SELECT name FROM groups WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+    if (!originalGroup) return res.status(404).json({ error: 'Không tìm thấy bảng' });
 
-      db.prepare('DELETE FROM group_teams WHERE group_id = ?').run(req.params.id);
-      const info = db.prepare('DELETE FROM groups WHERE id = ?').run(req.params.id);
-      if (info.changes === 0) {
-        db.exec('ROLLBACK');
-        return res.status(404).json({ error: 'Không tìm thấy bảng' });
-      }
-      db.exec('COMMIT');
-      logAction(req.user.username, 'DELETE_GROUP', `Xóa bảng đấu: ${originalGroup?.name || req.params.id} và lịch thi đấu liên quan`);
-      res.json({ message: 'Xóa bảng thành công và lịch thi đấu liên quan' });
-    } catch (err) {
-      db.exec('ROLLBACK');
-      throw err;
-    }
+    db.prepare("UPDATE groups SET deleted_at = datetime('now') WHERE id = ?").run(req.params.id);
+    logAction(req.user.username, 'DELETE_GROUP', `Đưa bảng đấu vào thùng rác: ${originalGroup.name}`);
+    res.json({ message: 'Đã đưa bảng đấu vào thùng rác' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

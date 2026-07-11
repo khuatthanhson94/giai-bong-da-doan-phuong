@@ -37,14 +37,15 @@ function enrichMatch(match) {
 }
 
 router.get('/', (req, res) => {
-  const { round, date, team_id, status, published } = req.query;
-  let sql = 'SELECT * FROM matches WHERE 1=1';
+  const { round, date, team_id, status, published, tournament_id } = req.query;
+  let sql = 'SELECT * FROM matches WHERE deleted_at IS NULL';
   const params = [];
 
   if (round) { sql += ' AND round = ?'; params.push(round); }
   if (date) { sql += ' AND match_date = ?'; params.push(date); }
   if (status) { sql += ' AND status = ?'; params.push(status); }
   if (published === '1') { sql += ' AND published = 1'; }
+  if (tournament_id) { sql += ' AND tournament_id = ?'; params.push(Number(tournament_id)); }
   if (team_id) {
     sql += ' AND (team_a_id = ? OR team_b_id = ?)';
     params.push(team_id, team_id);
@@ -55,12 +56,20 @@ router.get('/', (req, res) => {
 });
 
 router.get('/rounds', (req, res) => {
-  const rounds = db.prepare('SELECT DISTINCT round FROM matches ORDER BY id').all();
+  const { tournament_id } = req.query;
+  let sql = 'SELECT DISTINCT round FROM matches WHERE deleted_at IS NULL';
+  const params = [];
+  if (tournament_id) {
+    sql += ' AND tournament_id = ?';
+    params.push(Number(tournament_id));
+  }
+  sql += ' ORDER BY id';
+  const rounds = db.prepare(sql).all(...params);
   res.json(rounds.map((r) => r.round));
 });
 
 router.get('/:id', (req, res) => {
-  const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id);
+  const match = db.prepare('SELECT * FROM matches WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!match) return res.status(404).json({ error: 'Không tìm thấy trận đấu' });
   res.json(enrichMatch(match));
 });
@@ -70,16 +79,24 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   try {
+    const { tournament_id } = req.body;
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
+    }
+    if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để lên lịch' });
+
     db.exec('BEGIN IMMEDIATE');
     try {
-      // Delete all matches that are NOT finished
-      db.prepare("DELETE FROM matches WHERE status != 'finished'").run();
+      // Delete all scheduled matches that are NOT finished for this tournament
+      db.prepare("DELETE FROM matches WHERE status != 'finished' AND tournament_id = ?").run(tId);
 
-      const groups = db.prepare('SELECT id, name FROM groups').all();
+      const groups = db.prepare('SELECT id, name FROM groups WHERE tournament_id = ? AND deleted_at IS NULL').all(tId);
       const startDate = new Date();
       const insertMatch = db.prepare(`
-        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const group of groups) {
@@ -100,7 +117,7 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
 
         for (let round = 0; round < numRounds; round++) {
           const d = new Date(startDate);
-          d.setDate(d.getDate() + round * 7); // Schedule weekly (e.g., Lượt 1 on Week 1, Lượt 2 on Week 2)
+          d.setDate(d.getDate() + round * 7); // Schedule weekly
           const dateStr = d.toISOString().split('T')[0];
 
           let matchIdx = 0;
@@ -121,7 +138,8 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
                 timeStr,
                 'Sân bóng Phường',
                 teamA,
-                teamB
+                teamB,
+                tId
               );
               matchIdx++;
             }
@@ -132,7 +150,7 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
       }
 
       db.exec('COMMIT');
-      logAction(req.user.username, 'GENERATE_GROUP_SCHEDULE', 'Tự động khởi tạo lịch thi đấu vòng bảng');
+      logAction(req.user.username, 'GENERATE_GROUP_SCHEDULE', `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId}`);
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
@@ -148,31 +166,38 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   try {
-    const { config } = req.body;
+    const { config, tournament_id } = req.body;
     if (!config || !config.startingRound || !Array.isArray(config.startingMatches)) {
       return res.status(400).json({ error: 'Cấu hình knockout không hợp lệ' });
     }
 
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
+    }
+    if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để gán lịch knockout' });
+
     db.exec('BEGIN IMMEDIATE');
     try {
-      // 1. Save config to settings
-      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('knockout_bracket_config', ?)")
-        .run(JSON.stringify(config));
+      // 1. Save config to settings with tournament suffix
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+        .run(`knockout_bracket_config_${tId}`, JSON.stringify(config));
 
       // 2. Collect all knockout rounds in this configuration
       const koRounds = [config.startingRound, ...(config.nextRounds || []).map(r => r.round)];
 
-      // 3. Delete scheduled (not finished) matches in these rounds
+      // 3. Delete scheduled (not finished) matches in these rounds for this tournament
       const deleteStmt = db.prepare(`
         DELETE FROM matches 
-        WHERE round = ? AND status != 'finished'
+        WHERE round = ? AND status != 'finished' AND tournament_id = ?
       `);
       for (const round of koRounds) {
-        deleteStmt.run(round);
+        deleteStmt.run(round, tId);
       }
 
-      // 4. Resolve starting round teams and insert matches
-      const standings = computeStandings();
+      // 4. Resolve starting round teams and insert matches using tournament standings
+      const standings = computeStandings(tId);
 
       const resolveTeam = (source) => {
         if (source.type === 'team') {
@@ -191,8 +216,8 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
       };
 
       const insertMatch = db.prepare(`
-        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes)
-        VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?)
+        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes, tournament_id)
+        VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)
       `);
 
       for (const m of config.startingMatches) {
@@ -209,12 +234,13 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
           m.venue || 'Sân bóng Phường',
           teamAId,
           teamBId,
-          notes
+          notes,
+          tId
         );
       }
 
       db.exec('COMMIT');
-      logAction(req.user.username, 'GENERATE_KNOCKOUT_SCHEDULE', `Khởi tạo lịch thi đấu loại trực tiếp (Bắt đầu từ: ${config.startingRound})`);
+      logAction(req.user.username, 'GENERATE_KNOCKOUT_SCHEDULE', `Khởi tạo vòng loại trực tiếp cho giải đấu ID: ${tId}`);
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
@@ -229,11 +255,19 @@ router.post('/', authRequired, (req, res, next) => {
   if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
-  const { round, match_date, match_time, venue, team_a_id, team_b_id } = req.body;
+  const { round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id } = req.body;
+  
+  let tId = tournament_id ? Number(tournament_id) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+  if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để tạo trận' });
+
   const result = db.prepare(`
-    INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(round, match_date, match_time, venue, team_a_id, team_b_id);
+    INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, tId);
   const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_a_id);
   const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_b_id);
   logAction(req.user.username, 'CREATE_MATCH', `Tạo trận đấu mới: ${teamA?.name || team_a_id} vs ${teamB?.name || team_b_id} (Vòng: ${round})`);
@@ -262,14 +296,14 @@ router.delete('/:id', authRequired, (req, res, next) => {
   if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
-  const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(req.params.id);
-  const teamA = m ? db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id) : null;
-  const teamB = m ? db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id) : null;
-  db.prepare('DELETE FROM matches WHERE id = ?').run(req.params.id);
-  if (m) {
-    logAction(req.user.username, 'DELETE_MATCH', `Xóa lịch trận đấu ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
-  }
-  res.json({ message: 'Đã xóa' });
+  const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+  if (!m) return res.status(404).json({ error: 'Không tìm thấy trận đấu' });
+  const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
+  const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
+
+  db.prepare("UPDATE matches SET deleted_at = datetime('now') WHERE id = ?").run(req.params.id);
+  logAction(req.user.username, 'DELETE_MATCH', `Đưa trận đấu vào thùng rác: ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
+  res.json({ message: 'Đã đưa trận đấu vào thùng rác' });
 });
 
 router.post('/:id/result', authRequired, (req, res, next) => {
@@ -277,15 +311,15 @@ router.post('/:id/result', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   const matchId = req.params.id;
-  const { score_a, score_b, goals, yellow_cards, red_cards, motm_player_id, notes } = req.body;
+  const { score_a, score_b, goals, yellow_cards, red_cards, motm_player_id, notes, status } = req.body;
 
   const saveResult = () => {
     db.exec('BEGIN IMMEDIATE');
     try {
       db.prepare(`
-        UPDATE matches SET score_a=?, score_b=?, motm_player_id=?, notes=?, status='finished'
+        UPDATE matches SET score_a=?, score_b=?, motm_player_id=?, notes=?, status=?, published = CASE WHEN ? = 'live' THEN 1 ELSE published END
         WHERE id=?
-      `).run(score_a, score_b, motm_player_id || null, notes || '', matchId);
+      `).run(score_a, score_b, motm_player_id || null, notes || '', status || 'finished', status || 'finished', matchId);
 
       db.prepare('DELETE FROM goals WHERE match_id = ?').run(matchId);
       db.prepare('DELETE FROM yellow_cards WHERE match_id = ?').run(matchId);

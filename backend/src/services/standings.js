@@ -1,16 +1,28 @@
 import { db } from '../db.js';
 
-export function computeStandings() {
-  const teams = db.prepare(`
+export function computeStandings(tournamentId) {
+  let teamSql = `
     SELECT t.id, t.name, t.logo, t.jersey_color, g.id as group_id, g.name as group_name
     FROM teams t
     LEFT JOIN group_teams gt ON t.id = gt.team_id
     LEFT JOIN groups g ON gt.group_id = g.id
-    ORDER BY t.name
-  `).all();
-  const publishedMatches = db.prepare(`
-    SELECT * FROM matches WHERE published = 1 AND status = 'finished'
-  `).all();
+    WHERE t.deleted_at IS NULL
+  `;
+  const teamParams = [];
+  if (tournamentId) {
+    teamSql += ' AND t.tournament_id = ?';
+    teamParams.push(Number(tournamentId));
+  }
+  teamSql += ' ORDER BY t.name';
+  const teams = db.prepare(teamSql).all(...teamParams);
+
+  let matchSql = "SELECT * FROM matches WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL";
+  const matchParams = [];
+  if (tournamentId) {
+    matchSql += ' AND tournament_id = ?';
+    matchParams.push(Number(tournamentId));
+  }
+  const publishedMatches = db.prepare(matchSql).all(...matchParams);
 
   const stats = {};
   for (const team of teams) {
@@ -68,51 +80,74 @@ export function computeStandings() {
     .sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
 }
 
-export function getTopScorers(limit = 10) {
-  return db.prepare(`
+export function getTopScorers(limit = 10, tournamentId) {
+  let sql = `
     SELECT p.*, t.name as team_name, t.logo as team_logo
     FROM players p
     JOIN teams t ON p.team_id = t.id
-    WHERE p.goals > 0
-    ORDER BY p.goals DESC, p.name ASC
-    LIMIT ?
-  `).all(limit);
+    WHERE p.goals > 0 AND p.deleted_at IS NULL AND t.deleted_at IS NULL
+  `;
+  const params = [];
+  if (tournamentId) {
+    sql += ' AND t.tournament_id = ?';
+    params.push(Number(tournamentId));
+  }
+  sql += ' ORDER BY p.goals DESC, p.name ASC LIMIT ?';
+  params.push(limit);
+  return db.prepare(sql).all(...params);
 }
 
-export function getStatistics() {
+export function getStatistics(tournamentId) {
+  let baseWhere = 'WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL';
+  const params = [];
+  if (tournamentId) {
+    baseWhere += ' AND t.tournament_id = ?';
+    params.push(Number(tournamentId));
+  }
+
   const topScorers = db.prepare(`
     SELECT p.id, p.name, p.goals, p.photo, t.name as team_name
     FROM players p JOIN teams t ON p.team_id = t.id
+    ${baseWhere}
     ORDER BY p.goals DESC LIMIT 10
-  `).all();
+  `).all(...params);
 
   const topAssists = db.prepare(`
     SELECT p.id, p.name, p.assists, p.photo, t.name as team_name
     FROM players p JOIN teams t ON p.team_id = t.id
+    ${baseWhere}
     ORDER BY p.assists DESC LIMIT 10
-  `).all();
+  `).all(...params);
 
   const topYellow = db.prepare(`
     SELECT p.id, p.name, p.yellow_cards, p.photo, t.name as team_name
     FROM players p JOIN teams t ON p.team_id = t.id
+    ${baseWhere}
     ORDER BY p.yellow_cards DESC LIMIT 10
-  `).all();
+  `).all(...params);
 
   const topRed = db.prepare(`
     SELECT p.id, p.name, p.red_cards, p.photo, t.name as team_name
     FROM players p JOIN teams t ON p.team_id = t.id
+    ${baseWhere}
     ORDER BY p.red_cards DESC LIMIT 10
-  `).all();
+  `).all(...params);
 
-  const teamGoals = db.prepare(`
+  let teamGoalsSql = `
     SELECT t.id, t.name, t.logo, COALESCE(SUM(p.goals), 0) as total_goals
     FROM teams t
-    LEFT JOIN players p ON p.team_id = t.id
-    GROUP BY t.id
-    ORDER BY total_goals DESC
-  `).all();
+    LEFT JOIN players p ON p.team_id = t.id AND p.deleted_at IS NULL
+    WHERE t.deleted_at IS NULL
+  `;
+  const teamGoalsParams = [];
+  if (tournamentId) {
+    teamGoalsSql += ' AND t.tournament_id = ?';
+    teamGoalsParams.push(Number(tournamentId));
+  }
+  teamGoalsSql += ' GROUP BY t.id ORDER BY total_goals DESC';
+  const teamGoals = db.prepare(teamGoalsSql).all(...teamGoalsParams);
 
-  const standings = computeStandings();
+  const standings = computeStandings(tournamentId);
   const bestDefense = [...standings].sort((a, b) => a.goals_against - b.goals_against);
 
   return { topScorers, topAssists, topYellow, topRed, teamGoals, bestDefense };
@@ -172,7 +207,7 @@ export function publishMatchResult(matchId, userId) {
       const bracketMatchId = matchResultMatch ? matchResultMatch[1] : null;
 
       if (bracketMatchId) {
-        const configRow = db.prepare("SELECT value FROM settings WHERE key = 'knockout_bracket_config'").get();
+        const configRow = db.prepare("SELECT value FROM settings WHERE key = ?").get(`knockout_bracket_config_${updatedMatch.tournament_id}`);
         if (configRow) {
           const config = JSON.parse(configRow.value);
           const scoreA = updatedMatch.score_a ?? 0;

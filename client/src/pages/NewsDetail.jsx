@@ -8,10 +8,14 @@ import { getFullUrl } from '../utils/url';
 export default function NewsDetail() {
   const { id } = useParams();
   const [item, setItem] = useState(null);
+  const [qr, setQr] = useState('');
   const { settings } = useSettings();
 
   useEffect(() => {
     api.get(`/news/${id}`).then(setItem);
+    api.get(`/qrcode?url=${encodeURIComponent(window.location.href)}`)
+      .then(res => setQr(res.qr))
+      .catch(console.error);
   }, [id]);
 
   if (!item) return <div className="text-center py-20">Đang tải...</div>;
@@ -29,6 +33,17 @@ export default function NewsDetail() {
       {item.video_url && (
         <div className="mt-8">
           <iframe src={item.video_url} className="w-full aspect-video rounded-xl" allowFullScreen title="Video" />
+        </div>
+      )}
+
+      {/* QR Code Sharing */}
+      {qr && (
+        <div className="mt-12 border-t pt-6 flex flex-col sm:flex-row items-center gap-4 bg-gray-50 p-4 rounded-xl">
+          <img src={qr} alt="QR Code" className="w-24 h-24 border bg-white p-1 rounded-lg shadow-sm" />
+          <div className="text-center sm:text-left">
+            <h4 className="font-bold text-gray-800 text-sm">Chia sẻ tin bài này</h4>
+            <p className="text-xs text-gray-500 mt-1">Quét mã QR Code trên để mở bài viết thể thao này trực tiếp trên thiết bị di động của bạn.</p>
+          </div>
         </div>
       )}
     </article>

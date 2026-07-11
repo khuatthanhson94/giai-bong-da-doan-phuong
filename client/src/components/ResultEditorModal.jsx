@@ -67,6 +67,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
     red_cards_b: [],
     motm_player_id: '',
     notes: '',
+    status: 'scheduled',
   });
 
   useEffect(() => {
@@ -104,6 +105,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
         red_cards_b: redB,
         motm_player_id: m.motm_player_id || '',
         notes: m.notes || '',
+        status: m.status || 'scheduled',
       });
       setLoading(false);
     }).catch(err => {
@@ -152,6 +154,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
       red_cards: [...form.red_cards_a, ...form.red_cards_b],
       motm_player_id: form.motm_player_id ? Number(form.motm_player_id) : null,
       notes: form.notes,
+      status: form.status,
     };
   };
 
@@ -300,7 +303,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
           </div>
 
           {/* Other details */}
-          <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-gray-150">
+          <div className="grid md:grid-cols-3 gap-4 pt-4 border-t border-gray-150">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">⭐ Cầu thủ xuất sắc nhất trận (MOTM)</label>
               <select
@@ -314,6 +317,18 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
                     {p.name} (#{p.jersey_number}) - {p.team_id === match.team_a_id ? match.team_a?.name : match.team_b?.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">📊 Trạng thái trận đấu</label>
+              <select
+                className="input-field w-full max-w-full"
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+              >
+                <option value="scheduled">Sắp diễn ra (Scheduled)</option>
+                <option value="live">🔴 Đang diễn ra (Live)</option>
+                <option value="finished">Đã kết thúc (Finished)</option>
               </select>
             </div>
             <div>

@@ -35,22 +35,27 @@ function getTeamStats(teamId) {
 // ---------- GET ----------
 router.get('/', (req, res) => {
   try {
-    const { search } = req.query;
-    const teams = search
-      ? db.prepare(`
-          SELECT t.*, g.id as group_id, g.name as group_name
-          FROM teams t
-          LEFT JOIN group_teams gt ON t.id = gt.team_id
-          LEFT JOIN groups g ON gt.group_id = g.id
-          WHERE t.name LIKE ? ORDER BY t.name
-        `).all(`%${search}%`)
-      : db.prepare(`
-          SELECT t.*, g.id as group_id, g.name as group_name
-          FROM teams t
-          LEFT JOIN group_teams gt ON t.id = gt.team_id
-          LEFT JOIN groups g ON gt.group_id = g.id
-          ORDER BY t.name
-        `).all();
+    const { search, tournament_id } = req.query;
+    let sql = `
+      SELECT t.*, g.id as group_id, g.name as group_name
+      FROM teams t
+      LEFT JOIN group_teams gt ON t.id = gt.team_id
+      LEFT JOIN groups g ON gt.group_id = g.id
+      WHERE t.deleted_at IS NULL
+    `;
+    const params = [];
+
+    if (tournament_id) {
+      sql += ' AND t.tournament_id = ?';
+      params.push(Number(tournament_id));
+    }
+    if (search) {
+      sql += ' AND t.name LIKE ?';
+      params.push(`%${search}%`);
+    }
+    sql += ' ORDER BY t.name';
+
+    const teams = db.prepare(sql).all(...params);
     res.json(teams.map(t => ({ ...t, ...getTeamStats(t.id) })));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -201,15 +206,22 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
 // ---------- POST ----------
 router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
-    const { name, logo, jersey_color, description, image, coach, stadium } = req.body;
+    const { name, logo, jersey_color, description, image, coach, stadium, tournament_id } = req.body;
     if (!name) return res.status(400).json({ error: 'Tên đội không được trống' });
+
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
+    }
+    if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để phân bổ đội' });
 
     db.exec('BEGIN IMMEDIATE');
     try {
       const result = db.prepare(`
-        INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, coach || null, stadium || null);
+        INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium, tournament_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(name, logo || null, jersey_color || '#0066CC', description || '', image || null, coach || null, stadium || null, tId);
       const teamId = result.lastInsertRowid;
 
       // Auto create user for team
@@ -278,23 +290,15 @@ router.delete('/all', authRequired, requireRole('admin', 'super_admin'), (req, r
   try {
     db.exec('BEGIN IMMEDIATE');
     try {
-      db.prepare('DELETE FROM goals').run();
-      db.prepare('DELETE FROM yellow_cards').run();
-      db.prepare('DELETE FROM red_cards').run();
-      db.prepare('DELETE FROM player_votes').run();
-      db.prepare('UPDATE matches SET motm_player_id = NULL').run();
-      db.prepare('DELETE FROM matches').run();
-      db.prepare('DELETE FROM group_teams').run();
-      db.prepare('DELETE FROM players').run();
-      db.prepare('DELETE FROM users WHERE role = \'team\'').run();
-      db.prepare('DELETE FROM teams').run();
+      db.prepare("UPDATE teams SET deleted_at = datetime('now') WHERE deleted_at IS NULL").run();
+      db.prepare("UPDATE players SET deleted_at = datetime('now') WHERE deleted_at IS NULL").run();
       db.exec('COMMIT');
-      logAction(req.user.username, 'DELETE_ALL_TEAMS', 'Xóa toàn bộ các đội bóng và dữ liệu liên quan khỏi hệ thống');
+      logAction(req.user.username, 'DELETE_ALL_TEAMS', 'Đưa toàn bộ đội bóng vào thùng rác');
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
     }
-    res.json({ message: 'Đã xóa tất cả đội và dữ liệu liên quan' });
+    res.json({ message: 'Đã đưa tất cả đội vào thùng rác' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -304,32 +308,20 @@ router.delete('/all', authRequired, requireRole('admin', 'super_admin'), (req, r
 router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
     const teamId = req.params.id;
-    const team = db.prepare('SELECT id, name FROM teams WHERE id = ?').get(teamId);
+    const team = db.prepare('SELECT id, name FROM teams WHERE id = ? AND deleted_at IS NULL').get(teamId);
     if (!team) return res.status(404).json({ error: 'Không tìm thấy đội' });
 
     db.exec('BEGIN IMMEDIATE');
     try {
-      const playerIds = db.prepare('SELECT id FROM players WHERE team_id = ?').all(teamId).map(p => p.id);
-      if (playerIds.length) {
-        const ph = playerIds.map(() => '?').join(',');
-        db.prepare(`DELETE FROM goals WHERE player_id IN (${ph})`).run(...playerIds);
-        db.prepare(`DELETE FROM yellow_cards WHERE player_id IN (${ph})`).run(...playerIds);
-        db.prepare(`DELETE FROM red_cards WHERE player_id IN (${ph})`).run(...playerIds);
-        db.prepare(`DELETE FROM player_votes WHERE player_id IN (${ph})`).run(...playerIds);
-        db.prepare(`UPDATE matches SET motm_player_id = NULL WHERE motm_player_id IN (${ph})`).run(...playerIds);
-      }
-      db.prepare('DELETE FROM matches WHERE team_a_id = ? OR team_b_id = ?').run(teamId, teamId);
-      db.prepare('DELETE FROM group_teams WHERE team_id = ?').run(teamId);
-      db.prepare('DELETE FROM players WHERE team_id = ?').run(teamId);
-      db.prepare('DELETE FROM users WHERE team_id = ?').run(teamId);
-      db.prepare('DELETE FROM teams WHERE id = ?').run(teamId);
+      db.prepare("UPDATE teams SET deleted_at = datetime('now') WHERE id = ?").run(teamId);
+      db.prepare("UPDATE players SET deleted_at = datetime('now') WHERE team_id = ?").run(teamId);
       db.exec('COMMIT');
-      logAction(req.user.username, 'DELETE_TEAM', `Xóa đội bóng: ${team.name}`);
+      logAction(req.user.username, 'DELETE_TEAM', `Đưa đội bóng vào thùng rác: ${team.name}`);
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
     }
-    res.json({ message: 'Đã xóa đội thành công' });
+    res.json({ message: 'Đã đưa đội bóng vào thùng rác' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

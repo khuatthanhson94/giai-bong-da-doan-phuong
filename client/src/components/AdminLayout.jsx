@@ -16,6 +16,10 @@ const menuItems = [
   { to: '/admin/settings', label: 'Cài đặt', roles: ['super_admin', 'admin', 'team'] },
   { to: '/admin/sponsors', label: 'Nhà tài trợ', roles: ['super_admin', 'admin'] },
   { to: '/admin/schedule', label: 'Lịch thi đấu (Knockout)', roles: ['super_admin', 'admin'] },
+  { to: '/admin/seasons', label: 'Quản lý Mùa giải', roles: ['super_admin', 'admin'] },
+  { to: '/admin/tournaments', label: 'Quản lý Giải đấu', roles: ['super_admin', 'admin'] },
+  { to: '/admin/recyclebin', label: 'Thùng rác', roles: ['super_admin', 'admin'] },
+  { to: '/admin/backup', label: 'Sao lưu & Phục hồi', roles: ['super_admin', 'admin'] },
   { to: '/admin/action-logs', label: 'Nhật ký hoạt động', roles: ['super_admin'] },
 ];
 

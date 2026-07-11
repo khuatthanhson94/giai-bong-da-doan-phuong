@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Ho_Chi_Minh';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -79,19 +80,47 @@ function triggerSyncIfWrite(sql) {
   }
 }
 
+let activeDb = rawDb;
+
+export function reopenDatabase(sourcePath) {
+  try {
+    activeDb.close();
+    console.log('[Database] Closed active connection.');
+  } catch (err) {
+    console.error('[Database] Failed to close database:', err.message);
+  }
+
+  if (sourcePath) {
+    try {
+      fs.copyFileSync(sourcePath, dbPath);
+      if (sourcePath.includes('temp') || sourcePath.includes('uploads')) {
+        try { fs.unlinkSync(sourcePath); } catch (e) {}
+      }
+      console.log(`[Database] Overwrote dbPath from source: ${sourcePath}`);
+    } catch (err) {
+      console.error('[Database] Failed to copy database file:', err.message);
+      throw err;
+    }
+  }
+
+  activeDb = new DatabaseSync(dbPath);
+  activeDb.exec('PRAGMA foreign_keys = ON');
+  console.log('[Database] Re-opened active connection.');
+}
+
 // Proxy wrapper for SQLite DatabaseSync to automatically backup changes
-export const db = new Proxy(rawDb, {
+export const db = new Proxy({}, {
   get(target, prop) {
     if (prop === 'exec') {
       return function (sql) {
-        const result = target.exec(sql);
+        const result = activeDb.exec(sql);
         triggerSyncIfWrite(sql);
         return result;
       };
     }
     if (prop === 'prepare') {
       return function (sql) {
-        const stmt = target.prepare(sql);
+        const stmt = activeDb.prepare(sql);
         const rawRun = stmt.run;
         
         stmt.run = function (...args) {
@@ -103,9 +132,9 @@ export const db = new Proxy(rawDb, {
         return stmt;
       };
     }
-    const value = target[prop];
+    const value = activeDb[prop];
     if (typeof value === 'function') {
-      return value.bind(target);
+      return value.bind(activeDb);
     }
     return value;
   }
@@ -122,7 +151,7 @@ export function initDatabase() {
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'admin',
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -139,7 +168,7 @@ export function initDatabase() {
       image TEXT,
       coach TEXT,
       stadium TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     );
 
     -- Add new columns for existing databases
@@ -155,7 +184,7 @@ export function initDatabase() {
       assists INTEGER DEFAULT 0,
       yellow_cards INTEGER DEFAULT 0,
       red_cards INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
       FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
     );
 
@@ -173,7 +202,7 @@ export function initDatabase() {
       motm_player_id INTEGER,
       notes TEXT,
       published INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
       FOREIGN KEY (team_a_id) REFERENCES teams(id),
       FOREIGN KEY (team_b_id) REFERENCES teams(id),
       FOREIGN KEY (motm_player_id) REFERENCES players(id)
@@ -216,7 +245,7 @@ export function initDatabase() {
       video_url TEXT,
       category TEXT DEFAULT 'general',
       published INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     );
 
     CREATE TABLE IF NOT EXISTS gallery (
@@ -226,13 +255,13 @@ export function initDatabase() {
       video_url TEXT,
       album TEXT DEFAULT 'Chung',
       type TEXT DEFAULT 'image',
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     );
 
     CREATE TABLE IF NOT EXISTS groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     );
 
     CREATE TABLE IF NOT EXISTS group_teams (
@@ -248,7 +277,7 @@ export function initDatabase() {
       match_id INTEGER NOT NULL,
       player_id INTEGER NOT NULL,
       voter_ip TEXT,
-      created_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (player_id) REFERENCES players(id)
     );
@@ -261,7 +290,7 @@ export function initDatabase() {
       link TEXT,
       tier TEXT DEFAULT 'general',
       order_index INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
     );
 
     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -269,7 +298,45 @@ export function initDatabase() {
       username TEXT NOT NULL,
       action TEXT NOT NULL,
       details TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      action TEXT NOT NULL,
+      details TEXT,
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      year INTEGER NOT NULL,
+      logo TEXT,
+      banner TEXT,
+      status TEXT DEFAULT 'active',
+      deleted_at TEXT,
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tournaments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      season_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      logo TEXT,
+      banner TEXT,
+      format TEXT DEFAULT 'group_knockout',
+      points_win INTEGER DEFAULT 3,
+      points_draw INTEGER DEFAULT 1,
+      points_loss INTEGER DEFAULT 0,
+      advance_count INTEGER DEFAULT 2,
+      status TEXT DEFAULT 'draft',
+      settings TEXT,
+      deleted_at TEXT,
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+      FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
     );
   `);
 
@@ -299,6 +366,85 @@ export function initDatabase() {
     db.exec('ALTER TABLE sponsors ADD COLUMN short_name TEXT');
   } catch (e) {
     // Ignore error if column already exists
+  }
+
+  // Migrations for V3.0 multi-tournament, season and recycle bin
+  try { db.exec('ALTER TABLE teams ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE teams ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  try { db.exec('ALTER TABLE players ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  try { db.exec('ALTER TABLE groups ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE groups ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  try { db.exec('ALTER TABLE matches ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE matches ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  try { db.exec('ALTER TABLE news ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE news ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  try { db.exec('ALTER TABLE gallery ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE gallery ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  try { db.exec('ALTER TABLE sponsors ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
+  try { db.exec('ALTER TABLE sponsors ADD COLUMN deleted_at TEXT'); } catch (e) {}
+
+  // Timezone Migration: Convert UTC space-separated strings to ISO 8601 UTC strings
+  const tablesToFix = ['seasons', 'tournaments', 'teams', 'players', 'matches', 'news', 'gallery', 'sponsors', 'activity_logs', 'audit_logs', 'users'];
+  for (const table of tablesToFix) {
+    try {
+      const checkTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table);
+      if (checkTable) {
+        db.prepare(`
+          UPDATE ${table} 
+          SET created_at = replace(created_at, ' ', 'T') || 'Z' 
+          WHERE created_at NOT LIKE '%Z' AND created_at IS NOT NULL AND created_at NOT LIKE '%T%'
+        `).run();
+        
+        db.prepare(`
+          UPDATE ${table} 
+          SET created_at = created_at || 'Z' 
+          WHERE created_at NOT LIKE '%Z' AND created_at IS NOT NULL
+        `).run();
+      }
+    } catch (err) {
+      console.warn(`[Timezone Migration] Could not migrate created_at for table ${table}:`, err.message);
+    }
+  }
+
+  // Seed default season and tournament if empty, mapping existing database items
+  try {
+    const seasonCount = db.prepare('SELECT COUNT(*) as count FROM seasons').get();
+    if (!seasonCount || seasonCount.count === 0) {
+      console.log('No seasons found. Creating default V3.0 season...');
+      db.prepare("INSERT INTO seasons (name, year, status) VALUES ('Mùa giải 2026', 2026, 'active')").run();
+    }
+    
+    const defaultSeason = db.prepare("SELECT id FROM seasons WHERE name = 'Mùa giải 2026'").get();
+    if (defaultSeason) {
+      const tournamentCount = db.prepare('SELECT COUNT(*) as count FROM tournaments').get();
+      if (!tournamentCount || tournamentCount.count === 0) {
+        console.log('No tournaments found. Creating default V3.0 tournament and mapping existing data...');
+        db.prepare(`
+          INSERT INTO tournaments (season_id, name, format, status, points_win, points_draw, points_loss)
+          VALUES (?, 'Giải Bóng đá Thanh niên 2026', 'group_knockout', 'active', 3, 1, 0)
+        `).run(defaultSeason.id);
+        
+        const defaultTournament = db.prepare("SELECT id FROM tournaments WHERE name = 'Giải Bóng đá Thanh niên 2026'").get();
+        if (defaultTournament) {
+          const tId = defaultTournament.id;
+          db.prepare('UPDATE teams SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          db.prepare('UPDATE groups SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          db.prepare('UPDATE matches SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          db.prepare('UPDATE news SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          db.prepare('UPDATE gallery SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          db.prepare('UPDATE sponsors SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          console.log(`Mapped all existing teams, matches, groups, news, gallery, and sponsors to default tournament ID: ${tId}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error during V3.0 season/tournament database migration:', err);
   }
 
   // Automatically seed users if empty
@@ -332,6 +478,101 @@ export function initDatabase() {
     console.log('- admin / admin123 (super_admin)');
     console.log('- bientap / bientap123 (editor)');
     console.log('- nhapketqua / ketqua123 (scorekeeper)');
+  }
+
+  // Run recycle bin auto-cleanup on startup
+  try {
+    cleanOldRecycleBin();
+  } catch (err) {
+    console.error('[RecycleBin] Initial clean up error:', err);
+  }
+  // Setup interval to run every 24 hours
+  setInterval(() => {
+    try {
+      cleanOldRecycleBin();
+    } catch (err) {
+      console.error('[RecycleBin] Scheduled clean up error:', err);
+    }
+  }, 24 * 60 * 60 * 1000);
+
+  // Run auto backup on startup
+  try {
+    performAutoBackup();
+  } catch (err) {
+    console.error('[Backup] Initial auto backup error:', err);
+  }
+  // Setup interval to run every 7 days
+  setInterval(() => {
+    try {
+      performAutoBackup();
+    } catch (err) {
+      console.error('[Backup] Scheduled auto backup error:', err);
+    }
+  }, 7 * 24 * 60 * 60 * 1000);
+}
+
+export function performAutoBackup() {
+  try {
+    const backupsDir = path.join(path.dirname(dbPath), 'backups');
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true });
+    }
+
+    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFile = path.join(backupsDir, `backup-${dateStr}.db`);
+    
+    // Copy active database
+    fs.copyFileSync(dbPath, backupFile);
+    console.log(`[Backup] Automatic backup created: ${backupFile}`);
+
+    // Prune backups if count > 5
+    const files = fs.readdirSync(backupsDir)
+      .filter(f => f.startsWith('backup-') && f.endsWith('.db'))
+      .map(f => ({ name: f, path: path.join(backupsDir, f), stat: fs.statSync(path.join(backupsDir, f)) }))
+      .sort((a, b) => a.stat.mtime.getTime() - b.stat.mtime.getTime());
+
+    while (files.length > 5) {
+      const oldest = files.shift();
+      fs.unlinkSync(oldest.path);
+      console.log(`[Backup] Pruned oldest backup file: ${oldest.name}`);
+    }
+  } catch (err) {
+    console.error('[Backup] Automatic backup failed:', err);
+  }
+}
+
+export function cleanOldRecycleBin() {
+  try {
+    const threshold = "datetime('now', '-30 days')";
+    
+    // Deleting teams and their players
+    const oldTeams = db.prepare(`SELECT id FROM teams WHERE deleted_at < ${threshold}`).all();
+    for (const team of oldTeams) {
+      db.prepare('DELETE FROM players WHERE team_id = ?').run(team.id);
+      db.prepare('DELETE FROM group_teams WHERE team_id = ?').run(team.id);
+      db.prepare('DELETE FROM matches WHERE team_a_id = ? OR team_b_id = ?').run(team.id, team.id);
+      db.prepare('DELETE FROM users WHERE team_id = ?').run(team.id);
+      db.prepare('DELETE FROM teams WHERE id = ?').run(team.id);
+    }
+
+    db.prepare(`DELETE FROM players WHERE deleted_at < ${threshold}`).run();
+    db.prepare(`DELETE FROM matches WHERE deleted_at < ${threshold}`).run();
+    db.prepare(`DELETE FROM groups WHERE deleted_at < ${threshold}`).run();
+    db.prepare(`DELETE FROM news WHERE deleted_at < ${threshold}`).run();
+    db.prepare(`DELETE FROM sponsors WHERE deleted_at < ${threshold}`).run();
+    
+    // Deleting seasons and their tournaments
+    const oldSeasons = db.prepare(`SELECT id FROM seasons WHERE deleted_at < ${threshold}`).all();
+    for (const season of oldSeasons) {
+      db.prepare('DELETE FROM tournaments WHERE season_id = ?').run(season.id);
+      db.prepare('DELETE FROM seasons WHERE id = ?').run(season.id);
+    }
+    
+    db.prepare(`DELETE FROM tournaments WHERE deleted_at < ${threshold}`).run();
+    
+    console.log('[RecycleBin] Auto-purged old items deleted more than 30 days ago.');
+  } catch (err) {
+    console.error('[RecycleBin] Clean up failed:', err);
   }
 }
 

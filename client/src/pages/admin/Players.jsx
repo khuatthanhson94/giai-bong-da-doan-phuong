@@ -317,43 +317,87 @@ export default function AdminPlayers() {
             )}
           </div>
 
-          {importedPlayers.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm">Xem trước dữ liệu ({importedPlayers.length} cầu thủ):</h3>
-              <div className="max-h-60 overflow-y-auto border rounded">
-                <table className="table-styled text-xs">
-                  <thead>
-                    <tr>
-                      <th>Số áo</th>
-                      <th>Họ tên</th>
-                      <th>Ngày sinh</th>
-                      <th>Vị trí</th>
-                      <th>Giới thiệu</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importedPlayers.map((p, idx) => (
-                      <tr key={idx}>
-                        <td>{p.jersey_number}</td>
-                        <td>{p.name}</td>
-                        <td>{p.dob}</td>
-                        <td>{p.position}</td>
-                        <td>{p.description}</td>
+          {importedPlayers.length > 0 && (() => {
+            const getImportErrors = (player, idx) => {
+              const errors = [];
+              if (!player.name) {
+                errors.push('Tên trống');
+              }
+              if (player.jersey_number <= 0 || player.jersey_number > 99) {
+                errors.push('Số áo 1-99');
+              }
+              // Duplicates in import list
+              const dups = importedPlayers.filter((p, i) => i !== idx && p.jersey_number === player.jersey_number);
+              if (dups.length > 0) {
+                errors.push('Trùng trong file');
+              }
+              // Duplicates in current active roster
+              const targetTeamId = user?.role === 'team' ? user.team_id : importTeamId;
+              const teamPlayers = players.filter(p => p.team_id === Number(targetTeamId));
+              const duplicateInRoster = teamPlayers.find(p => p.jersey_number === player.jersey_number);
+              if (duplicateInRoster) {
+                errors.push(`Số áo đã dùng bởi ${duplicateInRoster.name}`);
+              }
+              return errors;
+            };
+
+            const hasErrors = importedPlayers.some((p, idx) => getImportErrors(p, idx).length > 0);
+
+            return (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Xem trước dữ liệu ({importedPlayers.length} cầu thủ):</h3>
+                <div className="max-h-60 overflow-y-auto border rounded">
+                  <table className="table-styled text-xs">
+                    <thead>
+                      <tr>
+                        <th>Số áo</th>
+                        <th>Họ tên</th>
+                        <th>Ngày sinh</th>
+                        <th>Vị trí</th>
+                        <th>Giới thiệu</th>
+                        <th>Trạng thái hợp lệ</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {importedPlayers.map((p, idx) => {
+                        const rowErrors = getImportErrors(p, idx);
+                        return (
+                          <tr key={idx} className={rowErrors.length > 0 ? 'bg-red-50/50' : ''}>
+                            <td>{p.jersey_number}</td>
+                            <td>{p.name}</td>
+                            <td>{p.dob}</td>
+                            <td>{p.position}</td>
+                            <td>{p.description}</td>
+                            <td>
+                              {rowErrors.length === 0 ? (
+                                <span className="text-green-600 font-semibold">✓ Hợp lệ</span>
+                              ) : (
+                                <span className="text-red-500 font-bold" title={rowErrors.join(', ')}>
+                                  ⚠️ {rowErrors.join(', ')}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConfirmImport}
+                    disabled={hasErrors}
+                    className={`btn-primary text-sm ${hasErrors ? 'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400' : ''}`}
+                  >
+                    Lưu danh sách cầu thủ
+                  </button>
+                  <button onClick={() => setImportedPlayers([])} className="btn-outline text-sm">
+                    Hủy bỏ
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={handleConfirmImport} className="btn-primary text-sm">
-                  Lưu danh sách cầu thủ
-                </button>
-                <button onClick={() => setImportedPlayers([])} className="btn-outline text-sm">
-                  Hủy bỏ
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

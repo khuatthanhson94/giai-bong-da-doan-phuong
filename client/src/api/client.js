@@ -19,13 +19,36 @@ async function request(url, options = {}) {
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
+  // Automatically append tournament_id to URL query if present in localStorage
+  let finalUrl = url;
+  const tId = localStorage.getItem("v3_selected_tournament_id");
+  if (tId && !url.includes("tournament_id=")) {
+    const separator = url.includes("?") ? "&" : "?";
+    // Avoid attaching to login/register, seasons listing, or absolute urls
+    if (!url.startsWith("http") && !url.includes("/auth/login") && !url.includes("/auth/register") && url !== "/seasons" && !url.startsWith("/tournaments")) {
+      finalUrl = `${url}${separator}tournament_id=${tId}`;
+    }
+  }
+
+  // Automatically inject tournament_id to POST/PUT request bodies
+  let bodyContent = options.body;
+  if (tId && options.method && ['POST', 'PUT'].includes(options.method.toUpperCase()) && !isFormData) {
+    if (options.body && typeof options.body === 'object') {
+      const updatedBody = { ...options.body };
+      if (!updatedBody.hasOwnProperty('tournament_id')) {
+        updatedBody.tournament_id = Number(tId);
+      }
+      bodyContent = updatedBody;
+    }
+  }
+
   const fetchOptions = {
     ...options,
     headers,
-    body: isFormData ? options.body : JSON.stringify(options.body)
+    body: isFormData ? bodyContent : (bodyContent !== undefined ? JSON.stringify(bodyContent) : undefined)
   };
 
-  const res = await fetch(API + url, fetchOptions);
+  const res = await fetch(API + finalUrl, fetchOptions);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
   return data;

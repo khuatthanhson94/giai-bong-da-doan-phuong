@@ -32,6 +32,10 @@ import AdminUsers from './pages/admin/Users';
 import AdminSettings from './pages/admin/Settings';
 import AdminSponsors from './pages/admin/Sponsors';
 import AdminActionLogs from './pages/admin/ActionLogs';
+import AdminSeasons from './pages/admin/Seasons';
+import AdminTournaments from './pages/admin/Tournaments';
+import AdminRecycleBin from './pages/admin/RecycleBin';
+import AdminBackup from './pages/admin/Backup';
 
 export default function App() {
   return (
@@ -62,6 +66,10 @@ export default function App() {
         <Route path="matches" element={<AdminMatches />} />
         <Route path="results" element={<AdminResults />} />
         <Route path="schedule" element={<AdminSchedule />} />
+        <Route path="seasons" element={<AdminSeasons />} />
+        <Route path="tournaments" element={<AdminTournaments />} />
+        <Route path="recyclebin" element={<AdminRecycleBin />} />
+        <Route path="backup" element={<AdminBackup />} />
         <Route path="news" element={<AdminNews />} />
         <Route path="gallery" element={<AdminGallery />} />
         <Route path="users" element={<AdminUsers />} />

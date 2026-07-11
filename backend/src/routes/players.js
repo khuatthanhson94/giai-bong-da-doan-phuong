@@ -11,21 +11,42 @@ function enrichPlayer(player) {
   return { ...player, team };
 }
 
-// Get all players (optionally filter by team)
+// Get all players (optionally filter by team, search, and tournament_id)
 router.get('/', (req, res) => {
-  const { teamId } = req.query;
-  let players;
-  if (teamId) {
-    players = db.prepare('SELECT * FROM players WHERE team_id = ? ORDER BY jersey_number').all(teamId);
-  } else {
-    players = db.prepare('SELECT * FROM players ORDER BY jersey_number').all();
+  const { teamId, search, tournament_id } = req.query;
+  try {
+    let sql = `
+      SELECT p.*, t.name as team_name, t.tournament_id
+      FROM players p
+      JOIN teams t ON p.team_id = t.id
+      WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL
+    `;
+    const params = [];
+
+    if (teamId) {
+      sql += ' AND p.team_id = ?';
+      params.push(Number(teamId));
+    }
+    if (tournament_id) {
+      sql += ' AND t.tournament_id = ?';
+      params.push(Number(tournament_id));
+    }
+    if (search) {
+      sql += ' AND (p.name LIKE ? OR t.name LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    sql += ' ORDER BY p.name';
+    const players = db.prepare(sql).all(...params);
+    res.json(players.map(p => ({ ...p, team: { id: p.team_id, name: p.team_name } })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  res.json(players.map(enrichPlayer));
 });
 
 // Get single player
 router.get('/:id', (req, res) => {
-  const player = db.prepare('SELECT * FROM players WHERE id = ?').get(req.params.id);
+  const player = db.prepare('SELECT * FROM players WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
   res.json(enrichPlayer(player));
 });
@@ -84,7 +105,7 @@ router.delete('/:id', authRequired, (req, res) => {
   const id = req.params.id;
 
   try {
-    const player = db.prepare('SELECT team_id, name FROM players WHERE id = ?').get(id);
+    const player = db.prepare('SELECT team_id, name FROM players WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
 
     const isTeamAdmin = req.user.role === 'team' && Number(player.team_id) === Number(req.user.team_id);
@@ -93,9 +114,9 @@ router.delete('/:id', authRequired, (req, res) => {
       return res.status(403).json({ error: 'Không có quyền' });
     }
 
-    db.prepare('DELETE FROM players WHERE id = ?').run(id);
-    logAction(req.user.username, 'DELETE_PLAYER', `Xóa cầu thủ: ${player.name}`);
-    res.json({ message: 'Đã xóa' });
+    db.prepare("UPDATE players SET deleted_at = datetime('now') WHERE id = ?").run(id);
+    logAction(req.user.username, 'DELETE_PLAYER', `Đưa cầu thủ vào thùng rác: ${player.name}`);
+    res.json({ message: 'Đã đưa vào thùng rác' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

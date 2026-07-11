@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Ho_Chi_Minh';
 import express from 'express';
 import fs from 'fs';
 import cors from 'cors';
@@ -14,6 +15,11 @@ import galleryRoutes from './routes/gallery.js';
 import publicRoutes from './routes/public.js';
 import groupsRoutes from './routes/groups.js';
 import sponsorsRoutes from './routes/sponsors.js';
+import seasonsRoutes from './routes/seasons.js';
+import tournamentsRoutes from './routes/tournaments.js';
+import recyclebinRoutes from './routes/recyclebin.js';
+import aiRoutes from './routes/ai.js';
+import backupRoutes from './routes/backup.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -104,6 +110,11 @@ app.use('/api/news', newsRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/groups', groupsRoutes);
 app.use('/api/sponsors', sponsorsRoutes);
+app.use('/api/seasons', seasonsRoutes);
+app.use('/api/tournaments', tournamentsRoutes);
+app.use('/api/recyclebin', recyclebinRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/backup', backupRoutes);
 app.use('/api', publicRoutes);
 
 // Debug endpoint to list uploaded files (for development)

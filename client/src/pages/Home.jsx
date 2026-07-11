@@ -11,12 +11,28 @@ export default function Home() {
   const [sponsors, setSponsors] = useState([]);
   const [activeHomeTab, setActiveHomeTab] = useState('group');
 
+  const loadHomeData = () => {
+    api.get('/home').then(setData).catch(console.error);
+  };
+
   // Fetch home data, teams list and sponsors
   useEffect(() => {
-    api.get('/home').then(setData).catch(console.error);
+    loadHomeData();
     api.get('/teams').then(setTeams).catch(console.error);
     api.get('/sponsors').then(setSponsors).catch(console.error);
   }, []);
+
+  // Poll home data every 5 seconds if there are active live matches
+  useEffect(() => {
+    const hasLiveMatch = data?.liveMatches && data.liveMatches.length > 0;
+    if (!hasLiveMatch) return;
+
+    const interval = setInterval(() => {
+      loadHomeData();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [data?.liveMatches]);
 
   if (!data) {
     return (
@@ -26,7 +42,7 @@ export default function Home() {
     );
   }
 
-  const { settings, latestMatch, upcomingMatches, news, standings, topScorers } = data || {};
+  const { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers } = data || {};
 
   return (
     <div>
@@ -75,6 +91,40 @@ export default function Home() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-16">
+        {/* Live Matches Panel */}
+        {liveMatches && liveMatches.length > 0 && (
+          <section className="bg-red-50 border-2 border-red-500/30 p-6 md:p-8 rounded-2xl animate-pulse space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-red-600 rounded-full animate-ping"></span>
+              <h2 className="text-xl font-black text-red-600 tracking-wider">🔴 TRẬN ĐẤU ĐANG DIỄN RA (LIVE)</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {liveMatches.map((m) => (
+                <div key={m.id} className="bg-white p-5 rounded-xl border border-red-200 shadow-sm space-y-3">
+                  <div className="flex justify-between items-center text-xs font-semibold text-gray-500">
+                    <span>{m.round}</span>
+                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black tracking-wide">LIVE</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      {m.team_a_logo && <img src={getFullUrl(m.team_a_logo)} alt="" className="w-8 h-8 object-contain" />}
+                      <span className="font-bold text-gray-800 text-sm truncate">{m.team_a_name}</span>
+                    </div>
+                    <div className="text-xl font-black text-primary px-4 bg-gray-100 py-1 rounded">
+                      {m.score_a} - {m.score_b}
+                    </div>
+                    <div className="flex items-center gap-2 flex-1 justify-end">
+                      <span className="font-bold text-gray-800 text-sm truncate">{m.team_b_name}</span>
+                      {m.team_b_logo && <img src={getFullUrl(m.team_b_logo)} alt="" className="w-8 h-8 object-contain" />}
+                    </div>
+                  </div>
+                  {m.notes && <div className="text-xs text-gray-500 italic text-center border-t pt-2">{m.notes}</div>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Upcoming match countdown */}
         {upcomingMatches?.[0] && (
           <section className="card p-6 md:p-8 text-center animate-slide-up">

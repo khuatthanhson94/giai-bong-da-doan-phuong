@@ -7,10 +7,14 @@ import { useSettings } from '../context/SettingsContext';
 export default function TeamDetail() {
   const { id } = useParams();
   const [team, setTeam] = useState(null);
+  const [qr, setQr] = useState('');
   const { settings } = useSettings();
 
   useEffect(() => {
     api.get(`/teams/${id}`).then(setTeam).catch(() => setTeam(null));
+    api.get(`/qrcode?url=${encodeURIComponent(window.location.href)}`)
+      .then(res => setQr(res.qr))
+      .catch(console.error);
   }, [id]);
 
   if (!team) return <div className="text-center py-20 text-gray-500">Đang tải...</div>;
@@ -93,6 +97,17 @@ export default function TeamDetail() {
               </tbody>
             </table>
           </div>
+
+          {/* QR Code Sharing */}
+          {qr && (
+            <div className="mt-8 border-t pt-6 flex flex-col sm:flex-row items-center gap-4 bg-gray-50 p-4 rounded-xl">
+              <img src={qr} alt="QR Code" className="w-24 h-24 border bg-white p-1 rounded-lg shadow-sm" />
+              <div className="text-center sm:text-left">
+                <h4 className="font-bold text-gray-800 text-sm">Chia sẻ Đội bóng này</h4>
+                <p className="text-xs text-gray-500 mt-1">Quét mã QR Code trên để xem chi tiết đội bóng và danh sách cầu thủ trực tiếp trên điện thoại di động của bạn.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
