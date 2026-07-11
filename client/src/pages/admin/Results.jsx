@@ -74,6 +74,7 @@ export default function AdminResults() {
     status: 'scheduled',
   });
   const [message, setMessage] = useState('');
+  const [showConfirmPublish, setShowConfirmPublish] = useState(false);
 
   useEffect(() => {
     api.get('/matches').then(setMatches);
@@ -187,22 +188,41 @@ export default function AdminResults() {
     };
   };
 
-  const handleSave = async () => {
+  const handleSaveLive = async () => {
     setMessage('');
     try {
-      await api.post(`/matches/${selectedId}/result`, getMergedForm());
-      setMessage('Đã lưu kết quả (chưa công bố)');
+      const payload = { ...getMergedForm(), status: 'live' };
+      await api.post(`/matches/${selectedId}/result`, payload);
+      setForm(prev => ({ ...prev, status: 'live' }));
+      setMessage('✅ Đã cập nhật kết quả Live thành công!');
+      api.get('/matches').then(setMatches);
     } catch (err) {
       setMessage(err.message);
     }
   };
 
-  const handlePublish = async () => {
+  const handlePublish = () => {
+    if (form.status === 'live') {
+      setShowConfirmPublish(true);
+    } else {
+      saveAndPublishMatch('finished');
+    }
+  };
+
+  const saveAndPublishMatch = async (targetStatus) => {
     setMessage('');
     try {
-      await api.post(`/matches/${selectedId}/result`, getMergedForm());
-      await api.post(`/matches/${selectedId}/publish`);
-      setMessage('✅ Đã công bố! Bảng xếp hạng và thống kê điểm số, danh sách ghi bàn đã được cập nhật.');
+      const payload = { ...getMergedForm(), status: targetStatus };
+      await api.post(`/matches/${selectedId}/result`, payload);
+      
+      if (targetStatus === 'finished') {
+        await api.post(`/matches/${selectedId}/publish`);
+        setForm(prev => ({ ...prev, status: 'finished' }));
+        setMessage('✅ Đã kết thúc trận đấu và công bố kết quả thành công! Bảng xếp hạng và vua phá lưới đã được cập nhật.');
+      } else {
+        setForm(prev => ({ ...prev, status: 'live' }));
+        setMessage('✅ Đã cập nhật kết quả Live thành công!');
+      }
       api.get('/matches').then(setMatches);
     } catch (err) {
       setMessage(err.message);
@@ -381,17 +401,58 @@ export default function AdminResults() {
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-2">
-              <button onClick={handleSave} className="btn-outline text-sm px-6 py-2 w-full sm:w-auto order-2 sm:order-1">
-                Lưu nháp
-              </button>
-              <button onClick={handlePublish} className="btn-secondary text-sm px-6 py-2 w-full sm:w-auto order-1 sm:order-2">
-                Công bố kết quả
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+             <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-2">
+               <button onClick={handleSaveLive} className="btn-outline text-sm px-6 py-2 w-full sm:w-auto order-2 sm:order-1 bg-white text-primary border-primary hover:bg-blue-50 font-bold">
+                 🔴 Cập nhật Live
+               </button>
+               <button onClick={handlePublish} className="btn-secondary text-sm px-6 py-2 w-full sm:w-auto order-1 sm:order-2">
+                 Công bố kết quả
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Confirmation Overlay for Live Match Publish */}
+       {showConfirmPublish && (
+         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+           <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-md w-full text-center space-y-4 animate-scale-up">
+             <h4 className="font-extrabold text-red-600 text-lg flex items-center justify-center gap-1">
+               ⚠️ Trận đấu đang diễn ra trực tiếp!
+             </h4>
+             <p className="text-sm text-gray-600 leading-relaxed">
+               Bạn đang bấm <strong>Công bố kết quả</strong> cho một trận đấu đang Live. Hành động này sẽ chính thức <strong>KẾT THÚC</strong> trận đấu này.
+             </p>
+             <p className="text-xs text-gray-500 font-medium">Vui lòng chọn hành động bạn muốn thực hiện:</p>
+             <div className="flex flex-col gap-2 pt-2">
+               <button 
+                 onClick={async () => {
+                   setShowConfirmPublish(false);
+                   await saveAndPublishMatch('finished');
+                 }} 
+                 className="bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-sm transition"
+               >
+                 🏁 Kết thúc trận đấu & Công bố kết quả
+               </button>
+               <button 
+                 onClick={async () => {
+                   setShowConfirmPublish(false);
+                   await saveAndPublishMatch('live');
+                 }} 
+                 className="bg-primary hover:bg-primary-dark text-white py-2.5 rounded-xl text-sm font-bold shadow-sm transition"
+               >
+                 🔴 Chỉ cập nhật Live (Không kết thúc)
+               </button>
+               <button 
+                 onClick={() => setShowConfirmPublish(false)} 
+                 className="bg-gray-150 hover:bg-gray-200 text-gray-700 py-2 rounded-xl text-sm font-semibold transition"
+               >
+                 Hủy bỏ
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ }
