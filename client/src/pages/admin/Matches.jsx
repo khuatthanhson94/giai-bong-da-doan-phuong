@@ -258,7 +258,13 @@ export default function AdminMatches() {
                 checked={form.is_knockout}
                 onChange={(e) => {
                   const val = e.target.checked;
-                  setForm({ ...form, is_knockout: val });
+                  setForm(prev => ({
+                    ...prev,
+                    is_knockout: val,
+                    round: val 
+                      ? (prev.round.toLowerCase().includes('bảng') || prev.round.toLowerCase().includes('lượt') || !prev.round ? 'Knockout' : prev.round) 
+                      : 'Vòng bảng - Lượt 1'
+                  }));
                   if (val) setSelectedGroupId('');
                 }}
                 className="w-4 h-4 accent-primary"
