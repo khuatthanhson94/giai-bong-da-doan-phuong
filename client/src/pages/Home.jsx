@@ -105,20 +105,82 @@ export default function Home() {
                     <span>{m.round}</span>
                     <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black tracking-wide">LIVE</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1">
-                      {m.team_a_logo && <img src={getFullUrl(m.team_a_logo)} alt="" className="w-8 h-8 object-contain" />}
-                      <span className="font-bold text-gray-800 text-sm truncate">{m.team_a_name}</span>
+                  
+                  {/* Scoreboard row */}
+                  <div className="flex items-center justify-between gap-2 sm:gap-4 border-b pb-4">
+                    {/* Team A */}
+                    <div className="flex-1 flex flex-col items-center text-center w-1/3">
+                      {m.team_a_logo ? (
+                        <img src={getFullUrl(m.team_a_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2 bg-gray-50 rounded-full p-1 border border-gray-100" />
+                      ) : (
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-lg mb-2">
+                          {m.team_a_name?.charAt(0)}
+                        </div>
+                      )}
+                      <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
+                        {m.team_a_name}
+                      </span>
                     </div>
-                    <div className="text-xl font-black text-primary px-4 bg-gray-100 py-1 rounded">
-                      {m.score_a} - {m.score_b}
+
+                    {/* Score */}
+                    <div className="flex flex-col items-center justify-center px-2 sm:px-4 min-w-[70px] sm:min-w-[100px] text-center">
+                      <div className="text-2xl sm:text-4xl font-black text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl shadow-inner font-mono tracking-tighter">
+                        {m.score_a} - {m.score_b}
+                      </div>
+                      <span className="text-[10px] font-bold text-red-500 bg-red-100 px-2 py-0.5 rounded-full mt-2 animate-pulse tracking-widest flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span> LIVE
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 flex-1 justify-end">
-                      <span className="font-bold text-gray-800 text-sm truncate">{m.team_b_name}</span>
-                      {m.team_b_logo && <img src={getFullUrl(m.team_b_logo)} alt="" className="w-8 h-8 object-contain" />}
+
+                    {/* Team B */}
+                    <div className="flex-1 flex flex-col items-center text-center w-1/3">
+                      {m.team_b_logo ? (
+                        <img src={getFullUrl(m.team_b_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mb-2 bg-gray-50 rounded-full p-1 border border-gray-100" />
+                      ) : (
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-lg mb-2">
+                          {m.team_b_name?.charAt(0)}
+                        </div>
+                      )}
+                      <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
+                        {m.team_b_name}
+                      </span>
                     </div>
                   </div>
-                  {m.notes && <div className="text-xs text-gray-500 italic text-center border-t pt-2">{m.notes}</div>}
+
+                  {/* Goal Scorers list */}
+                  {m.goals && m.goals.length > 0 && (
+                    <div className="grid grid-cols-2 gap-4 text-[11px] sm:text-xs text-gray-600 pt-1">
+                      {/* Team A scorers */}
+                      <div className="space-y-1 text-left border-r pr-2 border-gray-100">
+                        {m.goals
+                          .filter(g => (g.team_id === m.team_a_id && !g.is_own_goal) || (g.team_id === m.team_b_id && g.is_own_goal))
+                          .map((g, idx) => (
+                            <div key={idx} className="flex items-center gap-1 font-medium truncate">
+                              <span>⚽</span>
+                              <span>{g.player_name}</span>
+                              <span className="text-gray-400">({g.minute}')</span>
+                              {g.is_own_goal && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">OG</span>}
+                            </div>
+                          ))}
+                      </div>
+
+                      {/* Team B scorers */}
+                      <div className="space-y-1 text-right pl-2">
+                        {m.goals
+                          .filter(g => (g.team_id === m.team_b_id && !g.is_own_goal) || (g.team_id === m.team_a_id && g.is_own_goal))
+                          .map((g, idx) => (
+                            <div key={idx} className="flex items-center justify-end gap-1 font-medium truncate">
+                              {g.is_own_goal && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">OG</span>}
+                              <span className="text-gray-400">({g.minute}')</span>
+                              <span>{g.player_name}</span>
+                              <span>⚽</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {m.notes && <div className="text-[10px] sm:text-xs text-gray-400 italic text-center pt-2 border-t border-dashed mt-2">{m.notes}</div>}
                 </div>
               ))}
             </div>

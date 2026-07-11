@@ -36,7 +36,16 @@ router.get('/home', (req, res) => {
     allMatchesParams.push(Number(tournament_id));
   }
   allMatchesSql += ' ORDER BY m.match_date, m.match_time';
-  const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams);
+  const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
+    const goals = db.prepare(`
+      SELECT g.*, p.name as player_name, p.jersey_number, p.team_id
+      FROM goals g
+      JOIN players p ON g.player_id = p.id
+      WHERE g.match_id = ?
+      ORDER BY g.minute ASC
+    `).all(m.id);
+    return { ...m, goals };
+  });
 
   const latestMatch = allMatches.filter((m) => m.status === 'finished').pop();
   const liveMatches = allMatches.filter((m) => m.status === 'live');
