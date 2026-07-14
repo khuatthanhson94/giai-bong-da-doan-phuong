@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db, logAction, autoStartMatches } from '../db.js';
 import { authRequired, canManageTournament, canManageResults } from '../middleware/auth.js';
 import { publishMatchResult, computeStandings } from '../services/standings.js';
+import { getVNLocalDateString } from '../utils/date.js';
 
 const router = Router();
 
@@ -119,7 +120,7 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
         for (let round = 0; round < numRounds; round++) {
           const d = new Date(startDate);
           d.setDate(d.getDate() + round * 7); // Schedule weekly
-          const dateStr = d.toISOString().split('T')[0];
+          const dateStr = getVNLocalDateString(d);
 
           let matchIdx = 0;
           for (let i = 0; i < half; i++) {

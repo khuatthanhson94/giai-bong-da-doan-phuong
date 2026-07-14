@@ -4,6 +4,7 @@ import path from 'path';
 import multer from 'multer';
 import { dbPath, reopenDatabase, logAction } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
+import { getVNLocalDateTimeString } from '../utils/date.js';
 
 const router = Router();
 const upload = multer({ dest: 'uploads/temp/' });
@@ -17,7 +18,7 @@ if (!fs.existsSync(backupsDir)) {
 // Helper to run auto-backup rotation
 export function performAutoBackup() {
   try {
-    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+    const dateStr = getVNLocalDateTimeString();
     const backupFile = path.join(backupsDir, `backup-${dateStr}.db`);
     
     // Copy active database

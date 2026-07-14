@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
+import { getVNLocalDateTimeString } from './utils/date.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let dataDir;
@@ -518,7 +519,7 @@ export function performAutoBackup() {
       fs.mkdirSync(backupsDir, { recursive: true });
     }
 
-    const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+    const dateStr = getVNLocalDateTimeString();
     const backupFile = path.join(backupsDir, `backup-${dateStr}.db`);
     
     // Copy active database

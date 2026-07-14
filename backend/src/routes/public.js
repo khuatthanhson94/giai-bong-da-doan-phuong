@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { db, logAction, autoStartMatches } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
 import { computeStandings, getTopScorers, getStatistics } from '../services/standings.js';
+import { getVNLocalDateString } from '../utils/date.js';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get('/home', (req, res) => {
     settings[s.key] = s.value;
   });
 
-  const now = new Date().toISOString().split('T')[0];
+  const now = getVNLocalDateString();
   let allMatchesSql = `
     SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
            tb.name as team_b_name, tb.logo as team_b_logo,
