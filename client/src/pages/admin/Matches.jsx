@@ -76,6 +76,10 @@ export default function AdminMatches() {
   };
 
   const handleRoundChange = (val) => {
+    if (form.is_friendly) {
+      setForm({ ...form, round: val });
+      return;
+    }
     const isKO = val ? !/bảng|lượt|group/i.test(val) : false;
     setForm({ ...form, round: val, is_knockout: isKO });
     if (isKO) {
@@ -263,59 +267,63 @@ export default function AdminMatches() {
             {/* Body */}
             <div className="p-6 overflow-y-auto grid md:grid-cols-2 gap-4 flex-1">
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600">Kiểu vòng đấu</label>
-                <div className="flex items-center h-10 border rounded bg-white px-3 gap-2">
-                  <input
-                    type="checkbox"
-                    id="is_knockout"
-                    checked={form.is_knockout}
-                    onChange={(e) => {
-                      const val = e.target.checked;
-                      setForm(prev => ({
-                        ...prev,
-                        is_knockout: val,
-                        is_friendly: val ? false : prev.is_friendly,
-                        round: val 
-                          ? (prev.round.toLowerCase().includes('bảng') || prev.round.toLowerCase().includes('lượt') || !prev.round ? 'Knockout' : prev.round) 
-                          : 'Vòng bảng - Lượt 1'
-                      }));
-                      if (val) setSelectedGroupId('');
-                    }}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <label htmlFor="is_knockout" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
-                    Là vòng đấu Knockout (cho phép đấu chéo bảng)
-                  </label>
+              {!form.is_friendly && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-600">Kiểu vòng đấu</label>
+                  <div className="flex items-center h-10 border rounded bg-white px-3 gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_knockout"
+                      checked={form.is_knockout}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setForm(prev => ({
+                          ...prev,
+                          is_knockout: val,
+                          is_friendly: val ? false : prev.is_friendly,
+                          round: val 
+                            ? (prev.round.toLowerCase().includes('bảng') || prev.round.toLowerCase().includes('lượt') || !prev.round ? 'Knockout' : prev.round) 
+                            : 'Vòng bảng - Lượt 1'
+                        }));
+                        if (val) setSelectedGroupId('');
+                      }}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <label htmlFor="is_knockout" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
+                      Là vòng đấu Knockout (cho phép đấu chéo bảng)
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600">Trận giao hữu</label>
-                <div className="flex items-center h-10 border rounded bg-white px-3 gap-2">
-                  <input
-                    type="checkbox"
-                    id="is_friendly"
-                    checked={form.is_friendly}
-                    onChange={(e) => {
-                      const val = e.target.checked;
-                      setForm(prev => ({
-                        ...prev,
-                        is_friendly: val,
-                        is_knockout: val ? false : prev.is_knockout,
-                        round: val 
-                          ? (prev.round.toLowerCase().includes('bảng') || prev.round.toLowerCase().includes('lượt') || !prev.round ? 'Giao hữu' : prev.round)
-                          : prev.round
-                      }));
-                      if (val) setSelectedGroupId('');
-                    }}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  <label htmlFor="is_friendly" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
-                    Là trận đấu giao hữu (không tính điểm xếp hạng)
-                  </label>
+              {!form.is_knockout && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-600">Trận giao hữu</label>
+                  <div className="flex items-center h-10 border rounded bg-white px-3 gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_friendly"
+                      checked={form.is_friendly}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setForm(prev => ({
+                          ...prev,
+                          is_friendly: val,
+                          is_knockout: val ? false : prev.is_knockout,
+                          round: val 
+                            ? (prev.round.toLowerCase().includes('bảng') || prev.round.toLowerCase().includes('lượt') || !prev.round ? 'Giao hữu' : prev.round)
+                            : prev.round
+                        }));
+                        if (val) setSelectedGroupId('');
+                      }}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <label htmlFor="is_friendly" className="text-xs font-medium text-gray-700 cursor-pointer select-none">
+                      Là trận đấu giao hữu (không tính điểm xếp hạng)
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
  
               {!form.is_knockout && !form.is_friendly && (
                 <div className="flex flex-col gap-1">
@@ -335,10 +343,10 @@ export default function AdminMatches() {
               )}
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-600">Vòng đấu / Lượt đấu</label>
+            <label className="text-xs font-semibold text-gray-600">{form.is_friendly ? 'Tên trận đấu / Mô tả' : 'Vòng đấu / Lượt đấu'}</label>
             <input
               className="input-field"
-              placeholder="ví dụ: Vòng bảng - Lượt 1"
+              placeholder={form.is_friendly ? "ví dụ: Giao hữu Việt Nam - Thái Lan" : "ví dụ: Vòng bảng - Lượt 1"}
               value={form.round}
               onChange={(e) => handleRoundChange(e.target.value)}
               required
@@ -367,7 +375,7 @@ export default function AdminMatches() {
               value={form.team_a_id}
               onChange={(e) => setForm({ ...form, team_a_id: e.target.value })}
               required
-              disabled={!form.is_knockout && !selectedGroupId}
+              disabled={!form.is_knockout && !form.is_friendly && !selectedGroupId}
             >
               <option value="">-- Chọn Đội A --</option>
               {filteredTeamsA.map((t) => (
@@ -385,7 +393,7 @@ export default function AdminMatches() {
               value={form.team_b_id}
               onChange={(e) => setForm({ ...form, team_b_id: e.target.value })}
               required
-              disabled={!form.is_knockout && !selectedGroupId}
+              disabled={!form.is_knockout && !form.is_friendly && !selectedGroupId}
             >
               <option value="">-- Chọn Đội B --</option>
               {filteredTeamsB.map((t) => (
