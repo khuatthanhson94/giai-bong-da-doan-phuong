@@ -478,6 +478,7 @@ function TeamPlayersModal({ team, onClose }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState(null);
+  const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [photoPreview, setPhotoPreview] = useState('');
   const [form, setForm] = useState({
     name: '',
@@ -521,6 +522,20 @@ function TeamPlayersModal({ team, onClose }) {
     }
   };
 
+  const resetPlayerForm = () => {
+    setForm({
+      name: '',
+      jersey_number: '',
+      position: 'Tiền vệ',
+      dob: '',
+      photo: '',
+      description: ''
+    });
+    setEditId(null);
+    setPhotoPreview('');
+    setShowPlayerForm(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = {
@@ -537,17 +552,7 @@ function TeamPlayersModal({ team, onClose }) {
         await api.post('/players', payload);
       }
       
-      // Reset form
-      setForm({
-        name: '',
-        jersey_number: '',
-        position: 'Tiền vệ',
-        dob: '',
-        photo: '',
-        description: ''
-      });
-      setEditId(null);
-      setPhotoPreview('');
+      resetPlayerForm();
       loadPlayers();
     } catch (err) {
       alert('Lỗi lưu thông tin: ' + (err.message || err));
@@ -565,6 +570,7 @@ function TeamPlayersModal({ team, onClose }) {
     });
     setEditId(p.id);
     setPhotoPreview(p.photo || '');
+    setShowPlayerForm(true);
   };
 
   const handleDelete = async (id) => {
@@ -588,9 +594,22 @@ function TeamPlayersModal({ team, onClose }) {
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">Quản lý danh sách cầu thủ thuộc biên chế đội bóng</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition">
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setEditId(null);
+                setForm({ name: '', jersey_number: '', position: 'Tiền vệ', dob: '', photo: '', description: '' });
+                setPhotoPreview('');
+                setShowPlayerForm(true);
+              }}
+              className="btn-primary text-xs py-2 px-3 shadow"
+            >
+              ➕ Thêm cầu thủ mới
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -649,12 +668,22 @@ function TeamPlayersModal({ team, onClose }) {
             )}
           </div>
 
-          {/* Form Section */}
-          <div className="md:col-span-2 bg-gray-50/50 p-5 rounded-2xl border border-gray-100 self-start">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-              {editId ? '📝 Sửa cầu thủ' : '➕ Thêm cầu thủ mới'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form Popup Modal */}
+          {showPlayerForm && (
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
+              <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-scale-up">
+                {/* Header */}
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50 select-none">
+                  <h3 className="font-extrabold text-gray-800 text-base">
+                    {editId ? '📝 Sửa thông tin cầu thủ' : '➕ Thêm cầu thủ mới'}
+                  </h3>
+                  <button type="button" onClick={resetPlayerForm} className="text-gray-400 hover:text-gray-600 font-bold text-lg p-1">
+                    ✕
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className="form-label text-xs font-semibold text-gray-600 mb-1">Họ tên cầu thủ <span className="text-red-500">*</span></label>
                 <input
@@ -723,26 +752,20 @@ function TeamPlayersModal({ team, onClose }) {
                 )}
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button type="submit" className="btn-primary text-xs py-2 px-4 flex-1">
-                  {editId ? 'Cập nhật' : 'Lưu lại'}
-                </button>
-                {editId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditId(null);
-                      setForm({ name: '', jersey_number: '', position: 'Tiền vệ', dob: '', photo: '', description: '' });
-                      setPhotoPreview('');
-                    }}
-                    className="btn-outline text-xs py-2 px-4"
-                  >
-                    Hủy sửa
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t flex justify-end gap-2 bg-gray-55 select-none">
+                  <button type="button" onClick={resetPlayerForm} className="btn-outline text-sm px-4 py-2">
+                    Hủy bỏ
                   </button>
-                )}
-              </div>
-            </form>
-          </div>
+                  <button type="submit" className="btn-primary text-sm px-5 py-2 shadow-md">
+                    {editId ? 'Cập nhật' : 'Lưu lại'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>

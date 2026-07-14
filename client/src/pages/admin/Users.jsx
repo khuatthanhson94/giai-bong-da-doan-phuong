@@ -15,6 +15,7 @@ export default function AdminUsers() {
   const [teams, setTeams] = useState([]);
   const [form, setForm] = useState({ username: '', password: '', role: 'admin', team_id: '' });
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showForm, setShowForm] = useState(false);
 
   const loadUsers = () => api.get('/auth/users').then((data) => {
     setUsers(data);
@@ -51,6 +52,7 @@ export default function AdminUsers() {
     };
     await api.post('/auth/users', payload);
     setForm({ username: '', password: '', role: 'admin', team_id: '' });
+    setShowForm(false);
     loadUsers();
   };
 
@@ -82,30 +84,78 @@ export default function AdminUsers() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-primary text-center sm:text-left">Quản lý tài khoản</h1>
-        <button onClick={exportUsers} className="btn-outline text-sm flex items-center justify-center gap-1 py-2 px-3 self-center sm:self-auto">
-          📥 Xuất Excel
-        </button>
+        <div className="flex gap-2 self-center sm:self-auto">
+          <button
+            onClick={() => {
+              setForm({ username: '', password: '', role: 'admin', team_id: '' });
+              setShowForm(true);
+            }}
+            className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 shadow"
+          >
+            ➕ Thêm tài khoản mới
+          </button>
+          <button onClick={exportUsers} className="btn-outline text-sm flex items-center justify-center gap-1 py-2 px-3">
+            📥 Xuất Excel
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="card p-6 mb-6 grid md:grid-cols-3 gap-4">
-        <input className="input-field" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-        <input className="input-field" type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        <select className="input-field" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value, team_id: e.target.value === 'team' ? (teams[0]?.id || '') : '' })}>
-          {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-        </select>
+      {/* Form Popup Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-scale-up">
+            {/* Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50 select-none">
+              <h3 className="font-extrabold text-gray-800 text-base">
+                ➕ Thêm tài khoản mới
+              </h3>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 font-bold text-lg p-1">
+                ✕
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="form-label font-semibold text-gray-700">Username <span className="text-red-500">*</span></label>
+                  <input className="input-field" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+                </div>
+                <div className="space-y-1">
+                  <label className="form-label font-semibold text-gray-700">Password <span className="text-red-500">*</span></label>
+                  <input className="input-field" type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="form-label font-semibold text-gray-700">Quyền hạn <span className="text-red-500">*</span></label>
+                <select className="input-field" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value, team_id: e.target.value === 'team' ? (teams[0]?.id || '') : '' })}>
+                  {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
 
-        {form.role === 'team' && (
-          <div className="md:col-span-3">
-            <label className="block text-sm font-medium mb-1">Gán cho đội bóng</label>
-            <select className="input-field" value={form.team_id} onChange={(e) => setForm({ ...form, team_id: e.target.value })} required>
-              <option value="">Chọn đội bóng...</option>
-              {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-        )}
+              {form.role === 'team' && (
+                <div className="space-y-1">
+                  <label className="form-label font-semibold text-gray-700">Gán cho đội bóng <span className="text-red-500">*</span></label>
+                  <select className="input-field" value={form.team_id} onChange={(e) => setForm({ ...form, team_id: e.target.value })} required>
+                    <option value="">Chọn đội bóng...</option>
+                    {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
 
-        <button type="submit" className="btn-primary text-sm md:col-span-3">Thêm tài khoản</button>
-      </form>
+            {/* Footer */}
+            <div className="p-4 border-t flex justify-end gap-2 bg-gray-55 select-none">
+              <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm px-5 py-2">
+                Hủy bỏ
+              </button>
+              <button type="submit" className="btn-primary text-sm px-6 py-2 shadow-md">
+                Tạo tài khoản
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {selectedIds.length > 0 && (
         <div className="flex items-center justify-between bg-red-50 border border-red-100 rounded-2xl p-4 mb-4 animate-fade-in">
