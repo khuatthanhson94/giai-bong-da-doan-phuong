@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { getVNLocalDateTimeString } from './utils/date.js';
+import { requestStorage } from './utils/context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let dataDir;
@@ -390,6 +391,11 @@ export function initDatabase() {
   try { db.exec('ALTER TABLE sponsors ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
   try { db.exec('ALTER TABLE sponsors ADD COLUMN deleted_at TEXT'); } catch (e) {}
 
+  // Audit Logs Migrations
+  try { db.exec('ALTER TABLE audit_logs ADD COLUMN ip_address TEXT'); } catch (e) {}
+  try { db.exec('ALTER TABLE audit_logs ADD COLUMN user_agent TEXT'); } catch (e) {}
+  try { db.exec('ALTER TABLE audit_logs ADD COLUMN device_type TEXT'); } catch (e) {}
+
   // Timezone Migration: Convert UTC space-separated strings to ISO 8601 UTC strings
   const tablesToFix = ['seasons', 'tournaments', 'teams', 'players', 'matches', 'news', 'gallery', 'sponsors', 'activity_logs', 'audit_logs', 'users'];
   for (const table of tablesToFix) {
@@ -577,12 +583,65 @@ export function cleanOldRecycleBin() {
   }
 }
 
+function getDeviceType(ua) {
+  if (!ua) return 'Desktop';
+  const uaLower = ua.toLowerCase();
+  if (uaLower.includes('mobi') || uaLower.includes('android') || uaLower.includes('iphone') || uaLower.includes('ipad')) {
+    if (uaLower.includes('ipad') || uaLower.includes('tablet')) {
+      return 'Tablet';
+    }
+    return 'Mobile';
+  }
+  return 'Desktop';
+}
+
+function getBrowserName(ua) {
+  if (!ua) return 'Unknown';
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('SamsungBrowser')) return 'Samsung Browser';
+  if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera';
+  if (ua.includes('Trident')) return 'Internet Explorer';
+  if (ua.includes('Edge') || ua.includes('Edg')) return 'Edge';
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Safari')) return 'Safari';
+  return 'Browser';
+}
+
 export function logAction(username, action, details) {
   try {
+    let ipAddress = null;
+    let userAgent = null;
+    let deviceType = null;
+
+    try {
+      const req = requestStorage.getStore();
+      if (req) {
+        userAgent = req.headers['user-agent'] || null;
+        ipAddress = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || null;
+        if (ipAddress && ipAddress.startsWith('::ffff:')) {
+          ipAddress = ipAddress.substring(7);
+        }
+        deviceType = getDeviceType(userAgent);
+        if (userAgent) {
+          const browser = getBrowserName(userAgent);
+          userAgent = `${deviceType} (${browser}) - ${userAgent.substring(0, 100)}`;
+        }
+      }
+    } catch (e) {
+      // Ignore request context errors
+    }
+
     db.prepare(`
-      INSERT INTO audit_logs (username, action, details)
-      VALUES (?, ?, ?)
-    `).run(username, action, details || null);
+      INSERT INTO audit_logs (username, action, details, ip_address, user_agent, device_type)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      username,
+      action,
+      details || null,
+      ipAddress,
+      userAgent,
+      deviceType || 'Desktop'
+    );
   } catch (err) {
     console.error('[AuditLog] Failed to write log:', err);
   }

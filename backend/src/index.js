@@ -20,6 +20,7 @@ import tournamentsRoutes from './routes/tournaments.js';
 import recyclebinRoutes from './routes/recyclebin.js';
 import aiRoutes from './routes/ai.js';
 import backupRoutes from './routes/backup.js';
+import { requestStorage } from './utils/context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -78,6 +79,11 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
+app.use((req, res, next) => {
+  requestStorage.run(req, () => {
+    next();
+  });
+});
 app.use('/uploads', express.static(uploadDir));
 
 // Fallback for static files on ephemeral serverless environment (Vercel)

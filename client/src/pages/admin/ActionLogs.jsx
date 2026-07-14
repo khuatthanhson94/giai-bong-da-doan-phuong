@@ -79,11 +79,11 @@ export default function ActionLogs() {
   });
 
   const exportExcel = () => {
-    const headers = ['Mã log', 'Tài khoản thực hiện', 'Hành động', 'Chi tiết hoạt động', 'Thời gian'];
+    const headers = ['Mã log', 'Tài khoản thực hiện', 'Hành động', 'Chi tiết hoạt động', 'Thiết bị', 'Địa chỉ IP', 'Thời gian'];
     const rows = filteredLogs.map((log) => {
       const actionName = ACTION_MAP[log.action]?.label || log.action;
       const formattedTime = new Date(log.created_at).toLocaleString('vi-VN');
-      return [log.id, log.username, actionName, log.details || '-', formattedTime];
+      return [log.id, log.username, actionName, log.details || '-', log.device_type || 'Desktop', log.ip_address || '-', formattedTime];
     });
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -144,10 +144,11 @@ export default function ActionLogs() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
+                <tr className="bg-gray-55 border-b border-gray-100">
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Thời gian</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Tài khoản</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Hành động</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Thiết bị & IP</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Chi tiết hoạt động</th>
                 </tr>
               </thead>
@@ -163,7 +164,7 @@ export default function ActionLogs() {
                     second: '2-digit',
                   });
                   return (
-                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                    <tr key={log.id} className="hover:bg-gray-55/50 transition-colors">
                       <td className="p-4 whitespace-nowrap text-sm text-gray-600 font-mono">
                         {formattedTime}
                       </td>
@@ -174,6 +175,24 @@ export default function ActionLogs() {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${actInfo.color}`}>
                           {actInfo.label}
                         </span>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold w-fit ${
+                            log.device_type === 'Mobile'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : log.device_type === 'Tablet'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {log.device_type === 'Mobile' ? '📱 Di động' : log.device_type === 'Tablet' ? '📟 M.tính bảng' : '💻 Máy tính'}
+                          </span>
+                          {log.ip_address && (
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              IP: {log.ip_address}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-sm text-gray-700 font-medium">
                         {log.details || '-'}
