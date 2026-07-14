@@ -8,8 +8,14 @@ export default function MatchCard({ match, showScore = false }) {
   return (
     <div className="card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-youth bg-green-50 px-2 py-1 rounded">
-          {match.group?.name || match.group_name ? `${match.group?.name || match.group_name} - ${match.round}` : match.round}
+        <span className={`text-xs font-medium px-2 py-1 rounded ${
+          match.is_friendly 
+            ? 'text-purple-700 bg-purple-50' 
+            : 'text-youth bg-green-50'
+        }`}>
+          {match.is_friendly 
+            ? `Giao hữu - ${match.round}` 
+            : (match.group?.name || match.group_name ? `${match.group?.name || match.group_name} - ${match.round}` : match.round)}
         </span>
         <span className={`text-xs px-2 py-1 rounded font-medium ${
           match.status === 'finished' ? 'bg-gray-100 text-gray-600' :

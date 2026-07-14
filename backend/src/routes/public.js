@@ -39,25 +39,25 @@ router.get('/home', (req, res) => {
   allMatchesSql += ' ORDER BY m.match_date, m.match_time';
   const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
     const goals = db.prepare(`
-      SELECT g.*, p.name as player_name, p.jersey_number, p.team_id
+      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, g.team_id
       FROM goals g
-      JOIN players p ON g.player_id = p.id
+      LEFT JOIN players p ON g.player_id = p.id
       WHERE g.match_id = ?
       ORDER BY g.minute ASC
     `).all(m.id);
 
     const yellow_cards = db.prepare(`
-      SELECT y.*, p.name as player_name, p.jersey_number, p.team_id
+      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, y.team_id
       FROM yellow_cards y
-      JOIN players p ON y.player_id = p.id
+      LEFT JOIN players p ON y.player_id = p.id
       WHERE y.match_id = ?
       ORDER BY y.minute ASC
     `).all(m.id);
 
     const red_cards = db.prepare(`
-      SELECT r.*, p.name as player_name, p.jersey_number, p.team_id
+      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, r.team_id
       FROM red_cards r
-      JOIN players p ON r.player_id = p.id
+      LEFT JOIN players p ON r.player_id = p.id
       WHERE r.match_id = ?
       ORDER BY r.minute ASC
     `).all(m.id);

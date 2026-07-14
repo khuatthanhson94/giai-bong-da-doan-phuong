@@ -16,7 +16,7 @@ export function computeStandings(tournamentId) {
   teamSql += ' ORDER BY t.name';
   const teams = db.prepare(teamSql).all(...teamParams);
 
-  let matchSql = "SELECT * FROM matches WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL";
+  let matchSql = "SELECT * FROM matches WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL AND (is_friendly IS NULL OR is_friendly = 0)";
   const matchParams = [];
   if (tournamentId) {
     matchSql += ' AND tournament_id = ?';
@@ -169,7 +169,7 @@ export function publishMatchResult(matchId, userId) {
       const allGoals = db.prepare(`
         SELECT g.player_id, COUNT(*) as cnt FROM goals g
         JOIN matches m ON g.match_id = m.id
-        WHERE m.published = 1 GROUP BY g.player_id
+        WHERE m.published = 1 AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND g.player_id IS NOT NULL GROUP BY g.player_id
       `).all();
       for (const g of allGoals) {
         db.prepare('UPDATE players SET goals = ? WHERE id = ?').run(g.cnt, g.player_id);
@@ -178,7 +178,7 @@ export function publishMatchResult(matchId, userId) {
       const allYellow = db.prepare(`
         SELECT y.player_id, COUNT(*) as cnt FROM yellow_cards y
         JOIN matches m ON y.match_id = m.id
-        WHERE m.published = 1 GROUP BY y.player_id
+        WHERE m.published = 1 AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND y.player_id IS NOT NULL GROUP BY y.player_id
       `).all();
       for (const y of allYellow) {
         db.prepare('UPDATE players SET yellow_cards = ? WHERE id = ?').run(y.cnt, y.player_id);
@@ -187,7 +187,7 @@ export function publishMatchResult(matchId, userId) {
       const allRed = db.prepare(`
         SELECT r.player_id, COUNT(*) as cnt FROM red_cards r
         JOIN matches m ON r.match_id = m.id
-        WHERE m.published = 1 GROUP BY r.player_id
+        WHERE m.published = 1 AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND r.player_id IS NOT NULL GROUP BY r.player_id
       `).all();
       for (const r of allRed) {
         db.prepare('UPDATE players SET red_cards = ? WHERE id = ?').run(r.cnt, r.player_id);

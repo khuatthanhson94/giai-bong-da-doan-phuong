@@ -32,14 +32,17 @@ export default function Schedule() {
 
   // Filter matches based on active tab
   const displayedMatches = matches.filter((m) => {
+    if (m.is_friendly) return activeTab === 'friendly';
     const isGroupRound = /bảng|lượt|group/i.test(m.round);
+    if (activeTab === 'friendly') return false;
     return activeTab === 'group' ? isGroupRound : !isGroupRound;
   });
 
   // Filter dropdown rounds based on active tab
   const displayedRounds = rounds.filter((r) => {
+    if (activeTab === 'friendly') return /giao hữu|friendly/i.test(r);
     const isGroupRound = /bảng|lượt|group/i.test(r);
-    return activeTab === 'group' ? isGroupRound : !isGroupRound;
+    return activeTab === 'group' ? isGroupRound : (!isGroupRound && !/giao hữu|friendly/i.test(r));
   });
 
   return (
@@ -68,6 +71,16 @@ export default function Schedule() {
             }`}
           >
             🏆 Vòng Knockout
+          </button>
+          <button
+            onClick={() => handleTabChange('friendly')}
+            className={`px-5 py-2 rounded-md text-sm font-semibold transition-all ${
+              activeTab === 'friendly'
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            🤝 Giao hữu
           </button>
         </div>
       </div>

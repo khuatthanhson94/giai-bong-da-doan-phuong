@@ -28,24 +28,24 @@ router.post('/generate', authRequired, async (req, res) => {
       const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(match.team_b_id);
 
       const goals = db.prepare(`
-        SELECT g.*, p.name as player_name, t.name as team_name
+        SELECT g.*, COALESCE(p.name, g.player_name) as player_name, t.name as team_name
         FROM goals g
-        JOIN players p ON g.player_id = p.id
-        JOIN teams t ON p.team_id = t.id
+        LEFT JOIN players p ON g.player_id = p.id
+        LEFT JOIN teams t ON g.team_id = t.id
         WHERE g.match_id = ?
       `).all(match_id);
 
       const cards = db.prepare(`
-        SELECT 'yellow' as type, y.minute, p.name as player_name, t.name as team_name
+        SELECT 'yellow' as type, y.minute, COALESCE(p.name, y.player_name) as player_name, t.name as team_name
         FROM yellow_cards y
-        JOIN players p ON y.player_id = p.id
-        JOIN teams t ON p.team_id = t.id
+        LEFT JOIN players p ON y.player_id = p.id
+        LEFT JOIN teams t ON y.team_id = t.id
         WHERE y.match_id = ?
         UNION ALL
-        SELECT 'red' as type, r.minute, p.name as player_name, t.name as team_name
+        SELECT 'red' as type, r.minute, COALESCE(p.name, r.player_name) as player_name, t.name as team_name
         FROM red_cards r
-        JOIN players p ON r.player_id = p.id
-        JOIN teams t ON p.team_id = t.id
+        LEFT JOIN players p ON r.player_id = p.id
+        LEFT JOIN teams t ON r.team_id = t.id
         WHERE r.match_id = ?
       `).all(match_id, match_id);
 

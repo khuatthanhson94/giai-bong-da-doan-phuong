@@ -202,8 +202,10 @@ export function initDatabase() {
       score_b INTEGER,
       status TEXT DEFAULT 'scheduled',
       motm_player_id INTEGER,
+      motm_player_name TEXT,
       notes TEXT,
       published INTEGER DEFAULT 0,
+      is_friendly INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
       FOREIGN KEY (team_a_id) REFERENCES teams(id),
       FOREIGN KEY (team_b_id) REFERENCES teams(id),
@@ -213,29 +215,38 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS goals (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       match_id INTEGER NOT NULL,
-      player_id INTEGER NOT NULL,
+      player_id INTEGER,
+      player_name TEXT,
+      team_id INTEGER,
       minute INTEGER NOT NULL,
       is_own_goal INTEGER DEFAULT 0,
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
-      FOREIGN KEY (player_id) REFERENCES players(id)
+      FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS yellow_cards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       match_id INTEGER NOT NULL,
-      player_id INTEGER NOT NULL,
+      player_id INTEGER,
+      player_name TEXT,
+      team_id INTEGER,
       minute INTEGER NOT NULL,
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
-      FOREIGN KEY (player_id) REFERENCES players(id)
+      FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS red_cards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       match_id INTEGER NOT NULL,
-      player_id INTEGER NOT NULL,
+      player_id INTEGER,
+      player_name TEXT,
+      team_id INTEGER,
       minute INTEGER NOT NULL,
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
-      FOREIGN KEY (player_id) REFERENCES players(id)
+      FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+      FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS news (
@@ -407,6 +418,99 @@ export function initDatabase() {
   try { db.exec('ALTER TABLE audit_logs ADD COLUMN ip_address TEXT'); } catch (e) {}
   try { db.exec('ALTER TABLE audit_logs ADD COLUMN user_agent TEXT'); } catch (e) {}
   try { db.exec('ALTER TABLE audit_logs ADD COLUMN device_type TEXT'); } catch (e) {}
+
+  // Friendly matches and MOTM name migrations
+  try { db.exec('ALTER TABLE matches ADD COLUMN is_friendly INTEGER DEFAULT 0'); } catch (e) {}
+  try { db.exec('ALTER TABLE matches ADD COLUMN motm_player_name TEXT'); } catch (e) {}
+
+  // Migration: Modify goals, yellow_cards, red_cards to support free text players & team_id
+  try {
+    const checkGoals = db.prepare("PRAGMA table_info(goals)").all();
+    const hasPlayerName = checkGoals.some(c => c.name === 'player_name');
+    if (!hasPlayerName) {
+      console.log('Migrating goals, yellow_cards, and red_cards tables...');
+      db.exec('BEGIN IMMEDIATE');
+      
+      // 1. goals migration
+      db.exec(`
+        CREATE TABLE goals_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          match_id INTEGER NOT NULL,
+          player_id INTEGER,
+          player_name TEXT,
+          team_id INTEGER,
+          minute INTEGER NOT NULL,
+          is_own_goal INTEGER DEFAULT 0,
+          FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+          FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
+        );
+      `);
+      db.exec(`
+        INSERT INTO goals_new (id, match_id, player_id, team_id, minute, is_own_goal)
+        SELECT id, match_id, player_id, 
+               (SELECT team_id FROM players WHERE players.id = player_id), 
+               minute, is_own_goal
+        FROM goals;
+      `);
+      db.exec('DROP TABLE goals;');
+      db.exec('ALTER TABLE goals_new RENAME TO goals;');
+
+      // 2. yellow_cards migration
+      db.exec(`
+        CREATE TABLE yellow_cards_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          match_id INTEGER NOT NULL,
+          player_id INTEGER,
+          player_name TEXT,
+          team_id INTEGER,
+          minute INTEGER NOT NULL,
+          FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+          FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
+        );
+      `);
+      db.exec(`
+        INSERT INTO yellow_cards_new (id, match_id, player_id, team_id, minute)
+        SELECT id, match_id, player_id, 
+               (SELECT team_id FROM players WHERE players.id = player_id), 
+               minute
+        FROM yellow_cards;
+      `);
+      db.exec('DROP TABLE yellow_cards;');
+      db.exec('ALTER TABLE yellow_cards_new RENAME TO yellow_cards;');
+
+      // 3. red_cards migration
+      db.exec(`
+        CREATE TABLE red_cards_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          match_id INTEGER NOT NULL,
+          player_id INTEGER,
+          player_name TEXT,
+          team_id INTEGER,
+          minute INTEGER NOT NULL,
+          FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+          FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+          FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
+        );
+      `);
+      db.exec(`
+        INSERT INTO red_cards_new (id, match_id, player_id, team_id, minute)
+        SELECT id, match_id, player_id, 
+               (SELECT team_id FROM players WHERE players.id = player_id), 
+               minute
+        FROM red_cards;
+      `);
+      db.exec('DROP TABLE red_cards;');
+      db.exec('ALTER TABLE red_cards_new RENAME TO red_cards;');
+
+      db.exec('COMMIT');
+      console.log('Migration of goals, yellow_cards, and red_cards successful!');
+    }
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch (e) {}
+    console.error('Failed to migrate events tables:', err.message);
+  }
 
   // Timezone Migration: Convert UTC space-separated strings to ISO 8601 UTC strings
   const tablesToFix = ['seasons', 'tournaments', 'teams', 'players', 'matches', 'news', 'gallery', 'sponsors', 'activity_logs', 'audit_logs', 'users'];

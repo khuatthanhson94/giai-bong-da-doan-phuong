@@ -19,21 +19,27 @@ function enrichMatch(match) {
   `).get(match.team_a_id) || null);
 
   const goals = db.prepare(`
-    SELECT g.*, p.name as player_name, p.jersey_number, t.name as team_name
-    FROM goals g JOIN players p ON g.player_id = p.id JOIN teams t ON p.team_id = t.id
+    SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, t.name as team_name
+    FROM goals g 
+    LEFT JOIN players p ON g.player_id = p.id 
+    LEFT JOIN teams t ON g.team_id = t.id
     WHERE g.match_id = ? ORDER BY g.minute
   `).all(match.id);
   const yellows = db.prepare(`
-    SELECT y.*, p.name as player_name, p.jersey_number
-    FROM yellow_cards y JOIN players p ON y.player_id = p.id WHERE y.match_id = ? ORDER BY y.minute
+    SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number
+    FROM yellow_cards y 
+    LEFT JOIN players p ON y.player_id = p.id 
+    WHERE y.match_id = ? ORDER BY y.minute
   `).all(match.id);
   const reds = db.prepare(`
-    SELECT r.*, p.name as player_name, p.jersey_number
-    FROM red_cards r JOIN players p ON r.player_id = p.id WHERE r.match_id = ? ORDER BY r.minute
+    SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number
+    FROM red_cards r 
+    LEFT JOIN players p ON r.player_id = p.id 
+    WHERE r.match_id = ? ORDER BY r.minute
   `).all(match.id);
   const motm = match.motm_player_id
     ? db.prepare('SELECT id, name, jersey_number, photo FROM players WHERE id = ?').get(match.motm_player_id)
-    : null;
+    : (match.motm_player_name ? { name: match.motm_player_name } : null);
   return { ...match, team_a: teamA, team_b: teamB, goals, yellow_cards: yellows, red_cards: reds, motm, group };
 }
 
@@ -257,7 +263,7 @@ router.post('/', authRequired, (req, res, next) => {
   if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
-  const { round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id } = req.body;
+  const { round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, is_friendly } = req.body;
   
   let tId = tournament_id ? Number(tournament_id) : null;
   if (!tId) {
@@ -267,9 +273,9 @@ router.post('/', authRequired, (req, res, next) => {
   if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để tạo trận' });
 
   const result = db.prepare(`
-    INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, tId);
+    INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, is_friendly)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, tId, is_friendly ? 1 : 0);
   const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_a_id);
   const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_b_id);
   logAction(req.user.username, 'CREATE_MATCH', `Tạo trận đấu mới: ${teamA?.name || team_a_id} vs ${teamB?.name || team_b_id} (Vòng: ${round})`);
@@ -282,12 +288,12 @@ router.put('/:id', authRequired, (req, res, next) => {
   }
   next();
 }, (req, res) => {
-  const { round, match_date, match_time, venue, team_a_id, team_b_id } = req.body;
+  const { round, match_date, match_time, venue, team_a_id, team_b_id, is_friendly } = req.body;
   const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(req.params.id);
   db.prepare(`
-    UPDATE matches SET round=?, match_date=?, match_time=?, venue=?, team_a_id=?, team_b_id=?
+    UPDATE matches SET round=?, match_date=?, match_time=?, venue=?, team_a_id=?, team_b_id=?, is_friendly=?
     WHERE id=?
-  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, req.params.id);
+  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, is_friendly ? 1 : 0, req.params.id);
   const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
   const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
   logAction(req.user.username, 'UPDATE_MATCH', `Cập nhật lịch trận đấu ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
@@ -313,33 +319,33 @@ router.post('/:id/result', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   const matchId = req.params.id;
-  const { score_a, score_b, goals, yellow_cards, red_cards, motm_player_id, notes, status } = req.body;
+  const { score_a, score_b, goals, yellow_cards, red_cards, motm_player_id, motm_player_name, notes, status } = req.body;
 
   const saveResult = () => {
     db.exec('BEGIN IMMEDIATE');
     try {
       db.prepare(`
-        UPDATE matches SET score_a=?, score_b=?, motm_player_id=?, notes=?, status=?, published = CASE WHEN ? = 'live' THEN 1 ELSE published END
+        UPDATE matches SET score_a=?, score_b=?, motm_player_id=?, motm_player_name=?, notes=?, status=?, published = CASE WHEN ? = 'live' THEN 1 ELSE published END
         WHERE id=?
-      `).run(score_a, score_b, motm_player_id || null, notes || '', status || 'finished', status || 'finished', matchId);
+      `).run(score_a, score_b, motm_player_id || null, motm_player_name || null, notes || '', status || 'finished', status || 'finished', matchId);
 
       db.prepare('DELETE FROM goals WHERE match_id = ?').run(matchId);
       db.prepare('DELETE FROM yellow_cards WHERE match_id = ?').run(matchId);
       db.prepare('DELETE FROM red_cards WHERE match_id = ?').run(matchId);
 
-      const insertGoal = db.prepare('INSERT INTO goals (match_id, player_id, minute, is_own_goal) VALUES (?, ?, ?, ?)');
+      const insertGoal = db.prepare('INSERT INTO goals (match_id, player_id, player_name, team_id, minute, is_own_goal) VALUES (?, ?, ?, ?, ?, ?)');
       for (const g of goals || []) {
-        insertGoal.run(matchId, g.player_id, g.minute, g.is_own_goal ? 1 : 0);
+        insertGoal.run(matchId, g.player_id || null, g.player_name || null, g.team_id || null, g.minute, g.is_own_goal ? 1 : 0);
       }
 
-      const insertYellow = db.prepare('INSERT INTO yellow_cards (match_id, player_id, minute) VALUES (?, ?, ?)');
+      const insertYellow = db.prepare('INSERT INTO yellow_cards (match_id, player_id, player_name, team_id, minute) VALUES (?, ?, ?, ?, ?)');
       for (const y of yellow_cards || []) {
-        insertYellow.run(matchId, y.player_id, y.minute);
+        insertYellow.run(matchId, y.player_id || null, y.player_name || null, y.team_id || null, y.minute);
       }
 
-      const insertRed = db.prepare('INSERT INTO red_cards (match_id, player_id, minute) VALUES (?, ?, ?)');
+      const insertRed = db.prepare('INSERT INTO red_cards (match_id, player_id, player_name, team_id, minute) VALUES (?, ?, ?, ?, ?)');
       for (const r of red_cards || []) {
-        insertRed.run(matchId, r.player_id, r.minute);
+        insertRed.run(matchId, r.player_id || null, r.player_name || null, r.team_id || null, r.minute);
       }
 
       const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(matchId);
