@@ -687,20 +687,38 @@ export default function Tournaments() {
               </button>
             </div>
           {/* Progress Header */}
-          <div className="bg-gray-50 border-b p-4 flex justify-between items-center text-xs font-semibold text-gray-500 divide-x overflow-x-auto">
-            {[
-              '1. Chọn Mùa', '2. Cấu hình giải', '3. Đội tham gia', '4. Chia bảng',
-              '5. Xếp lịch đấu', '6. Nhánh Knockout', '7. Nhà tài trợ', '8. Kích hoạt'
-            ].map((name, i) => (
-              <div
-                key={name}
-                className={`flex-1 text-center py-2 px-1 ${
-                  wizardStep === i + 1 ? 'text-primary font-bold bg-blue-50/50' : wizardStep > i + 1 ? 'text-green-600' : ''
-                }`}
-              >
-                {name}
+          <div className="bg-gray-50 border-b p-4 text-xs font-semibold text-gray-500 select-none">
+            {/* Desktop / Tablet View */}
+            <div className="hidden md:flex justify-between items-center divide-x overflow-x-auto">
+              {[
+                '1. Chọn Mùa', '2. Cấu hình giải', '3. Đội tham gia', '4. Chia bảng',
+                '5. Xếp lịch đấu', '6. Nhánh Knockout', '7. Nhà tài trợ', '8. Kích hoạt'
+              ].map((name, i) => (
+                <div
+                  key={name}
+                  className={`flex-1 text-center py-2 px-1 ${
+                    wizardStep === i + 1 ? 'text-primary font-bold bg-blue-50/50' : wizardStep > i + 1 ? 'text-green-600' : ''
+                  }`}
+                >
+                  {name}
+                </div>
+              ))}
+            </div>
+            {/* Mobile View */}
+            <div className="md:hidden flex justify-between items-center px-2">
+              <span className="text-gray-700 font-bold">
+                Bước {wizardStep} / 8: {[
+                  'Chọn Mùa giải', 'Cấu hình giải đấu', 'Đội bóng tham gia', 'Chia bảng đấu',
+                  'Xếp lịch đấu vòng bảng', 'Thiết lập nhánh Knockout', 'Nhà tài trợ giải', 'Đăng tải & Kích hoạt'
+                ][wizardStep - 1]}
+              </span>
+              <div className="w-24 bg-gray-200 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-primary h-full transition-all duration-300"
+                  style={{ width: `${(wizardStep / 8) * 100}%` }}
+                />
               </div>
-            ))}
+            </div>
           </div>
 
           {/* Step Body */}
