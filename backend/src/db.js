@@ -621,6 +621,10 @@ export function logAction(username, action, details) {
         if (ipAddress && ipAddress.startsWith('::ffff:')) {
           ipAddress = ipAddress.substring(7);
         }
+        // Extract client IP if comma separated proxy list
+        if (ipAddress && ipAddress.includes(',')) {
+          ipAddress = ipAddress.split(',')[0].trim();
+        }
         deviceType = getDeviceType(userAgent);
         if (userAgent) {
           const browser = getBrowserName(userAgent);
@@ -631,19 +635,31 @@ export function logAction(username, action, details) {
       // Ignore request context errors
     }
 
-    db.prepare(`
-      INSERT INTO audit_logs (username, action, details, ip_address, user_agent, device_type)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      username,
-      action,
-      details || null,
-      ipAddress,
-      userAgent,
-      deviceType || 'Desktop'
-    );
+    // Print to backend console for verification
+    console.log(`[AuditLog] Logged action: ${action} by user ${username} from IP: ${ipAddress || 'local'} (${deviceType || 'Desktop'})`);
+
+    try {
+      db.prepare(`
+        INSERT INTO audit_logs (username, action, details, ip_address, user_agent, device_type)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        username,
+        action,
+        details || null,
+        ipAddress,
+        userAgent,
+        deviceType || 'Desktop'
+      );
+    } catch (dbErr) {
+      // Fallback if table doesn't have the new columns yet (server has not restarted to run migrations)
+      db.prepare(`
+        INSERT INTO audit_logs (username, action, details)
+        VALUES (?, ?, ?)
+      `).run(username, action, details || null);
+      console.warn('[AuditLog] Wrote log using fallback schema due to DB column error:', dbErr.message);
+    }
   } catch (err) {
-    console.error('[AuditLog] Failed to write log:', err);
+    console.error('[AuditLog] Failed to write log completely:', err);
   }
 }
 
