@@ -67,8 +67,22 @@ export default function AdminNews() {
         }} className="btn-primary text-sm py-2 px-4 self-center sm:self-auto">+ Thêm bài viết</button>
       </div>
 
+      {/* Form Popup Modal */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4 max-w-4xl mx-auto bg-white shadow-lg rounded-2xl border border-gray-100">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-scale-up">
+            {/* Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50 select-none">
+              <h3 className="font-extrabold text-gray-800 text-base">
+                {editId ? '📝 Chỉnh sửa Bài viết' : '➕ Thêm bài viết mới'}
+              </h3>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 font-bold text-lg p-1">
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
           <label className="form-label font-semibold">Tiêu đề bài viết</label>
           <input className="input-field" placeholder="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           
@@ -95,11 +109,19 @@ export default function AdminNews() {
           <label className="form-label font-semibold">URL Video Youtube (Nhúng - Không bắt buộc)</label>
           <input className="input-field" placeholder="URL video (YouTube embed)" value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} />
           
-          <div className="flex gap-2">
-            <button type="submit" className="btn-primary text-sm">Lưu</button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm">Hủy</button>
-          </div>
-        </form>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t flex justify-end gap-2 bg-gray-55 select-none">
+              <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm px-5 py-2">
+                Hủy bỏ
+              </button>
+              <button type="submit" className="btn-primary text-sm px-6 py-2 shadow-md">
+                Lưu bài viết
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {news.length > 0 && (

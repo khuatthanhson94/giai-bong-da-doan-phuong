@@ -15,6 +15,7 @@ export default function Tournaments() {
 
   // Normal CRUD Form state
   const [editId, setEditId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
   const [seasonId, setSeasonId] = useState('');
   const [name, setName] = useState('');
   const [format, setFormat] = useState('group_knockout');
@@ -178,6 +179,7 @@ export default function Tournaments() {
     setStatus('draft');
     setLogo('');
     setBanner('');
+    setShowForm(false);
   };
 
   const handleEdit = (t) => {
@@ -192,6 +194,7 @@ export default function Tournaments() {
     setStatus(t.status);
     setLogo(t.logo || '');
     setBanner(t.banner || '');
+    setShowForm(true);
   };
 
   const handleSubmit = async (e) => {
@@ -427,33 +430,49 @@ export default function Tournaments() {
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Quản lý Giải đấu</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {viewMode === 'list' 
-              ? 'Tạo mới hoặc quản lý cấu hình các giải đấu thể thao Đoàn phường' 
-              : 'Thiết lập giải đấu chuyên nghiệp qua bộ Wizard 8 bước'}
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Cấu hình các giải đấu con thuộc Mùa giải (Ví dụ: Giải bóng đá Nam Thanh niên 2026)</p>
         </div>
-        <button
-          onClick={() => {
-            setViewMode(viewMode === 'list' ? 'wizard' : 'list');
-            setWizardStep(1);
-          }}
-          className="bg-youth text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-youth/90 transition shadow-sm cursor-pointer"
-        >
-          {viewMode === 'list' ? '🚀 Tạo giải đấu (Wizard 8 Bước)' : '← Danh sách giải đấu'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              resetForm();
+              setShowForm(true);
+            }}
+            className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 shadow-md"
+          >
+            ➕ Thêm giải đấu mới
+          </button>
+          <button
+            onClick={() => {
+              setWizardStep(1);
+              setViewMode('wizard');
+            }}
+            className="bg-youth text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-youth/90 transition shadow-sm cursor-pointer"
+          >
+            🚀 Tạo giải đấu (Wizard 8 Bước)
+          </button>
+        </div>
       </div>
 
       {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm font-medium border border-red-200">{error}</div>}
       {success && <div className="bg-green-50 text-green-600 p-4 rounded-lg text-sm font-medium border border-green-200">{success}</div>}
 
-      {viewMode === 'list' ? (
-        // ==================== LIST VIEW (CRUD) ====================
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Form */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">{editId ? 'Chỉnh sửa Giải đấu' : 'Thêm Giải đấu mới'}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      {/* CRUD Form Popup Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-scale-up">
+            {/* Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-55 select-none">
+              <h3 className="font-extrabold text-gray-800 text-base">
+                {editId ? '📝 Chỉnh sửa Giải đấu' : '➕ Thêm Giải đấu mới'}
+              </h3>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 font-bold text-lg p-1">
+                ✕
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Thuộc Mùa giải</label>
                 <select
@@ -581,28 +600,24 @@ export default function Tournaments() {
                 )}
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-primary text-white py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark cursor-pointer transition"
-                >
-                  {editId ? 'Cập nhật' : 'Thêm mới'}
-                </button>
-                {editId && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
-                  >
-                    Hủy
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
+            </div>
 
-          {/* List */}
-          <div className="lg:col-span-2 space-y-4">
+            {/* Footer */}
+            <div className="p-4 border-t flex justify-end gap-2 bg-gray-55 select-none">
+              <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm px-5 py-2">
+                Hủy bỏ
+              </button>
+              <button type="submit" className="btn-primary text-sm px-6 py-2 shadow-md">
+                {editId ? 'Cập nhật' : 'Thêm mới'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {viewMode === 'list' ? (
+        /* List is now full-width */
+        <div className="space-y-4">
             {loading ? (
               <div className="text-center p-8 bg-white rounded-xl border border-gray-200 shadow-sm text-gray-500">Đang tải danh sách giải đấu...</div>
             ) : tournaments.length === 0 ? (
@@ -658,10 +673,19 @@ export default function Tournaments() {
               </div>
             )}
           </div>
-        </div>
       ) : (
-        // ==================== 8-STEP TOURNAMENT WIZARD VIEW ====================
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden max-w-4xl mx-auto">
+        // ==================== 8-STEP TOURNAMENT WIZARD VIEW POPUP ====================
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[92vh] flex flex-col my-auto overflow-hidden animate-scale-up">
+            {/* Wizard Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-55 select-none">
+              <h3 className="font-extrabold text-primary text-base flex items-center gap-2">
+                🚀 Bộ Wizard Thiết lập Giải đấu Nhanh (8 Bước)
+              </h3>
+              <button onClick={() => setViewMode('list')} className="text-gray-400 hover:text-gray-600 font-bold text-lg p-1">
+                ✕
+              </button>
+            </div>
           {/* Progress Header */}
           <div className="bg-gray-50 border-b p-4 flex justify-between items-center text-xs font-semibold text-gray-500 divide-x overflow-x-auto">
             {[
@@ -680,7 +704,7 @@ export default function Tournaments() {
           </div>
 
           {/* Step Body */}
-          <div className="p-8 space-y-6">
+          <div className="p-8 space-y-6 overflow-y-auto flex-1 bg-gray-55">
             
             {/* Step 1: Season selection */}
             {wizardStep === 1 && (
@@ -1290,7 +1314,8 @@ export default function Tournaments() {
 
           </div>
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 }

@@ -214,7 +214,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col animate-fade-in my-8">
+      <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col animate-fade-in my-auto">
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-gray-800 text-lg">

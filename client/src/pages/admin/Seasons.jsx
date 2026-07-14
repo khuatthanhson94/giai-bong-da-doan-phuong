@@ -14,6 +14,7 @@ export default function Seasons() {
   const [status, setStatus] = useState('active');
   const [logo, setLogo] = useState('');
   const [banner, setBanner] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   const getFullUrl = (url) => {
     if (!url) return '';
@@ -71,6 +72,7 @@ export default function Seasons() {
     setStatus('active');
     setLogo('');
     setBanner('');
+    setShowForm(false);
   };
 
   const handleEdit = (s) => {
@@ -80,6 +82,7 @@ export default function Seasons() {
     setStatus(s.status);
     setLogo(s.logo || '');
     setBanner(s.banner || '');
+    setShowForm(true);
   };
 
   const handleSubmit = async (e) => {
@@ -127,109 +130,119 @@ export default function Seasons() {
           <h1 className="text-2xl font-bold text-gray-800">Quản lý Mùa giải</h1>
           <p className="text-sm text-gray-500 mt-1">Quản lý các chuỗi thời gian tổ chức các giải đấu (Ví dụ: Mùa giải 2026)</p>
         </div>
+        <button
+          onClick={() => { resetForm(); setShowForm(true); }}
+          className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 shadow-md"
+        >
+          ➕ Thêm mùa giải mới
+        </button>
       </div>
 
       {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm font-medium border border-red-200">{error}</div>}
       {success && <div className="bg-green-50 text-green-600 p-4 rounded-lg text-sm font-medium border border-green-200">{success}</div>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Form panel */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">{editId ? 'Chỉnh sửa Mùa giải' : 'Thêm Mùa giải mới'}</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên Mùa giải</label>
-              <input
-                type="text"
-                required
-                placeholder="Ví dụ: Mùa giải 2026"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-              />
+      {/* Form Popup Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in">
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col my-auto overflow-hidden animate-scale-up">
+            {/* Header */}
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50 select-none">
+              <h3 className="font-extrabold text-gray-800 text-base">
+                {editId ? '📝 Chỉnh sửa Mùa giải' : '➕ Thêm Mùa giải mới'}
+              </h3>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 font-bold text-lg p-1">
+                ✕
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Năm</label>
-              <input
-                type="number"
-                required
-                value={year}
-                onChange={e => setYear(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-              >
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Tạm ngưng</option>
-              </select>
-            </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Logo Mùa giải (Tùy chọn)</label>
-               <div className="flex gap-2 items-center">
-                 <input
-                   type="text"
-                   placeholder="Đường dẫn logo hoặc tải lên..."
-                   value={logo}
-                   onChange={e => setLogo(e.target.value)}
-                   className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-                 />
-                 <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
-                   Tải lên
-                   <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} />
-                 </label>
-               </div>
-               {logo && (
-                 <img src={getFullUrl(logo)} alt="Logo Preview" className="w-16 h-16 object-contain border rounded mt-2 p-1 bg-white" />
-               )}
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Banner Mùa giải (Tùy chọn)</label>
-               <div className="flex gap-2 items-center">
-                 <input
-                   type="text"
-                   placeholder="Đường dẫn banner hoặc tải lên..."
-                   value={banner}
-                   onChange={e => setBanner(e.target.value)}
-                   className="flex-1 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
-                 />
-                 <label className="bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer select-none">
-                   Tải lên
-                   <input type="file" accept="image/*" className="hidden" onChange={handleUploadBanner} />
-                 </label>
-               </div>
-               {banner && (
-                 <img src={getFullUrl(banner)} alt="Banner Preview" className="w-32 h-16 object-cover border rounded mt-2 p-1 bg-white" />
-               )}
-             </div>
 
-            <div className="flex gap-2 pt-2">
-              <button
-                type="submit"
-                className="flex-1 bg-primary text-white py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark cursor-pointer transition"
-              >
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 text-left">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Tên Mùa giải <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Mùa giải 2026"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Năm <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  required
+                  value={year}
+                  onChange={e => setYear(e.target.value)}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Trạng thái</label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Tạm ngưng</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Logo Mùa giải (Tùy chọn)</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Đường dẫn logo hoặc tải lên..."
+                    value={logo}
+                    onChange={e => setLogo(e.target.value)}
+                    className="input-field flex-1"
+                  />
+                  <label className="bg-gray-150 hover:bg-gray-200 border border-gray-200 text-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer select-none">
+                    Tải lên
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} />
+                  </label>
+                </div>
+                {logo && (
+                  <img src={getFullUrl(logo)} alt="Logo Preview" className="w-16 h-16 object-contain border rounded-xl mt-2 p-1 bg-white" />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Banner Mùa giải (Tùy chọn)</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Đường dẫn banner hoặc tải lên..."
+                    value={banner}
+                    onChange={e => setBanner(e.target.value)}
+                    className="input-field flex-1"
+                  />
+                  <label className="bg-gray-150 hover:bg-gray-200 border border-gray-200 text-gray-700 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer select-none">
+                    Tải lên
+                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadBanner} />
+                  </label>
+                </div>
+                {banner && (
+                  <img src={getFullUrl(banner)} alt="Banner Preview" className="w-32 h-16 object-cover border rounded-xl mt-2 p-1 bg-white" />
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t flex justify-end gap-2 bg-gray-55 select-none">
+              <button type="button" onClick={() => setShowForm(false)} className="btn-outline text-sm px-5 py-2">
+                Hủy bỏ
+              </button>
+              <button type="submit" className="btn-primary text-sm px-6 py-2 shadow-md">
                 {editId ? 'Cập nhật' : 'Thêm mới'}
               </button>
-              {editId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
-                >
-                  Hủy
-                </button>
-              )}
             </div>
           </form>
         </div>
+      )}
 
-        {/* List panel */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="space-y-4">
           {loading ? (
             <div className="text-center p-8 bg-white rounded-xl border border-gray-200 shadow-sm text-gray-500">Đang tải danh sách mùa giải...</div>
           ) : seasons.length === 0 ? (
@@ -277,7 +290,6 @@ export default function Seasons() {
               </table>
             </div>
           )}
-        </div>
       </div>
     </div>
   );
