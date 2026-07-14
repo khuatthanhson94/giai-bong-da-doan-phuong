@@ -9,9 +9,11 @@ router.post('/login', (req, res) => {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    logAction(username || 'unknown', 'LOGIN_FAILED', 'Đăng nhập thất bại (Mật khẩu hoặc tài khoản sai)');
     return res.status(401).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
   }
   const token = signToken(user);
+  logAction(user.username, 'LOGIN', `Đăng nhập hệ thống thành công (Vai trò: ${user.role})`);
   res.json({
     token,
     user: { id: user.id, username: user.username, role: user.role, team_id: user.team_id },
