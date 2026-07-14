@@ -132,7 +132,7 @@ export default function AdminSponsors() {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-6 bg-white shadow-lg rounded-2xl border border-gray-100 animate-fade-in">
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-6 bg-white shadow-lg rounded-2xl border border-gray-100 animate-fade-in max-w-4xl mx-auto">
           <h2 className="text-lg font-bold text-primary border-b pb-2">
             {editId ? '📝 Chỉnh sửa Nhà tài trợ' : '➕ Thêm Nhà tài trợ mới'}
           </h2>

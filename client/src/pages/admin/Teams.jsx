@@ -252,7 +252,7 @@ export default function AdminTeams() {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-6 bg-white shadow-lg rounded-2xl border border-gray-100">
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-6 bg-white shadow-lg rounded-2xl border border-gray-100 max-w-4xl mx-auto">
           <h2 className="text-lg font-bold text-primary border-b pb-2">
             {editId ? '📝 Chỉnh sửa thông tin đội bóng' : '➕ Thêm đội bóng mới'}
           </h2>

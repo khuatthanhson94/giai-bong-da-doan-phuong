@@ -403,7 +403,7 @@ export default function AdminPlayers() {
 
       {/* Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4 max-w-2xl bg-white shadow-lg rounded-2xl border border-gray-100 animate-fade-in">
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4 max-w-2xl mx-auto bg-white shadow-lg rounded-2xl border border-gray-100 animate-fade-in">
           <h2 className="text-lg font-bold text-primary border-b pb-2">
             {editId ? '📝 Sửa thông tin cầu thủ' : '➕ Thêm cầu thủ mới'}
           </h2>

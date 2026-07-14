@@ -243,7 +243,7 @@ export default function AdminMatches() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 grid md:grid-cols-2 gap-4 bg-gray-50 border border-gray-100 animate-fade-in">
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 grid md:grid-cols-2 gap-4 bg-white shadow-lg rounded-2xl border border-gray-100 animate-fade-in max-w-4xl mx-auto">
           <div className="md:col-span-2 border-b pb-2">
             <h3 className="font-bold text-gray-800 text-sm">{editId ? 'Chỉnh sửa lịch thi đấu' : 'Tạo lịch thi đấu mới'}</h3>
             <p className="text-xs text-gray-500">Thiết lập thông tin ngày giờ, địa điểm và các đội bóng thi đấu.</p>

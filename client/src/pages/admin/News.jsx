@@ -68,7 +68,7 @@ export default function AdminNews() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4">
+        <form onSubmit={handleSubmit} className="card p-6 mb-6 space-y-4 max-w-4xl mx-auto bg-white shadow-lg rounded-2xl border border-gray-100">
           <label className="form-label font-semibold">Tiêu đề bài viết</label>
           <input className="input-field" placeholder="Tiêu đề" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           

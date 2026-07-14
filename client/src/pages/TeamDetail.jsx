@@ -21,86 +21,111 @@ export default function TeamDetail() {
 
   const logo = team.logo || team.logo_url || settings?.logo_url;
 
+  const stats = [
+    { l: 'Số trận đã đấu', v: team.played, bg: 'from-blue-50 to-indigo-100 text-indigo-700 border-indigo-100' },
+    { l: 'Trận thắng', v: team.won, bg: 'from-emerald-50 to-teal-100 text-emerald-700 border-emerald-100' },
+    { l: 'Trận hòa', v: team.drawn, bg: 'from-amber-50 to-orange-100 text-amber-700 border-amber-100' },
+    { l: 'Tổng điểm số', v: team.points, bg: 'from-blue-50 to-blue-100 text-primary border-blue-200' },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12 animate-fade-in">
-      <Link to="/doi-bong" className="text-primary text-sm hover:underline mb-4 inline-block">← Quay lại</Link>
-      <div className="card overflow-hidden">
-        <div className="flex items-center justify-center py-8" style={{ background: `linear-gradient(135deg, ${team.jersey_color}, ${team.jersey_color}aa)` }}>
-          <div className="text-center text-white">
-            <div className="w-48 h-48 sm:w-64 sm:h-64 mx-auto rounded-full overflow-hidden bg-white/15 p-4 flex items-center justify-center border-4 border-white/20 shadow-lg">
+    <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in">
+      <Link to="/doi-bong" className="text-primary text-sm hover:underline mb-4 inline-block font-semibold">← Quay lại danh sách</Link>
+      
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-150 overflow-hidden mb-8">
+        {/* Banner gradient background */}
+        <div className="h-32 md:h-48 relative" style={{ background: `linear-gradient(135deg, ${team.jersey_color}, ${team.jersey_color}88)` }}>
+          <div className="absolute inset-0 bg-black/10"></div>
+        </div>
+
+        {/* Profile header content */}
+        <div className="px-6 pb-6 md:px-8 md:pb-8 relative">
+          {/* Logo container overlapping the banner */}
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-16 md:-mt-20 mb-6">
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl bg-white shadow-xl p-3 flex items-center justify-center border-4 border-white select-none">
               {logo ? (
                 <img src={getFullUrl(logo)} alt="Team Logo" className="max-w-full max-h-full object-contain" />
               ) : (
-                <div className="w-full h-full bg-white/20 flex items-center justify-center text-4xl font-bold rounded-full">
+                <div 
+                  className="w-full h-full flex items-center justify-center text-4xl font-bold rounded-xl text-white"
+                  style={{ backgroundColor: team.jersey_color }}
+                >
                   {team.name.charAt(0)}
                 </div>
               )}
             </div>
-            <h1 className="text-3xl font-bold mt-4">{team.name}</h1>
+            
+            <div className="text-center md:text-left flex-1 space-y-2">
+              <h1 className="text-2xl md:text-4xl font-black text-gray-800 tracking-tight">{team.name}</h1>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-6 gap-y-2 mt-2">
+                {team.coach && (
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5">
+                    <span className="text-gray-400">📋 HLV Trưởng:</span>
+                    <span className="text-gray-800">{team.coach}</span>
+                  </p>
+                )}
+                {team.stadium && (
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5">
+                    <span className="text-gray-400">🏟️ Sân nhà:</span>
+                    <span className="text-gray-800">{team.stadium}</span>
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="p-6 md:p-8">
-          <p className="text-gray-600 mb-6">{team.description}</p>
-          
-          {(team.coach || team.stadium) && (
-            <div className="flex flex-wrap gap-6 mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100 text-sm">
-              {team.coach && (
-                <div>
-                  <span className="text-gray-500 font-medium">📋 Huấn luyện viên trưởng:</span>{' '}
-                  <span className="font-bold text-gray-800">{team.coach}</span>
-                </div>
-              )}
-              {team.stadium && (
-                <div>
-                  <span className="text-gray-500 font-medium">🏟️ Sân nhà:</span>{' '}
-                  <span className="font-bold text-gray-800">{team.stadium}</span>
-                </div>
-              )}
+
+          {/* Team Description / Introduction */}
+          {team.description && (
+            <div className="bg-gray-50/70 border border-gray-100 rounded-2xl p-4 md:p-6 mb-6">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Giới thiệu đội bóng</h3>
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{team.description}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { l: 'Số trận', v: team.played },
-              { l: 'Thắng', v: team.won },
-              { l: 'Hòa', v: team.drawn },
-              { l: 'Điểm', v: team.points },
-            ].map(({ l, v }) => (
-              <div key={l} className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{v || 0}</div>
-                <div className="text-sm text-gray-500">{l}</div>
+          {/* Team Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {stats.map(({ l, v, bg }) => (
+              <div key={l} className={`p-4 rounded-2xl border bg-gradient-to-br ${bg} text-center shadow-sm`}>
+                <div className="text-3xl font-black">{v || 0}</div>
+                <div className="text-xs font-bold opacity-80 mt-1">{l}</div>
               </div>
             ))}
           </div>
-          <h2 className="text-xl font-bold text-primary mb-4">Danh sách cầu thủ</h2>
-          <div className="overflow-x-auto">
-            <table className="table-styled">
-              <thead>
-                <tr><th>Ảnh</th><th>Số áo</th><th>Họ tên</th><th>Vị trí</th><th>Bàn thắng</th></tr>
-              </thead>
-              <tbody>
-                {team.players?.map((p) => (
-                  <tr key={p.id}>
-                    <td className="w-12 h-12">
-                      {p.photo ? (
-                        <img src={getFullUrl(p.photo)} alt="Player" className="w-full h-full object-cover rounded-full" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 rounded-full" />
-                      )}
-                    </td>
-                    <td className="font-bold">{p.jersey_number}</td>
-                    <td>{p.name}</td>
-                    <td>{p.position}</td>
-                    <td className="text-primary font-semibold">{p.goals}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          {/* Player list and QR code sharing stays inside the same card wrapper */}
+          <div className="mt-8 border-t pt-8">
+            <h2 className="text-xl font-black text-gray-800 mb-4 flex items-center gap-2">
+              🏃‍♂️ Danh sách cầu thủ
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="table-styled">
+                <thead>
+                  <tr><th>Ảnh</th><th>Số áo</th><th>Họ tên</th><th>Vị trí</th><th>Bàn thắng</th></tr>
+                </thead>
+                <tbody>
+                  {team.players?.map((p) => (
+                    <tr key={p.id}>
+                      <td className="w-12 h-12">
+                        {p.photo ? (
+                          <img src={getFullUrl(p.photo)} alt="Player" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 rounded-full" />
+                        )}
+                      </td>
+                      <td className="font-bold">{p.jersey_number}</td>
+                      <td>{p.name}</td>
+                      <td>{p.position}</td>
+                      <td className="text-primary font-semibold">{p.goals}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* QR Code Sharing */}
           {qr && (
-            <div className="mt-8 border-t pt-6 flex flex-col sm:flex-row items-center gap-4 bg-gray-50 p-4 rounded-xl">
+            <div className="mt-8 border-t pt-6 flex flex-col sm:flex-row items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
               <img src={qr} alt="QR Code" className="w-24 h-24 border bg-white p-1 rounded-lg shadow-sm" />
               <div className="text-center sm:text-left">
                 <h4 className="font-bold text-gray-800 text-sm">Chia sẻ Đội bóng này</h4>
@@ -108,6 +133,7 @@ export default function TeamDetail() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
