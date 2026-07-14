@@ -142,6 +142,41 @@ router.post('/admin/update-settings', (req, res) => {
   res.json({ message: 'Cập nhật thành công' });
 });
 
+// Visit session tracking endpoint
+router.post('/track-visit', (req, res) => {
+  try {
+    const userAgent = req.headers['user-agent'] || '';
+    let ipAddress = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || '';
+    if (ipAddress.startsWith('::ffff:')) {
+      ipAddress = ipAddress.substring(7);
+    }
+    if (ipAddress.includes(',')) {
+      ipAddress = ipAddress.split(',')[0].trim();
+    }
+
+    let deviceType = 'Desktop';
+    const uaLower = userAgent.toLowerCase();
+    if (uaLower.includes('mobi') || uaLower.includes('android') || uaLower.includes('iphone') || uaLower.includes('ipad')) {
+      if (uaLower.includes('ipad') || uaLower.includes('tablet')) {
+        deviceType = 'Tablet';
+      } else {
+        deviceType = 'Mobile';
+      }
+    }
+
+    const todayStr = getVNLocalDateString();
+    
+    db.prepare(`
+      INSERT INTO visit_logs (ip_address, user_agent, device_type, visit_date)
+      VALUES (?, ?, ?, ?)
+    `).run(ipAddress, userAgent, deviceType, todayStr);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/dashboard', authRequired, (req, res) => {
   const { tournament_id } = req.query;
 
@@ -182,6 +217,30 @@ router.get('/dashboard', authRequired, (req, res) => {
   res.json({
     totalTeams, totalPlayers, totalMatches, finishedMatches, scheduledMatches,
     recentNews, standings, logs,
+    visits: (() => {
+      let stats = {
+        total_visits: 0,
+        total_unique_visitors: 0,
+        today_visits: 0,
+        today_unique_visitors: 0
+      };
+      try {
+        const todayStr = getVNLocalDateString();
+        const totalVisits = db.prepare('SELECT COUNT(*) as c FROM visit_logs').get()?.c || 0;
+        const totalUnique = db.prepare('SELECT COUNT(DISTINCT ip_address) as c FROM visit_logs').get()?.c || 0;
+        const todayVisits = db.prepare('SELECT COUNT(*) as c FROM visit_logs WHERE visit_date = ?').get(todayStr)?.c || 0;
+        const todayUnique = db.prepare('SELECT COUNT(DISTINCT ip_address) as c FROM visit_logs WHERE visit_date = ?').get(todayStr)?.c || 0;
+        stats = {
+          total_visits: totalVisits,
+          total_unique_visitors: totalUnique,
+          today_visits: todayVisits,
+          today_unique_visitors: todayUnique
+        };
+      } catch (err) {
+        // Table not migrated yet
+      }
+      return stats;
+    })()
   });
 });
 

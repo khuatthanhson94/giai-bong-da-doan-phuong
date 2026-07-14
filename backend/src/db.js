@@ -312,6 +312,18 @@ export function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS visit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ip_address TEXT,
+      user_agent TEXT,
+      device_type TEXT,
+      visit_date TEXT,
+      created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_visit_logs_date ON visit_logs(visit_date);
+    CREATE INDEX IF NOT EXISTS idx_visit_logs_ip ON visit_logs(ip_address);
+
     CREATE TABLE IF NOT EXISTS seasons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,

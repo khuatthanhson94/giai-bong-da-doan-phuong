@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import api from './api/client';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import AdminLogin from './pages/admin/Login';
@@ -38,6 +40,16 @@ import AdminRecycleBin from './pages/admin/RecycleBin';
 import AdminBackup from './pages/admin/Backup';
 
 export default function App() {
+  useEffect(() => {
+    if (!sessionStorage.getItem('session_tracked')) {
+      api.post('/track-visit').then(() => {
+        sessionStorage.setItem('session_tracked', 'true');
+      }).catch((err) => {
+        console.error('Failed to track visit:', err);
+      });
+    }
+  }, []);
+
   return (
     <Routes>
       {/* Public site */}
