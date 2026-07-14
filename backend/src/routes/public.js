@@ -165,7 +165,7 @@ router.get('/dashboard', authRequired, (req, res) => {
   recentNewsSql += ' ORDER BY created_at DESC LIMIT 5';
 
   const totalTeams = db.prepare(teamsSql).get(...params).c;
-  const totalPlayers = db.prepare(playersSql).get(tournament_id ? [Number(tournament_id)] : []).c;
+  const totalPlayers = db.prepare(playersSql).get(...(tournament_id ? [Number(tournament_id)] : [])).c;
   const totalMatches = db.prepare(matchesSql).get(...params).c;
   const finishedMatches = db.prepare(finishedMatchesSql).get(...params).c;
   const scheduledMatches = db.prepare(scheduledMatchesSql).get(...params).c;
