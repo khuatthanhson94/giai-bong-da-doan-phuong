@@ -141,10 +141,10 @@ export default function ActionLogs() {
         ) : filteredLogs.length === 0 ? (
           <div className="text-center py-8 text-gray-500">Không tìm thấy ghi chép nhật ký phù hợp.</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-290px)] shadow-inner">
             <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-55 border-b border-gray-100">
+              <thead className="sticky top-0 bg-gray-50 z-10 shadow-[0_1px_0_0_rgba(229,231,235,1)] select-none">
+                <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Thời gian</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Tài khoản</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Hành động</th>
