@@ -248,6 +248,12 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
 
   const handleSaveLive = async () => {
     setMessage('');
+    const minScoreA = form.goals_a.filter(g => !g.is_own_goal).length + form.goals_b.filter(g => g.is_own_goal).length;
+    const minScoreB = form.goals_b.filter(g => !g.is_own_goal).length + form.goals_a.filter(g => g.is_own_goal).length;
+    if (form.score_a < minScoreA || form.score_b < minScoreB) {
+      setMessage(`❌ Tỉ số chỉnh tay không được thấp hơn số bàn thắng ghi nhận (Đội A tối thiểu ${minScoreA}, Đội B tối thiểu ${minScoreB})!`);
+      return;
+    }
     try {
       const payload = { ...getMergedForm(), status: 'live' };
       await api.post(`/matches/${matchId}/result`, payload);
@@ -269,6 +275,12 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
 
   const saveAndPublishMatch = async (targetStatus) => {
     setMessage('');
+    const minScoreA = form.goals_a.filter(g => !g.is_own_goal).length + form.goals_b.filter(g => g.is_own_goal).length;
+    const minScoreB = form.goals_b.filter(g => !g.is_own_goal).length + form.goals_a.filter(g => g.is_own_goal).length;
+    if (form.score_a < minScoreA || form.score_b < minScoreB) {
+      setMessage(`❌ Tỉ số chỉnh tay không được thấp hơn số bàn thắng ghi nhận (Đội A tối thiểu ${minScoreA}, Đội B tối thiểu ${minScoreB})!`);
+      return;
+    }
     try {
       const payload = { ...getMergedForm(), status: targetStatus };
       await api.post(`/matches/${matchId}/result`, payload);
@@ -298,6 +310,9 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
   }
 
   if (!match) return null;
+ 
+  const minScoreA = form.goals_a.filter(g => !g.is_own_goal).length + form.goals_b.filter(g => g.is_own_goal).length;
+  const minScoreB = form.goals_b.filter(g => !g.is_own_goal).length + form.goals_a.filter(g => g.is_own_goal).length;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -324,10 +339,13 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
               <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 truncate">{match.team_a?.name}</p>
               <input
                 type="number"
-                min="0"
+                min={minScoreA}
                 className="input-field w-20 sm:w-24 text-center text-2xl sm:text-3xl font-bold text-primary bg-gray-50 focus:ring-primary mx-auto"
                 value={form.score_a}
-                onChange={(e) => setForm({ ...form, score_a: Number(e.target.value) })}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setForm(prev => ({ ...prev, score_a: val < minScoreA ? minScoreA : val }));
+                }}
               />
             </div>
             <span className="text-2xl sm:text-3xl font-bold text-gray-400 mt-6 flex-shrink-0">VS</span>
@@ -335,10 +353,13 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
               <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 truncate">{match.team_b?.name}</p>
               <input
                 type="number"
-                min="0"
+                min={minScoreB}
                 className="input-field w-20 sm:w-24 text-center text-2xl sm:text-3xl font-bold text-primary bg-gray-50 focus:ring-primary mx-auto"
                 value={form.score_b}
-                onChange={(e) => setForm({ ...form, score_b: Number(e.target.value) })}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setForm(prev => ({ ...prev, score_b: val < minScoreB ? minScoreB : val }));
+                }}
               />
             </div>
           </div>
