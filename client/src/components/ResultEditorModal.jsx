@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api/client';
 
-function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false }) {
+function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false, isFriendly = false }) {
   return (
     <div className="border rounded-lg p-3 bg-white shadow-sm">
       <div className="flex justify-between items-center mb-2">
@@ -9,7 +9,7 @@ function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false
         <button type="button" onClick={onAdd} className="text-primary text-xs font-semibold hover:underline">+ Thêm</button>
       </div>
       {items.map((item, i) => {
-        const useManualInput = players.length === 0 || !!item.is_free_text;
+        const useManualInput = isFriendly && (players.length === 0 || !!item.is_free_text);
         return (
           <div key={i} className="flex gap-1 items-center mb-1.5">
             {useManualInput ? (
@@ -35,7 +35,7 @@ function EventList({ title, items, onAdd, onRemove, players, showOwnGoal = false
               </select>
             )}
             
-            {players.length > 0 && (
+            {isFriendly && players.length > 0 && (
               <button
                 type="button"
                 onClick={() => onRemove(i, { 
@@ -121,21 +121,21 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
         player_name: g.player_name || '',
         minute: g.minute,
         is_own_goal: !!g.is_own_goal,
-        is_free_text: !g.player_id
+        is_free_text: m.is_friendly && !g.player_id
       })) || [];
       const goalsB = m.goals?.filter(g => g.team_id ? g.team_id === m.team_b_id : teamBPlayers.some(p => p.id === g.player_id)).map(g => ({
         player_id: g.player_id || '',
         player_name: g.player_name || '',
         minute: g.minute,
         is_own_goal: !!g.is_own_goal,
-        is_free_text: !g.player_id
+        is_free_text: m.is_friendly && !g.player_id
       })) || [];
 
-      const yellowA = m.yellow_cards?.filter(y => y.team_id ? y.team_id === m.team_a_id : teamAPlayers.some(p => p.id === y.player_id)).map(y => ({ player_id: y.player_id || '', player_name: y.player_name || '', minute: y.minute, is_free_text: !y.player_id })) || [];
-      const yellowB = m.yellow_cards?.filter(y => y.team_id ? y.team_id === m.team_b_id : teamBPlayers.some(p => p.id === y.player_id)).map(y => ({ player_id: y.player_id || '', player_name: y.player_name || '', minute: y.minute, is_free_text: !y.player_id })) || [];
+      const yellowA = m.yellow_cards?.filter(y => y.team_id ? y.team_id === m.team_a_id : teamAPlayers.some(p => p.id === y.player_id)).map(y => ({ player_id: y.player_id || '', player_name: y.player_name || '', minute: y.minute, is_free_text: m.is_friendly && !y.player_id })) || [];
+      const yellowB = m.yellow_cards?.filter(y => y.team_id ? y.team_id === m.team_b_id : teamBPlayers.some(p => p.id === y.player_id)).map(y => ({ player_id: y.player_id || '', player_name: y.player_name || '', minute: y.minute, is_free_text: m.is_friendly && !y.player_id })) || [];
 
-      const redA = m.red_cards?.filter(r => r.team_id ? r.team_id === m.team_a_id : teamAPlayers.some(p => p.id === r.player_id)).map(r => ({ player_id: r.player_id || '', player_name: r.player_name || '', minute: r.minute, is_free_text: !r.player_id })) || [];
-      const redB = m.red_cards?.filter(r => r.team_id ? r.team_id === m.team_b_id : teamBPlayers.some(p => p.id === r.player_id)).map(r => ({ player_id: r.player_id || '', player_name: r.player_name || '', minute: r.minute, is_free_text: !r.player_id })) || [];
+      const redA = m.red_cards?.filter(r => r.team_id ? r.team_id === m.team_a_id : teamAPlayers.some(p => p.id === r.player_id)).map(r => ({ player_id: r.player_id || '', player_name: r.player_name || '', minute: r.minute, is_free_text: m.is_friendly && !r.player_id })) || [];
+      const redB = m.red_cards?.filter(r => r.team_id ? r.team_id === m.team_b_id : teamBPlayers.some(p => p.id === r.player_id)).map(r => ({ player_id: r.player_id || '', player_name: r.player_name || '', minute: r.minute, is_free_text: m.is_friendly && !r.player_id })) || [];
 
       setForm({
         score_a: m.score_a ?? 0,
@@ -148,7 +148,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
         red_cards_b: redB,
         motm_player_id: m.motm_player_id || '',
         motm_player_name: m.motm_player_name || '',
-        is_motm_free_text: !m.motm_player_id && !!m.motm_player_name,
+        is_motm_free_text: m.is_friendly && !m.motm_player_id && !!m.motm_player_name,
         notes: m.notes || '',
         status: m.status || 'scheduled',
       });
@@ -168,11 +168,58 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
   const updateList = (field, index, value, isUpdate) => {
     setForm((prev) => {
       const list = [...prev[field]];
+      let score_a_diff = 0;
+      let score_b_diff = 0;
+
+      if (!isUpdate) {
+        // Delete action
+        if (field === 'goals_a') {
+          const deleted = prev.goals_a[index];
+          if (deleted.is_own_goal) score_b_diff = -1;
+          else score_a_diff = -1;
+        } else if (field === 'goals_b') {
+          const deleted = prev.goals_b[index];
+          if (deleted.is_own_goal) score_a_diff = -1;
+          else score_b_diff = -1;
+        }
+      } else {
+        // Update/modify action
+        if (field === 'goals_a') {
+          const oldGoal = prev.goals_a[index];
+          const newGoal = value;
+          if (!!oldGoal.is_own_goal !== !!newGoal.is_own_goal) {
+            if (newGoal.is_own_goal) {
+              score_a_diff = -1;
+              score_b_diff = 1;
+            } else {
+              score_a_diff = 1;
+              score_b_diff = -1;
+            }
+          }
+        } else if (field === 'goals_b') {
+          const oldGoal = prev.goals_b[index];
+          const newGoal = value;
+          if (!!oldGoal.is_own_goal !== !!newGoal.is_own_goal) {
+            if (newGoal.is_own_goal) {
+              score_b_diff = -1;
+              score_a_diff = 1;
+            } else {
+              score_b_diff = 1;
+              score_a_diff = -1;
+            }
+          }
+        }
+      }
+
       if (isUpdate) list[index] = value;
       else list.splice(index, 1);
-      
-      const newForm = { ...prev, [field]: list };
-      return newForm;
+
+      return {
+        ...prev,
+        [field]: list,
+        score_a: Math.max(0, prev.score_a + score_a_diff),
+        score_b: Math.max(0, prev.score_b + score_b_diff)
+      };
     });
   };
 
@@ -310,21 +357,24 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
                 items={form.goals_a}
                 players={teamAPlayers}
                 showOwnGoal={true}
-                onAdd={() => setForm(prev => ({ ...prev, goals_a: [...prev.goals_a, { player_id: '', player_name: '', minute: '', is_own_goal: false, is_free_text: teamAPlayers.length === 0 }] }))}
+                isFriendly={!!match.is_friendly}
+                onAdd={() => setForm(prev => ({ ...prev, goals_a: [...prev.goals_a, { player_id: '', player_name: '', minute: '', is_own_goal: false, is_free_text: match.is_friendly && teamAPlayers.length === 0 }], score_a: prev.score_a + 1 }))}
                 onRemove={(i, v, isUpdate) => updateList('goals_a', i, v, isUpdate)}
               />
               <EventList
                 title="🟨 Thẻ vàng"
                 items={form.yellow_cards_a}
                 players={teamAPlayers}
-                onAdd={() => setForm(prev => ({ ...prev, yellow_cards_a: [...prev.yellow_cards_a, { player_id: '', player_name: '', minute: '', is_free_text: teamAPlayers.length === 0 }] }))}
+                isFriendly={!!match.is_friendly}
+                onAdd={() => setForm(prev => ({ ...prev, yellow_cards_a: [...prev.yellow_cards_a, { player_id: '', player_name: '', minute: '', is_free_text: match.is_friendly && teamAPlayers.length === 0 }] }))}
                 onRemove={(i, v, isUpdate) => updateList('yellow_cards_a', i, v, isUpdate)}
               />
               <EventList
                 title="🟥 Thẻ đỏ"
                 items={form.red_cards_a}
                 players={teamAPlayers}
-                onAdd={() => setForm(prev => ({ ...prev, red_cards_a: [...prev.red_cards_a, { player_id: '', player_name: '', minute: '', is_free_text: teamAPlayers.length === 0 }] }))}
+                isFriendly={!!match.is_friendly}
+                onAdd={() => setForm(prev => ({ ...prev, red_cards_a: [...prev.red_cards_a, { player_id: '', player_name: '', minute: '', is_free_text: match.is_friendly && teamAPlayers.length === 0 }] }))}
                 onRemove={(i, v, isUpdate) => updateList('red_cards_a', i, v, isUpdate)}
               />
             </div>
@@ -341,21 +391,24 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
                 items={form.goals_b}
                 players={teamBPlayers}
                 showOwnGoal={true}
-                onAdd={() => setForm(prev => ({ ...prev, goals_b: [...prev.goals_b, { player_id: '', player_name: '', minute: '', is_own_goal: false, is_free_text: teamBPlayers.length === 0 }] }))}
+                isFriendly={!!match.is_friendly}
+                onAdd={() => setForm(prev => ({ ...prev, goals_b: [...prev.goals_b, { player_id: '', player_name: '', minute: '', is_own_goal: false, is_free_text: match.is_friendly && teamBPlayers.length === 0 }], score_b: prev.score_b + 1 }))}
                 onRemove={(i, v, isUpdate) => updateList('goals_b', i, v, isUpdate)}
               />
               <EventList
                 title="🟨 Thẻ vàng"
                 items={form.yellow_cards_b}
                 players={teamBPlayers}
-                onAdd={() => setForm(prev => ({ ...prev, yellow_cards_b: [...prev.yellow_cards_b, { player_id: '', player_name: '', minute: '', is_free_text: teamBPlayers.length === 0 }] }))}
+                isFriendly={!!match.is_friendly}
+                onAdd={() => setForm(prev => ({ ...prev, yellow_cards_b: [...prev.yellow_cards_b, { player_id: '', player_name: '', minute: '', is_free_text: match.is_friendly && teamBPlayers.length === 0 }] }))}
                 onRemove={(i, v, isUpdate) => updateList('yellow_cards_b', i, v, isUpdate)}
               />
               <EventList
                 title="🟥 Thẻ đỏ"
                 items={form.red_cards_b}
                 players={teamBPlayers}
-                onAdd={() => setForm(prev => ({ ...prev, red_cards_b: [...prev.red_cards_b, { player_id: '', player_name: '', minute: '', is_free_text: teamBPlayers.length === 0 }] }))}
+                isFriendly={!!match.is_friendly}
+                onAdd={() => setForm(prev => ({ ...prev, red_cards_b: [...prev.red_cards_b, { player_id: '', player_name: '', minute: '', is_free_text: match.is_friendly && teamBPlayers.length === 0 }] }))}
                 onRemove={(i, v, isUpdate) => updateList('red_cards_b', i, v, isUpdate)}
               />
             </div>
@@ -365,7 +418,7 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
           <div className="grid md:grid-cols-3 gap-4 pt-4 border-t border-gray-150">
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">⭐ Cầu thủ xuất sắc nhất trận (MOTM)</label>
-              {matchPlayers.length === 0 || form.is_motm_free_text ? (
+              {(match.is_friendly && (matchPlayers.length === 0 || form.is_motm_free_text)) ? (
                 <div className="flex gap-1 items-center">
                   <input
                     type="text"
@@ -398,13 +451,15 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, is_motm_free_text: true, motm_player_id: null, motm_player_name: '' })}
-                    className="text-xs text-gray-500 border border-gray-200 rounded px-2 py-1.5 bg-gray-50 flex-shrink-0"
-                  >
-                    Nhập tay
-                  </button>
+                  {match.is_friendly && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, is_motm_free_text: true, motm_player_id: null, motm_player_name: '' })}
+                      className="text-xs text-gray-500 border border-gray-200 rounded px-2 py-1.5 bg-gray-50 flex-shrink-0"
+                    >
+                      Nhập tay
+                    </button>
+                  )}
                 </div>
               )}
             </div>
