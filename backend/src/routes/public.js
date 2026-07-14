@@ -199,6 +199,30 @@ router.post('/track-visit', (req, res) => {
   }
 });
 
+router.get('/visits-count', (req, res) => {
+  try {
+    const todayStr = getVNLocalDateString();
+    const totalVisits = db.prepare('SELECT COUNT(*) as c FROM visit_logs').get()?.c || 0;
+    const totalUnique = db.prepare('SELECT COUNT(DISTINCT ip_address) as c FROM visit_logs').get()?.c || 0;
+    const todayVisits = db.prepare('SELECT COUNT(*) as c FROM visit_logs WHERE visit_date = ?').get(todayStr)?.c || 0;
+    const todayUnique = db.prepare('SELECT COUNT(DISTINCT ip_address) as c FROM visit_logs WHERE visit_date = ?').get(todayStr)?.c || 0;
+
+    res.json({
+      total_visits: totalVisits,
+      total_unique_visitors: totalUnique,
+      today_visits: todayVisits,
+      today_unique_visitors: todayUnique
+    });
+  } catch (err) {
+    res.json({
+      total_visits: 0,
+      total_unique_visitors: 0,
+      today_visits: 0,
+      today_unique_visitors: 0
+    });
+  }
+});
+
 router.get('/dashboard', authRequired, (req, res) => {
   const { tournament_id } = req.query;
 

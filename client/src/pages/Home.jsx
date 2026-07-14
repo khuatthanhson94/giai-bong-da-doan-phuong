@@ -542,33 +542,6 @@ export default function Home() {
           </section>
         )}
       </div>
-
-      {/* Public visit statistics footer */}
-      {data.visits && (
-        <div className="border-t border-gray-100 bg-gray-50/50 py-6 mt-8">
-          <div className="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-gray-500 text-xs font-semibold select-none">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm">⚡</span>
-              <span>Đang trực tuyến: <span className="text-blue-600 font-bold">1</span></span>
-            </div>
-            <div className="w-1.5 h-1.5 bg-gray-300 rounded-full hidden sm:block"></div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm">📅</span>
-              <span>Lượt truy cập hôm nay: <span className="text-gray-800 font-bold">{data.visits.today_visits}</span></span>
-            </div>
-            <div className="w-1.5 h-1.5 bg-gray-300 rounded-full hidden sm:block"></div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm">👥</span>
-              <span>Khách hôm nay: <span className="text-gray-800 font-bold">{data.visits.today_unique_visitors}</span></span>
-            </div>
-            <div className="w-1.5 h-1.5 bg-gray-300 rounded-full hidden sm:block"></div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm">📈</span>
-              <span>Tổng lượt truy cập: <span className="text-gray-800 font-bold">{data.visits.total_visits}</span></span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

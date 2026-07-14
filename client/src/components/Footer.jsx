@@ -1,6 +1,15 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../api/client';
 
 export default function Footer() {
+  const [visits, setVisits] = useState(null);
+
+  useEffect(() => {
+    api.get('/visits-count')
+      .then(setVisits)
+      .catch((err) => console.error('Failed to load visit count:', err));
+  }, []);
   return (
     <footer className="bg-gradient-to-r from-primary-dark to-primary text-white mt-auto">
       <div className="max-w-7xl mx-auto px-4 py-10">
@@ -46,6 +55,21 @@ export default function Footer() {
         <div className="border-t border-white/20 mt-8 pt-6 text-center text-sm text-blue-200">
           © 2026 Đoàn phường. All rights reserved.
         </div>
+        {visits && (
+          <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] text-blue-200/80 select-none">
+            <div className="flex items-center gap-1">
+              <span>⚡ Đang trực tuyến: <span className="text-white font-bold">1</span></span>
+            </div>
+            <div className="w-1 h-1 bg-white/20 rounded-full hidden sm:block"></div>
+            <div className="flex items-center gap-1">
+              <span>📅 Hôm nay: <span className="text-white font-bold">{visits.today_visits}</span> lượt ({visits.today_unique_visitors} khách)</span>
+            </div>
+            <div className="w-1 h-1 bg-white/20 rounded-full hidden sm:block"></div>
+            <div className="flex items-center gap-1">
+              <span>📈 Tổng cộng: <span className="text-white font-bold">{visits.total_visits}</span> lượt ({visits.total_unique_visitors} khách)</span>
+            </div>
+          </div>
+        )}
       </div>
     </footer>
   );
