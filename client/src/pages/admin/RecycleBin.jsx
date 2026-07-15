@@ -68,7 +68,7 @@ export default function RecycleBin() {
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
-    return new Date(timeStr).toLocaleString('vi-VN');
+    return new Date(timeStr).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
   };
 
   const tabs = [

@@ -195,9 +195,9 @@ export function publishMatchResult(matchId, userId) {
 
       if (userId) {
         db.prepare(`
-          INSERT INTO activity_logs (user_id, action, details)
-          VALUES (?, 'publish_match', ?)
-        `).run(userId, JSON.stringify({ match_id: matchId }));
+          INSERT INTO activity_logs (user_id, action, details, created_at)
+          VALUES (?, 'publish_match', ?, ?)
+        `).run(userId, JSON.stringify({ match_id: matchId }), new Date().toISOString());
       }
 
       // ---------- AUTOMATIC PROGRESSION FOR KNOCKOUT STAGE ----------

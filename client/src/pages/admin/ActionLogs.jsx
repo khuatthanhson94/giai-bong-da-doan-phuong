@@ -82,7 +82,7 @@ export default function ActionLogs() {
     const headers = ['Mã log', 'Tài khoản thực hiện', 'Hành động', 'Chi tiết hoạt động', 'Thiết bị', 'Địa chỉ IP', 'Thời gian'];
     const rows = filteredLogs.map((log) => {
       const actionName = ACTION_MAP[log.action]?.label || log.action;
-      const formattedTime = new Date(log.created_at).toLocaleString('vi-VN');
+      const formattedTime = new Date(log.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       return [log.id, log.username, actionName, log.details || '-', log.device_type || 'Desktop', log.ip_address || '-', formattedTime];
     });
 
@@ -156,6 +156,7 @@ export default function ActionLogs() {
                 {filteredLogs.map((log) => {
                   const actInfo = ACTION_MAP[log.action] || { label: log.action, color: 'bg-gray-100 text-gray-800' };
                   const formattedTime = new Date(log.created_at).toLocaleString('vi-VN', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',

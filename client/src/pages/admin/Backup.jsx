@@ -207,7 +207,7 @@ export default function Backup() {
                 <div key={b.filename} className="p-4 bg-gray-50 rounded-lg border flex justify-between items-center text-xs">
                   <div className="space-y-1">
                     <div className="font-bold text-gray-800">{b.filename}</div>
-                    <div className="text-gray-500">Dung lượng: {formatSize(b.size)} | Tạo lúc: {new Date(b.created_at).toLocaleString('vi-VN')}</div>
+                    <div className="text-gray-500">Dung lượng: {formatSize(b.size)} | Tạo lúc: {new Date(b.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</div>
                   </div>
                   <button
                     onClick={() => handleRestoreFile(b.filename)}

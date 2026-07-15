@@ -92,7 +92,7 @@ export default function AdminDashboard() {
           {data.logs.map((l) => (
             <div key={l.id} className="text-sm py-2 border-b flex justify-between">
               <span>{l.username}: {l.action}</span>
-              <span className="text-gray-400">{new Date(l.created_at).toLocaleString('vi-VN')}</span>
+              <span className="text-gray-400">{new Date(l.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
             </div>
           ))}
         </div>

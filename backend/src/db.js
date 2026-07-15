@@ -756,22 +756,23 @@ export function logAction(username, action, details) {
 
     try {
       db.prepare(`
-        INSERT INTO audit_logs (username, action, details, ip_address, user_agent, device_type)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO audit_logs (username, action, details, ip_address, user_agent, device_type, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
         username,
         action,
         details || null,
         ipAddress,
         userAgent,
-        deviceType || 'Desktop'
+        deviceType || 'Desktop',
+        new Date().toISOString()
       );
     } catch (dbErr) {
       // Fallback if table doesn't have the new columns yet (server has not restarted to run migrations)
       db.prepare(`
-        INSERT INTO audit_logs (username, action, details)
-        VALUES (?, ?, ?)
-      `).run(username, action, details || null);
+        INSERT INTO audit_logs (username, action, details, created_at)
+        VALUES (?, ?, ?, ?)
+      `).run(username, action, details || null, new Date().toISOString());
       console.warn('[AuditLog] Wrote log using fallback schema due to DB column error:', dbErr.message);
     }
   } catch (err) {
