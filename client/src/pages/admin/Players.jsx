@@ -35,6 +35,14 @@ export default function AdminPlayers() {
   const [importTeamId, setImportTeamId] = useState('');
   const [showImportSection, setShowImportSection] = useState(false);
 
+  // Sorting & Filtering States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterTeam, setFilterTeam] = useState('');
+  const [filterPosition, setFilterPosition] = useState('');
+  const [filterMinGoals, setFilterMinGoals] = useState('');
+  const [sortBy, setSortBy] = useState('goals');
+  const [sortOrder, setSortOrder] = useState('desc');
+
   // Load initial data
   const loadPlayers = () => {
     const url = user?.role === 'team' ? `/players?teamId=${user.team_id}` : '/players';
@@ -253,6 +261,39 @@ export default function AdminPlayers() {
       alert(err.message || 'Lỗi khi xóa nhiều cầu thủ');
     }
   };
+
+  const processedPlayers = players
+    .filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            String(p.jersey_number).includes(searchTerm);
+      const matchesTeam = filterTeam ? p.team_id === Number(filterTeam) : true;
+      const matchesPosition = filterPosition ? p.position === filterPosition : true;
+      const matchesGoals = filterMinGoals !== '' ? (p.goals || 0) >= Number(filterMinGoals) : true;
+      return matchesSearch && matchesTeam && matchesPosition && matchesGoals;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'goals') {
+        const valA = a.goals || 0;
+        const valB = b.goals || 0;
+        if (valA !== valB) {
+          return sortOrder === 'desc' ? valB - valA : valA - valB;
+        }
+        return a.name.localeCompare(b.name, 'vi');
+      }
+      if (sortBy === 'name') {
+        const comp = a.name.localeCompare(b.name, 'vi');
+        return sortOrder === 'desc' ? -comp : comp;
+      }
+      if (sortBy === 'jersey_number') {
+        const valA = a.jersey_number || 0;
+        const valB = b.jersey_number || 0;
+        if (valA !== valB) {
+          return sortOrder === 'desc' ? valB - valA : valA - valB;
+        }
+        return a.name.localeCompare(b.name, 'vi');
+      }
+      return 0;
+    });
 
   return (
     <div>
@@ -555,6 +596,114 @@ export default function AdminPlayers() {
         </div>
       )}
 
+      {/* Filter and Sort Panel */}
+      <div className="card p-5 mb-6 bg-white border border-gray-100 shadow-sm space-y-4 text-left">
+        <div className="flex items-center justify-between border-b pb-2 mb-2">
+          <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
+            🔍 Bộ lọc & Sắp xếp danh sách
+          </h2>
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              setFilterTeam('');
+              setFilterPosition('');
+              setFilterMinGoals('');
+              setSortBy('goals');
+              setSortOrder('desc');
+            }}
+            className="text-xs text-primary hover:underline font-medium"
+          >
+            Xóa bộ lọc
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Tìm kiếm */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-500">Tìm kiếm cầu thủ</label>
+            <input
+              type="text"
+              className="input-field py-2 text-sm bg-white"
+              placeholder="Nhập họ tên, số áo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Lọc đội */}
+          {user?.role !== 'team' ? (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500">Đội bóng</label>
+              <select
+                className="input-field py-2 text-sm bg-white cursor-pointer"
+                value={filterTeam}
+                onChange={(e) => setFilterTeam(e.target.value)}
+              >
+                <option value="">Tất cả các đội</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {/* Lọc vị trí */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-500">Vị trí</label>
+            <select
+              className="input-field py-2 text-sm bg-white cursor-pointer"
+              value={filterPosition}
+              onChange={(e) => setFilterPosition(e.target.value)}
+            >
+              <option value="">Tất cả vị trí</option>
+              {positions.map((pos) => (
+                <option key={pos} value={pos}>{pos}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Lọc số bàn thắng */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-500">Số bàn thắng tối thiểu</label>
+            <input
+              type="number"
+              min="0"
+              className="input-field py-2 text-sm bg-white"
+              placeholder="Tối thiểu..."
+              value={filterMinGoals}
+              onChange={(e) => setFilterMinGoals(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t text-xs text-gray-500">
+          <div className="flex items-center gap-2">
+            <span>Sắp xếp theo:</span>
+            <select
+              className="border rounded p-1 bg-white cursor-pointer font-medium text-gray-700"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="goals">⚽ Số bàn thắng</option>
+              <option value="name">🔤 Họ tên</option>
+              <option value="jersey_number">👕 Số áo</option>
+            </select>
+            <select
+              className="border rounded p-1 bg-white cursor-pointer font-medium text-gray-700"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+            >
+              <option value="desc">Giảm dần</option>
+              <option value="asc">Tăng dần</option>
+            </select>
+          </div>
+          <div className="font-semibold text-primary">
+            Hiển thị {processedPlayers.length} / {players.length} cầu thủ
+          </div>
+        </div>
+      </div>
+
       {/* Bulk actions */}
       {selectedIds.length > 0 && (
         <button onClick={handleBulkDelete} className="btn-outline text-sm mb-4">
@@ -571,7 +720,7 @@ export default function AdminPlayers() {
                 <input
                   type="checkbox"
                   onChange={(e) => {
-                    if (e.target.checked) setSelectedIds(players.map((p) => p.id));
+                    if (e.target.checked) setSelectedIds(processedPlayers.map((p) => p.id));
                     else setSelectedIds([]);
                   }}
                 />
@@ -586,7 +735,7 @@ export default function AdminPlayers() {
             </tr>
           </thead>
           <tbody>
-            {players.map((p) => (
+            {processedPlayers.map((p) => (
               <tr key={p.id}>
                 <td>
                   <input
@@ -611,21 +760,21 @@ export default function AdminPlayers() {
                 <td>{p.name}</td>
                 <td>{teams.find(t => t.id === p.team_id)?.name || ''}</td>
                 <td>{p.position}</td>
-                <td>{p.goals}</td>
+                <td>{p.goals || 0}</td>
                 <td className="space-x-2">
                   <button onClick={() => handleEdit(p)} className="text-primary text-sm hover:underline">
-                    Sửa
+                     Sửa
                   </button>
                   <button onClick={() => handleDelete(p.id)} className="text-red-500 text-sm hover:underline">
-                    Xóa
+                     Xóa
                   </button>
                 </td>
               </tr>
             ))}
-            {players.length === 0 && (
+            {processedPlayers.length === 0 && (
               <tr>
                 <td colSpan="8" className="text-center text-gray-400 py-8 italic">
-                  Chưa có cầu thủ nào trong danh sách.
+                  {players.length === 0 ? "Chưa có cầu thủ nào trong danh sách." : "Không tìm thấy cầu thủ nào khớp với bộ lọc."}
                 </td>
               </tr>
             )}
