@@ -451,6 +451,7 @@ export default function AdminMatches() {
                 </th>
               )}
               <th>Vòng</th>
+              <th className="w-16 text-center">STT</th>
               <th>Bảng</th>
               <th>Ngày</th>
               <th>Giờ</th>
@@ -461,7 +462,7 @@ export default function AdminMatches() {
             </tr>
           </thead>
           <tbody>
-            {matches.map((m) => (
+            {matches.map((m, idx) => (
               <tr key={m.id}>
                 {user?.role !== 'scorekeeper' && (
                   <td>
@@ -476,6 +477,7 @@ export default function AdminMatches() {
                     />
                   </td>
                 )}
+                <td className="text-center text-gray-500 font-medium">{idx + 1}</td>
                 <td className="font-semibold text-sm">{m.round}</td>
                 <td className="text-sm font-medium text-gray-600">
                   {m.group?.name || m.group_name || <span className="text-gray-400 italic">Knockout</span>}
@@ -510,7 +512,7 @@ export default function AdminMatches() {
             ))}
             {matches.length === 0 && (
               <tr>
-                <td colSpan={user?.role !== 'scorekeeper' ? "9" : "8"} className="text-center text-gray-400 py-8 italic">Chưa có lịch thi đấu nào được tạo.</td>
+                <td colSpan={user?.role !== 'scorekeeper' ? "10" : "9"} className="text-center text-gray-400 py-8 italic">Chưa có lịch thi đấu nào được tạo.</td>
               </tr>
             )}
           </tbody>

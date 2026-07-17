@@ -155,7 +155,7 @@ export default function AdminNews() {
       )}
 
       <div className="space-y-3">
-        {news.map((n) => (
+        {news.map((n, idx) => (
           <div key={n.id} className="card p-4 flex justify-between items-center gap-4 hover:border-cyan-150 duration-200">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <input
@@ -167,6 +167,7 @@ export default function AdminNews() {
                 }}
                 className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer flex-shrink-0"
               />
+              <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded flex-shrink-0">#{idx + 1}</span>
               <div className="min-w-0">
                 <h3 className="font-semibold text-gray-800 truncate">{n.title}</h3>
                 <p className="text-xs text-gray-400">{n.category} • {new Date(n.created_at).toLocaleDateString('vi-VN')}</p>

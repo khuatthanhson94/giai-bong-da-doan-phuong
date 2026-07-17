@@ -252,6 +252,7 @@ export default function Seasons() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-gray-50 text-gray-700 text-sm font-semibold border-b">
                   <tr>
+                    <th className="p-4 w-16 text-center">STT</th>
                     <th className="p-4">Tên Mùa giải</th>
                     <th className="p-4">Năm</th>
                     <th className="p-4">Trạng thái</th>
@@ -259,8 +260,9 @@ export default function Seasons() {
                   </tr>
                 </thead>
                 <tbody className="divide-y text-sm">
-                  {seasons.map((s) => (
+                  {seasons.map((s, idx) => (
                     <tr key={s.id} className="hover:bg-gray-50 transition">
+                      <td className="p-4 text-center text-gray-500 font-medium">{idx + 1}</td>
                       <td className="p-4 font-semibold text-gray-800">{s.name}</td>
                       <td className="p-4 text-gray-600">{s.year}</td>
                       <td className="p-4">

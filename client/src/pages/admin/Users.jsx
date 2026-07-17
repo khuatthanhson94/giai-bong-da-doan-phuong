@@ -187,6 +187,7 @@ export default function AdminUsers() {
                   className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
                 />
               </th>
+              <th className="w-16 text-center">STT</th>
               <th>Username</th>
               <th>Phân quyền</th>
               <th>Gán cho đội</th>
@@ -195,7 +196,7 @@ export default function AdminUsers() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => {
+            {users.map((u, idx) => {
               const teamName = u.team_id ? (teams.find(t => t.id === u.team_id)?.name || `ID: ${u.team_id}`) : '-';
               return (
                 <tr key={u.id}>
@@ -210,6 +211,7 @@ export default function AdminUsers() {
                       className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
                     />
                   </td>
+                  <td className="text-center text-gray-500 font-medium">{idx + 1}</td>
                   <td>{u.username}</td>
                   <td>{roles.find((r) => r.value === u.role)?.label || u.role}</td>
                   <td>{teamName}</td>

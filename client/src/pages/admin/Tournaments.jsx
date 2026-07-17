@@ -630,6 +630,7 @@ export default function Tournaments() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-gray-50 text-gray-700 text-sm font-semibold border-b">
                     <tr>
+                      <th className="p-4 w-16 text-center">STT</th>
                       <th className="p-4">Tên Giải đấu</th>
                       <th className="p-4">Mùa giải</th>
                       <th className="p-4">Thể thức</th>
@@ -638,10 +639,11 @@ export default function Tournaments() {
                     </tr>
                   </thead>
                   <tbody className="divide-y text-sm">
-                    {tournaments.map((t) => {
+                    {tournaments.map((t, idx) => {
                       const parentSeason = seasons.find(s => s.id === t.season_id);
                       return (
                         <tr key={t.id} className="hover:bg-gray-50 transition">
+                          <td className="p-4 text-center text-gray-500 font-medium">{idx + 1}</td>
                           <td className="p-4 font-semibold text-gray-800">{t.name}</td>
                           <td className="p-4 text-gray-600">{parentSeason?.name || 'Mùa mặc định'}</td>
                           <td className="p-4 text-gray-600">

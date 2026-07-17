@@ -409,6 +409,7 @@ export default function AdminTeams() {
                   />
                 </th>
               )}
+              <th className="w-16 text-center">STT</th>
               <th>Tên</th>
               <th>Màu áo</th>
               <th>Logo</th>
@@ -417,7 +418,7 @@ export default function AdminTeams() {
             </tr>
           </thead>
           <tbody>
-            {teams.map((t) => (
+            {teams.map((t, idx) => (
               <tr key={t.id}>
                 {user?.role !== 'team' && (
                   <td>
@@ -432,6 +433,7 @@ export default function AdminTeams() {
                     />
                   </td>
                 )}
+                <td className="text-center text-gray-500 font-medium">{idx + 1}</td>
                 <td className="font-medium">{t.name}</td>
                 <td>
                   <div className="w-6 h-6 rounded" style={{ backgroundColor: t.jersey_color }} />
@@ -455,7 +457,7 @@ export default function AdminTeams() {
             ))}
             {teams.length === 0 && (
               <tr>
-                <td colSpan={user?.role === 'team' ? 5 : 6} className="text-center text-gray-400 py-8 italic">
+                <td colSpan={user?.role === 'team' ? 6 : 7} className="text-center text-gray-400 py-8 italic">
                   Chưa có đội bóng nào trong danh sách.
                 </td>
               </tr>

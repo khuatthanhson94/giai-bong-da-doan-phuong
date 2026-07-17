@@ -725,6 +725,7 @@ export default function AdminPlayers() {
                   }}
                 />
               </th>
+              <th className="w-16 text-center">STT</th>
               <th>Ảnh</th>
               <th>Số áo</th>
               <th>Họ tên</th>
@@ -735,7 +736,7 @@ export default function AdminPlayers() {
             </tr>
           </thead>
           <tbody>
-            {processedPlayers.map((p) => (
+            {processedPlayers.map((p, idx) => (
               <tr key={p.id}>
                 <td>
                   <input
@@ -747,6 +748,7 @@ export default function AdminPlayers() {
                     }}
                   />
                 </td>
+                <td className="text-center text-gray-500 font-medium">{idx + 1}</td>
                 <td>
                   {p.photo ? (
                     <img src={getFullUrl(p.photo)} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -773,7 +775,7 @@ export default function AdminPlayers() {
             ))}
             {processedPlayers.length === 0 && (
               <tr>
-                <td colSpan="8" className="text-center text-gray-400 py-8 italic">
+                <td colSpan="9" className="text-center text-gray-400 py-8 italic">
                   {players.length === 0 ? "Chưa có cầu thủ nào trong danh sách." : "Không tìm thấy cầu thủ nào khớp với bộ lọc."}
                 </td>
               </tr>
