@@ -220,6 +220,23 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
           }
           return teamInfo.team_id;
         }
+        if (source.type === 'best_third') {
+          const { rank } = source;
+          const groupsList = db.prepare("SELECT id FROM groups WHERE tournament_id = ?").all(tId);
+          const thirdTeams = [];
+          for (const g of groupsList) {
+            const groupStandings = standings.filter(s => s.group_id === g.id);
+            if (groupStandings.length >= 3 && groupStandings[2]) {
+              thirdTeams.push(groupStandings[2]);
+            }
+          }
+          thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
+          const teamInfo = thirdTeams[Number(rank) - 1];
+          if (!teamInfo) {
+            throw new Error(`Không tìm thấy đội bóng xếp thứ 3 xuất sắc thứ ${rank}. Hãy hoàn thành vòng bảng.`);
+          }
+          return teamInfo.team_id;
+        }
         throw new Error(`Kiểu nguồn đội không hợp lệ: ${source.type}`);
       };
 

@@ -57,11 +57,33 @@ export default function KnockoutBuilder() {
       };
 
       for (let i = 0; i < 4; i++) {
-        const pair = getGroupPair(i);
+        let homeSource = null;
+        let awaySource = null;
+
+        if (groups.length === 3) {
+          if (i === 0) {
+            homeSource = { type: 'rank', groupId: getGroupIdByIndex(0), rank: 1 };
+            awaySource = { type: 'best_third', rank: 2 };
+          } else if (i === 1) {
+            homeSource = { type: 'rank', groupId: getGroupIdByIndex(1), rank: 1 };
+            awaySource = { type: 'best_third', rank: 1 };
+          } else if (i === 2) {
+            homeSource = { type: 'rank', groupId: getGroupIdByIndex(2), rank: 1 };
+            awaySource = { type: 'rank', groupId: getGroupIdByIndex(0), rank: 2 };
+          } else if (i === 3) {
+            homeSource = { type: 'rank', groupId: getGroupIdByIndex(1), rank: 2 };
+            awaySource = { type: 'rank', groupId: getGroupIdByIndex(2), rank: 2 };
+          }
+        } else {
+          const pair = getGroupPair(i);
+          homeSource = { type: 'rank', groupId: getGroupIdByIndex(pair.homeGroup), rank: pair.homeRank };
+          awaySource = { type: 'rank', groupId: getGroupIdByIndex(pair.awayGroup), rank: pair.awayRank };
+        }
+
         matches.push({
           id: ids[i],
-          home: { type: 'rank', groupId: getGroupIdByIndex(pair.homeGroup), rank: pair.homeRank },
-          away: { type: 'rank', groupId: getGroupIdByIndex(pair.awayGroup), rank: pair.awayRank },
+          home: homeSource,
+          away: awaySource,
           venue: 'Sân bóng Phường',
           match_date: new Date().toISOString().split('T')[0],
           match_time: i === 0 || i === 1 ? '08:00' : '15:00',
@@ -196,6 +218,7 @@ export default function KnockoutBuilder() {
     if (type === 'team') return { type, teamId: Number(arg1) };
     if (type === 'rank') return { type, groupId: Number(arg1), rank: Number(arg2) };
     if (type === 'winner') return { type, matchId: arg1 };
+    if (type === 'best_third') return { type, rank: Number(arg1) };
     return null;
   };
 
@@ -204,6 +227,7 @@ export default function KnockoutBuilder() {
     if (source.type === 'team') return `team:${source.teamId}`;
     if (source.type === 'rank') return `rank:${source.groupId}:${source.rank}`;
     if (source.type === 'winner') return `winner:${source.matchId}`;
+    if (source.type === 'best_third') return `best_third:${source.rank}`;
     return '';
   };
 
@@ -223,6 +247,20 @@ export default function KnockoutBuilder() {
       const rankName = rank === 1 ? 'Nhất' : rank === 2 ? 'Nhì' : rank === 3 ? 'Ba' : `${rank}`;
       const actualTeamText = teamInfo ? ` (${teamInfo.name})` : ' (Chưa xác định)';
       return `${rankName} ${groupName}${actualTeamText}`;
+    }
+    if (source.type === 'best_third') {
+      const { rank } = source;
+      const thirdTeams = [];
+      groups.forEach(g => {
+        const groupStandings = standings.filter(s => s.group_id === g.id);
+        if (groupStandings.length >= 3 && groupStandings[2]) {
+          thirdTeams.push(groupStandings[2]);
+        }
+      });
+      thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
+      const teamInfo = thirdTeams[Number(rank) - 1];
+      const actualTeamText = teamInfo ? ` (${teamInfo.name} - ${teamInfo.group_name})` : ' (Chưa xác định)';
+      return `Đội thứ 3 xuất sắc nhất ${rank}${actualTeamText}`;
     }
     if (source.type === 'winner') {
       return `Thắng ${source.matchId}`;
@@ -266,6 +304,35 @@ export default function KnockoutBuilder() {
         );
       }
     });
+
+    if (groups.length === 3) {
+      options.push(<option key="divider-third" disabled>----------------------------</option>);
+      
+      const thirdTeams = [];
+      groups.forEach(g => {
+        const groupStandings = standings.filter(s => s.group_id === g.id);
+        if (groupStandings.length >= 3 && groupStandings[2]) {
+          thirdTeams.push(groupStandings[2]);
+        }
+      });
+      thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
+
+      const best3_1 = thirdTeams[0];
+      const best3_1_Label = best3_1 ? ` (${best3_1.name} - ${best3_1.group_name})` : ' (Chưa xác định)';
+      options.push(
+        <option key="best_third:1" value="best_third:1">
+          🥉 Đội thứ 3 xuất sắc nhất 1{best3_1_Label}
+        </option>
+      );
+
+      const best3_2 = thirdTeams[1];
+      const best3_2_Label = best3_2 ? ` (${best3_2.name} - ${best3_2.group_name})` : ' (Chưa xác định)';
+      options.push(
+        <option key="best_third:2" value="best_third:2">
+          🥉 Đội thứ 3 xuất sắc nhất 2{best3_2_Label}
+        </option>
+      );
+    }
 
     options.push(<option key="divider-teams" disabled>----------------------------</option>);
 

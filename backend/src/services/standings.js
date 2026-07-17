@@ -242,9 +242,25 @@ export function publishMatchResult(matchId, userId) {
             }
             if (source.type === 'rank') {
               const { groupId, rank } = source;
-              const standings = computeStandings();
+              const standings = computeStandings(updatedMatch.tournament_id);
               const groupStandings = standings.filter(s => s.group_id === Number(groupId));
               const teamInfo = groupStandings[Number(rank) - 1];
+              return teamInfo ? teamInfo.team_id : null;
+            }
+            if (source.type === 'best_third') {
+              const { rank } = source;
+              const tId = updatedMatch.tournament_id;
+              const standings = computeStandings(tId);
+              const groupsList = db.prepare("SELECT id FROM groups WHERE tournament_id = ?").all(tId);
+              const thirdTeams = [];
+              for (const g of groupsList) {
+                const groupStandings = standings.filter(s => s.group_id === g.id);
+                if (groupStandings.length >= 3 && groupStandings[2]) {
+                  thirdTeams.push(groupStandings[2]);
+                }
+              }
+              thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
+              const teamInfo = thirdTeams[Number(rank) - 1];
               return teamInfo ? teamInfo.team_id : null;
             }
             return null;

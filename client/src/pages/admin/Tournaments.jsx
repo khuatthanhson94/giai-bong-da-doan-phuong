@@ -126,11 +126,11 @@ export default function Tournaments() {
     ],
     nextRounds: [
       { round: 'Bán kết', matches: [
-        { id: 'S1', home: { type: 'match', matchId: 'Q1' }, away: { type: 'match', matchId: 'Q2' } },
-        { id: 'S2', home: { type: 'match', matchId: 'Q3' }, away: { type: 'match', matchId: 'Q4' } }
+        { id: 'S1', home: { type: 'winner', matchId: 'Q1' }, away: { type: 'winner', matchId: 'Q2' } },
+        { id: 'S2', home: { type: 'winner', matchId: 'Q3' }, away: { type: 'winner', matchId: 'Q4' } }
       ]},
       { round: 'Chung kết', matches: [
-        { id: 'F1', home: { type: 'match', matchId: 'S1' }, away: { type: 'match', matchId: 'S2' } }
+        { id: 'F1', home: { type: 'winner', matchId: 'S1' }, away: { type: 'winner', matchId: 'S2' } }
       ]}
     ]
   });
@@ -342,12 +342,15 @@ export default function Tournaments() {
   const wizSubmitGroups = async () => {
     setError('');
     try {
+      const createdGroups = [];
       for (const g of wizGroups) {
         const groupRes = await api.post('/groups', { name: g.name, tournament_id: Number(wizTourId) });
         const gId = groupRes.id;
         // Assign teams to group
         await api.post(`/groups/${gId}/teams`, { teamIds: g.teams });
+        createdGroups.push({ ...g, id: gId });
       }
+      setWizGroups(createdGroups);
       setSuccess('Đã phân chia các bảng đấu thành công');
       setWizardStep(5);
     } catch (err) {
@@ -1166,59 +1169,103 @@ export default function Tournaments() {
                           <div className="flex gap-2 items-center">
                             <span className="font-semibold text-gray-600">Home:</span>
                             <select
-                              value={m.home.groupId}
+                              value={m.home.type === 'best_third' ? 'best_third' : (m.home.groupId || '')}
                               onChange={(e) => {
                                 const list = [...wizKnockoutConfig.startingMatches];
-                                list[idx].home.groupId = e.target.value;
+                                if (e.target.value === 'best_third') {
+                                  list[idx].home = { type: 'best_third', rank: 1 };
+                                } else {
+                                  list[idx].home = { type: 'rank', groupId: e.target.value, rank: 1 };
+                                }
                                 setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
                               }}
                               className="border rounded p-0.5 w-full bg-gray-50"
                             >
                               <option value="">Chọn bảng đấu...</option>
                               {wizGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                              {wizGroups.length === 3 && (
+                                <option value="best_third">Đội thứ 3 xuất sắc...</option>
+                              )}
                             </select>
-                            <input
-                              type="number"
-                              min="1"
-                              max="4"
-                              placeholder="Hạng"
-                              value={m.home.rank}
-                              onChange={(e) => {
-                                const list = [...wizKnockoutConfig.startingMatches];
-                                list[idx].home.rank = Number(e.target.value);
-                                setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
-                              }}
-                              className="border rounded p-0.5 w-12 text-center"
-                            />
+                            {m.home.type === 'best_third' ? (
+                              <select
+                                value={m.home.rank}
+                                onChange={(e) => {
+                                  const list = [...wizKnockoutConfig.startingMatches];
+                                  list[idx].home.rank = Number(e.target.value);
+                                  setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
+                                }}
+                                className="border rounded p-0.5 w-12 text-center"
+                              >
+                                <option value={1}>1</option>
+                                <option value={2}>2</option>
+                              </select>
+                            ) : (
+                              <input
+                                type="number"
+                                min="1"
+                                max="4"
+                                placeholder="Hạng"
+                                value={m.home.rank}
+                                onChange={(e) => {
+                                  const list = [...wizKnockoutConfig.startingMatches];
+                                  list[idx].home.rank = Number(e.target.value);
+                                  setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
+                                }}
+                                className="border rounded p-0.5 w-12 text-center"
+                              />
+                            )}
                           </div>
 
                           <div className="flex gap-2 items-center">
                             <span className="font-semibold text-gray-600">Away:</span>
                             <select
-                              value={m.away.groupId}
+                              value={m.away.type === 'best_third' ? 'best_third' : (m.away.groupId || '')}
                               onChange={(e) => {
                                 const list = [...wizKnockoutConfig.startingMatches];
-                                list[idx].away.groupId = e.target.value;
+                                if (e.target.value === 'best_third') {
+                                  list[idx].away = { type: 'best_third', rank: 1 };
+                                } else {
+                                  list[idx].away = { type: 'rank', groupId: e.target.value, rank: 1 };
+                                }
                                 setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
                               }}
                               className="border rounded p-0.5 w-full bg-gray-50"
                             >
                               <option value="">Chọn bảng đấu...</option>
                               {wizGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                              {wizGroups.length === 3 && (
+                                <option value="best_third">Đội thứ 3 xuất sắc...</option>
+                              )}
                             </select>
-                            <input
-                              type="number"
-                              min="1"
-                              max="4"
-                              placeholder="Hạng"
-                              value={m.away.rank}
-                              onChange={(e) => {
-                                const list = [...wizKnockoutConfig.startingMatches];
-                                list[idx].away.rank = Number(e.target.value);
-                                setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
-                              }}
-                              className="border rounded p-0.5 w-12 text-center"
-                            />
+                            {m.away.type === 'best_third' ? (
+                              <select
+                                value={m.away.rank}
+                                onChange={(e) => {
+                                  const list = [...wizKnockoutConfig.startingMatches];
+                                  list[idx].away.rank = Number(e.target.value);
+                                  setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
+                                }}
+                                className="border rounded p-0.5 w-12 text-center"
+                              >
+                                <option value={1}>1</option>
+                                <option value={2}>2</option>
+                              </select>
+                            ) : (
+                              <input
+                                type="number"
+                                min="1"
+                                max="4"
+                                placeholder="Hạng"
+                                value={m.away.rank}
+                                onChange={(e) => {
+                                  const list = [...wizKnockoutConfig.startingMatches];
+                                  list[idx].away.rank = Number(e.target.value);
+                                  setWizKnockoutConfig(prev => ({ ...prev, startingMatches: list }));
+                                }}
+                                className="border rounded p-0.5 w-12 text-center"
+                              />
+                            )}
                           </div>
                         </div>
                       ))}
