@@ -13,9 +13,9 @@ set -e
 # Config – adjust if needed
 PROJECT_DIR="$(pwd)"
 FRONTEND_URL="https://giai-bong-da-doan-phuong-tung-thien.vercel.app"
-API_URL="https://giai-bong-da-doan-phuong-backend.onrender.com/api"
-RENDER_API_URL="https://giai-bong-da-doan-phuong-backend.onrender.com"
-UPLOAD_URL="https://giai-bong-da-doan-phuong-backend.onrender.com"
+API_URL="https://giai-bong-da-api-v2.onrender.com/api"
+RENDER_API_URL="https://giai-bong-da-api-v2.onrender.com"
+UPLOAD_URL="https://giai-bong-da-api-v2.onrender.com"
 
 # Ensure Vercel CLI is available
 if ! command -v vercel &>/dev/null; then

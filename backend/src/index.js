@@ -90,16 +90,34 @@ app.use('/uploads', express.static(uploadDir));
 // Redirect requests for missing files to the persistent Render backend
 if (process.env.VERCEL) {
   app.use('/uploads/:filename', (req, res) => {
-    const renderBackend = 'https://giai-bong-da-doan-phuong-backend.onrender.com';
+    const renderBackend = 'https://giai-bong-da-api-v2.onrender.com';
     res.redirect(`${renderBackend}/uploads/${req.params.filename}`);
   });
 }
 
 import { backupUpload } from './services/sync.js';
+import { isConfigured as isCloudinaryConfigured, uploadToCloudinary } from './services/cloudinary.js';
 
-app.post('/api/upload', upload.single('file'), (req, res) => {
+app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Không có file' });
   
+  if (isCloudinaryConfigured) {
+    try {
+      console.log(`[Cloudinary] Uploading file ${req.file.filename} to Cloudinary...`);
+      const result = await uploadToCloudinary(req.file.path, req.file.filename);
+      // Clean up the local temp file from multer since it is now safely stored on Cloudinary
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log(`[Cloudinary] Deleted local temp file: ${req.file.path}`);
+      } catch (err) {
+        console.error('[Cloudinary] Failed to delete local temp file:', err.message);
+      }
+      return res.json({ url: result.url });
+    } catch (err) {
+      console.error('[Cloudinary] Upload failed, falling back to local storage & Postgres backup:', err.message);
+    }
+  }
+
   // Backup upload to Postgres in background
   backupUpload(req.file.filename, req.file.path).catch((err) => {
     console.error('[Sync] Background upload backup error:', err.message);

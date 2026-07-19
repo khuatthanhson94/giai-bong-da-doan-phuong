@@ -1,6 +1,7 @@
 import pg from "pg";
 import fs from "fs";
 import path from "path";
+import { isConfigured as isCloudinaryConfigured } from "./cloudinary.js";
 
 const { Client } = pg;
 
@@ -213,6 +214,10 @@ export async function restoreUploads(uploadDir) {
 }
 
 export async function backupUpload(filename, filepath) {
+  if (isCloudinaryConfigured) {
+    // Skip backup to Neon Postgres since files are uploaded directly to Cloudinary
+    return;
+  }
   const url = process.env.SYNC_DATABASE_URL;
   if (!url) return;
 
