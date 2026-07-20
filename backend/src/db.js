@@ -654,6 +654,25 @@ export function initDatabase() {
     // Clean up stale group teams pointing to deleted groups
     db.prepare('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE deleted_at IS NOT NULL)').run();
     console.log('[Database] Cleaned up stale group_teams assignments.');
+
+    // Clean up duplicate groups that have NULL tournament_id, and update other orphans
+    // 1. Delete group_teams assignments for groups with NULL tournament_id
+    db.prepare('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE tournament_id IS NULL)').run();
+    // 2. Delete the groups themselves
+    db.prepare('DELETE FROM groups WHERE tournament_id IS NULL').run();
+    console.log('[Database] Cleaned up stale NULL tournament_id groups and their assignments.');
+
+    // 3. Set tournament_id for other orphaned records
+    const activeT = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeT) {
+      const tId = activeT.id;
+      db.prepare('UPDATE teams SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+      db.prepare('UPDATE matches SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+      db.prepare('UPDATE news SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+      db.prepare('UPDATE gallery SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+      db.prepare('UPDATE sponsors SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+      console.log(`[Database] Mapped orphaned records to tournament ID: ${tId}`);
+    }
   } catch (err) {
     console.error('[RecycleBin] Initial clean up error:', err);
   }

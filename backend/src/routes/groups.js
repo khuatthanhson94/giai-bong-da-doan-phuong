@@ -6,14 +6,22 @@ const router = express.Router();
 
 // ---------- GET ALL GROUPS ----------
 router.get('/', (req, res) => {
-  const { tournament_id } = req.query;
   try {
+    const { tournament_id } = req.query;
     let sql = 'SELECT * FROM groups WHERE deleted_at IS NULL';
     const params = [];
-    if (tournament_id) {
-      sql += ' AND tournament_id = ?';
-      params.push(Number(tournament_id));
+    
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
     }
+    
+    if (tId) {
+      sql += ' AND tournament_id = ?';
+      params.push(tId);
+    }
+    
     const groups = db.prepare(sql).all(...params);
     const result = groups.map(g => {
       const teams = db.prepare(`
