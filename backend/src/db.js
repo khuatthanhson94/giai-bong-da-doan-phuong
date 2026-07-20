@@ -411,6 +411,39 @@ export function initDatabase() {
   try { db.exec('ALTER TABLE groups ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
   try { db.exec('ALTER TABLE groups ADD COLUMN deleted_at TEXT'); } catch (e) {}
 
+  // Migration: Remove UNIQUE constraint on groups.name (was blocking groups with same name across tournaments)
+  try {
+    const groupsInfo = db.prepare("PRAGMA table_info(groups)").all();
+    const hasUnique = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='groups'").get();
+    if (hasUnique && hasUnique.sql && hasUnique.sql.includes('UNIQUE')) {
+      console.log('[Migration] Removing UNIQUE constraint from groups.name...');
+      db.exec('PRAGMA foreign_keys=OFF');
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS groups_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            tournament_id INTEGER REFERENCES tournaments(id),
+            deleted_at TEXT,
+            created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+          );
+        `);
+        db.exec(`INSERT INTO groups_new (id, name, tournament_id, deleted_at, created_at) SELECT id, name, tournament_id, deleted_at, created_at FROM groups`);
+        db.exec(`DROP TABLE groups`);
+        db.exec(`ALTER TABLE groups_new RENAME TO groups`);
+        db.exec('COMMIT');
+        console.log('[Migration] groups.name UNIQUE constraint removed successfully.');
+      } catch (migErr) {
+        db.exec('ROLLBACK');
+        console.error('[Migration] Failed to remove groups.name UNIQUE constraint:', migErr.message);
+      }
+      db.exec('PRAGMA foreign_keys=ON');
+    }
+  } catch (e) {
+    console.error('[Migration] groups UNIQUE check failed:', e.message);
+  }
+
   try { db.exec('ALTER TABLE matches ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
   try { db.exec('ALTER TABLE matches ADD COLUMN deleted_at TEXT'); } catch (e) {}
 
