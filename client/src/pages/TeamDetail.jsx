@@ -125,7 +125,7 @@ export default function TeamDetail() {
                         </div>
                       </td>
                       <td className="px-2 py-2.5 md:px-3 md:py-3 font-bold text-gray-700">{p.jersey_number}</td>
-                      <td className="px-2 py-2.5 md:px-3 md:py-3 font-medium text-gray-800 truncate max-w-[120px] sm:max-w-none">{p.name}</td>
+                      <td className="px-2 py-2.5 md:px-3 md:py-3 font-medium text-gray-800 break-words max-w-[150px] sm:max-w-none">{p.name}</td>
                       <td className="px-2 py-2.5 md:px-3 md:py-3 text-gray-600">{p.position}</td>
                       <td className="px-2 py-2.5 md:px-3 md:py-3 text-right text-primary font-black">{p.goals}</td>
                     </tr>
