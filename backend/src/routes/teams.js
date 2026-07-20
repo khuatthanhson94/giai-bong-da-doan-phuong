@@ -5,7 +5,7 @@ import { authRequired, requireRole } from '../middleware/auth.js';
 const router = Router();
 
 function enrichTeam(team) {
-  const players = db.prepare('SELECT * FROM players WHERE team_id = ? ORDER BY jersey_number').all(team.id);
+  const players = db.prepare('SELECT * FROM players WHERE team_id = ? AND deleted_at IS NULL ORDER BY jersey_number').all(team.id);
   const standings = getTeamStats(team.id);
   return { ...team, players, ...standings };
 }
@@ -64,7 +64,7 @@ router.get('/', (req, res) => {
 
 router.get('/:id', (req, res) => {
   try {
-    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(req.params.id);
+    const team = db.prepare('SELECT * FROM teams WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
     if (!team) return res.status(404).json({ error: 'Không tìm thấy đội' });
     res.json(enrichTeam(team));
   } catch (err) {
