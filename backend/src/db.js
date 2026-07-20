@@ -651,6 +651,9 @@ export function initDatabase() {
   // Run recycle bin auto-cleanup on startup
   try {
     cleanOldRecycleBin();
+    // Clean up stale group teams pointing to deleted groups
+    db.prepare('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE deleted_at IS NOT NULL)').run();
+    console.log('[Database] Cleaned up stale group_teams assignments.');
   } catch (err) {
     console.error('[RecycleBin] Initial clean up error:', err);
   }

@@ -40,7 +40,7 @@ router.get('/', (req, res) => {
       SELECT t.*, g.id as group_id, g.name as group_name
       FROM teams t
       LEFT JOIN group_teams gt ON t.id = gt.team_id
-      LEFT JOIN groups g ON gt.group_id = g.id
+      LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
       WHERE t.deleted_at IS NULL
     `;
     const params = [];
@@ -53,6 +53,7 @@ router.get('/', (req, res) => {
       sql += ' AND t.name LIKE ?';
       params.push(`%${search}%`);
     }
+    sql += ' GROUP BY t.id';
     sql += ' ORDER BY t.name';
 
     const teams = db.prepare(sql).all(...params);

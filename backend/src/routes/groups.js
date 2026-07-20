@@ -73,6 +73,8 @@ router.delete('/:id', authRequired, requireRole('admin', 'super_admin'), (req, r
     if (!originalGroup) return res.status(404).json({ error: 'Không tìm thấy bảng' });
 
     db.prepare("UPDATE groups SET deleted_at = datetime('now') WHERE id = ?").run(req.params.id);
+    // Xóa liên kết của đội với bảng bị xóa để đội trở lại trạng thái chưa phân bảng
+    db.prepare("DELETE FROM group_teams WHERE group_id = ?").run(req.params.id);
     logAction(req.user.username, 'DELETE_GROUP', `Đưa bảng đấu vào thùng rác: ${originalGroup.name}`);
     res.json({ message: 'Đã đưa bảng đấu vào thùng rác' });
   } catch (err) {
