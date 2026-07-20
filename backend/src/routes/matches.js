@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, logAction, autoStartMatches } from '../db.js';
 import { authRequired, canManageTournament, canManageResults } from '../middleware/auth.js';
-import { publishMatchResult, computeStandings } from '../services/standings.js';
+import { publishMatchResult, computeStandings, recalculatePlayerStats } from '../services/standings.js';
 import { getVNLocalDateString } from '../utils/date.js';
 
 const router = Router();
@@ -356,12 +356,17 @@ router.delete('/:id', authRequired, (req, res, next) => {
   if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
-  const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+  const m = db.prepare('SELECT team_a_id, team_b_id, round, published FROM matches WHERE id = ?').get(req.params.id);
   if (!m) return res.status(404).json({ error: 'Không tìm thấy trận đấu' });
   const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
   const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
 
   db.prepare("UPDATE matches SET deleted_at = datetime('now') WHERE id = ?").run(req.params.id);
+  
+  if (m.published === 1) {
+    recalculatePlayerStats();
+  }
+
   logAction(req.user.username, 'DELETE_MATCH', `Đưa trận đấu vào thùng rác: ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
   res.json({ message: 'Đã đưa trận đấu vào thùng rác' });
 });
@@ -412,6 +417,7 @@ router.post('/:id/result', authRequired, (req, res, next) => {
   };
 
   saveResult();
+  recalculatePlayerStats();
   const match = db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId);
   res.json(enrichMatch(match));
 });

@@ -10,6 +10,12 @@ const router = Router();
 router.get('/home', (req, res) => {
   autoStartMatches();
   const { tournament_id } = req.query;
+  let tId = tournament_id ? Number(tournament_id) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+
   const settings = {};
   db.prepare('SELECT key, value FROM settings').all().forEach((s) => {
     settings[s.key] = s.value;
@@ -28,13 +34,13 @@ router.get('/home', (req, res) => {
     JOIN teams ta ON m.team_a_id = ta.id
     JOIN teams tb ON m.team_b_id = tb.id
     LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-    LEFT JOIN groups g ON gt.group_id = g.id
+    LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
     WHERE m.published = 1 AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
   `;
   const allMatchesParams = [];
-  if (tournament_id) {
+  if (tId) {
     allMatchesSql += ' AND m.tournament_id = ?';
-    allMatchesParams.push(Number(tournament_id));
+    allMatchesParams.push(tId);
   }
   allMatchesSql += ' ORDER BY m.match_date, m.match_time';
   const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
@@ -80,28 +86,28 @@ router.get('/home', (req, res) => {
     JOIN teams ta ON m.team_a_id = ta.id
     JOIN teams tb ON m.team_b_id = tb.id
     LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-    LEFT JOIN groups g ON gt.group_id = g.id
+    LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
     WHERE m.status = 'scheduled' AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
   `;
   const upcomingMatchesParams = [];
-  if (tournament_id) {
+  if (tId) {
     upcomingMatchesSql += ' AND m.tournament_id = ?';
-    upcomingMatchesParams.push(Number(tournament_id));
+    upcomingMatchesParams.push(tId);
   }
   upcomingMatchesSql += ' ORDER BY m.match_date, m.match_time LIMIT 12';
   const upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingMatchesParams);
 
   let newsSql = 'SELECT * FROM news WHERE published = 1 AND deleted_at IS NULL';
   const newsParams = [];
-  if (tournament_id) {
+  if (tId) {
     newsSql += ' AND tournament_id = ?';
-    newsParams.push(Number(tournament_id));
+    newsParams.push(tId);
   }
   newsSql += ' ORDER BY created_at DESC LIMIT 4';
   const news = db.prepare(newsSql).all(...newsParams);
 
-  const standings = computeStandings(tournament_id);
-  const topScorers = getTopScorers(5, tournament_id);
+  const standings = computeStandings(tId);
+  const topScorers = getTopScorers(5, tId);
 
   let visits = {
     total_visits: 0,
@@ -130,12 +136,22 @@ router.get('/home', (req, res) => {
 
 router.get('/standings', (req, res) => {
   const { tournament_id } = req.query;
-  res.json(computeStandings(tournament_id));
+  let tId = tournament_id ? Number(tournament_id) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+  res.json(computeStandings(tId));
 });
 
 router.get('/statistics', (req, res) => {
   const { tournament_id } = req.query;
-  res.json(getStatistics(tournament_id));
+  let tId = tournament_id ? Number(tournament_id) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+  res.json(getStatistics(tId));
 });
 
 router.get('/settings', (req, res) => {
@@ -225,6 +241,11 @@ router.get('/visits-count', (req, res) => {
 
 router.get('/dashboard', authRequired, (req, res) => {
   const { tournament_id } = req.query;
+  let tId = tournament_id ? Number(tournament_id) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
 
   let teamsSql = 'SELECT COUNT(*) as c FROM teams WHERE deleted_at IS NULL';
   let playersSql = 'SELECT COUNT(*) as c FROM players p JOIN teams t ON p.team_id = t.id WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL';
@@ -234,26 +255,26 @@ router.get('/dashboard', authRequired, (req, res) => {
   let recentNewsSql = 'SELECT * FROM news WHERE deleted_at IS NULL';
 
   const params = [];
-  if (tournament_id) {
+  if (tId) {
     teamsSql += ' AND tournament_id = ?';
     playersSql += ' AND t.tournament_id = ?';
     matchesSql += ' AND tournament_id = ?';
     finishedMatchesSql += ' AND tournament_id = ?';
     scheduledMatchesSql += ' AND tournament_id = ?';
     recentNewsSql += ' AND tournament_id = ?';
-    params.push(Number(tournament_id));
+    params.push(tId);
   }
 
   recentNewsSql += ' ORDER BY created_at DESC LIMIT 5';
 
   const totalTeams = db.prepare(teamsSql).get(...params).c;
-  const totalPlayers = db.prepare(playersSql).get(...(tournament_id ? [Number(tournament_id)] : [])).c;
+  const totalPlayers = db.prepare(playersSql).get(...(tId ? [tId] : [])).c;
   const totalMatches = db.prepare(matchesSql).get(...params).c;
   const finishedMatches = db.prepare(finishedMatchesSql).get(...params).c;
   const scheduledMatches = db.prepare(scheduledMatchesSql).get(...params).c;
   const recentNews = db.prepare(recentNewsSql).all(...params);
 
-  const standings = computeStandings(tournament_id);
+  const standings = computeStandings(tId);
   const logs = db.prepare(`
     SELECT l.*, u.username FROM activity_logs l
     LEFT JOIN users u ON l.user_id = u.id

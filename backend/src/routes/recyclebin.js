@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db, logAction } from '../db.js';
 import { authRequired, requireRole } from '../middleware/auth.js';
+import { recalculatePlayerStats } from '../services/standings.js';
 
 const router = Router();
 
@@ -76,7 +77,7 @@ router.post('/restore', adminOnly, (req, res) => {
           break;
         }
         case 'matches': {
-          const item = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(id);
+          const item = db.prepare('SELECT team_a_id, team_b_id, round, published FROM matches WHERE id = ?').get(id);
           if (!item) throw new Error('Không tìm thấy trận đấu');
           const ta = db.prepare('SELECT name, deleted_at FROM teams WHERE id = ?').get(item.team_a_id);
           const tb = db.prepare('SELECT name, deleted_at FROM teams WHERE id = ?').get(item.team_b_id);
@@ -85,6 +86,9 @@ router.post('/restore', adminOnly, (req, res) => {
           }
           itemName = `${ta?.name || 'Đội A'} vs ${tb?.name || 'Đội B'}`;
           db.prepare('UPDATE matches SET deleted_at = NULL WHERE id = ?').run(id);
+          if (item.published === 1) {
+            recalculatePlayerStats();
+          }
           break;
         }
         case 'groups': {

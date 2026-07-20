@@ -1,26 +1,32 @@
 import { db } from '../db.js';
 
 export function computeStandings(tournamentId) {
+  let tId = tournamentId ? Number(tournamentId) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+
   let teamSql = `
     SELECT t.id, t.name, t.logo, t.jersey_color, g.id as group_id, g.name as group_name
     FROM teams t
     LEFT JOIN group_teams gt ON t.id = gt.team_id
-    LEFT JOIN groups g ON gt.group_id = g.id
+    LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
     WHERE t.deleted_at IS NULL
   `;
   const teamParams = [];
-  if (tournamentId) {
+  if (tId) {
     teamSql += ' AND t.tournament_id = ?';
-    teamParams.push(Number(tournamentId));
+    teamParams.push(tId);
   }
   teamSql += ' ORDER BY t.name';
   const teams = db.prepare(teamSql).all(...teamParams);
 
   let matchSql = "SELECT * FROM matches WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL AND (is_friendly IS NULL OR is_friendly = 0)";
   const matchParams = [];
-  if (tournamentId) {
+  if (tId) {
     matchSql += ' AND tournament_id = ?';
-    matchParams.push(Number(tournamentId));
+    matchParams.push(tId);
   }
   const publishedMatches = db.prepare(matchSql).all(...matchParams);
 
@@ -81,6 +87,12 @@ export function computeStandings(tournamentId) {
 }
 
 export function getTopScorers(limit = 10, tournamentId) {
+  let tId = tournamentId ? Number(tournamentId) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+
   let sql = `
     SELECT p.*, t.name as team_name, t.logo as team_logo
     FROM players p
@@ -88,9 +100,9 @@ export function getTopScorers(limit = 10, tournamentId) {
     WHERE p.goals > 0 AND p.deleted_at IS NULL AND t.deleted_at IS NULL
   `;
   const params = [];
-  if (tournamentId) {
+  if (tId) {
     sql += ' AND t.tournament_id = ?';
-    params.push(Number(tournamentId));
+    params.push(tId);
   }
   sql += ' ORDER BY p.goals DESC, p.name ASC LIMIT ?';
   params.push(limit);
@@ -98,11 +110,17 @@ export function getTopScorers(limit = 10, tournamentId) {
 }
 
 export function getStatistics(tournamentId) {
+  let tId = tournamentId ? Number(tournamentId) : null;
+  if (!tId) {
+    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    if (activeTournament) tId = activeTournament.id;
+  }
+
   let baseWhere = 'WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL';
   const params = [];
-  if (tournamentId) {
+  if (tId) {
     baseWhere += ' AND t.tournament_id = ?';
-    params.push(Number(tournamentId));
+    params.push(tId);
   }
 
   const topScorers = db.prepare(`
@@ -164,34 +182,7 @@ export function publishMatchResult(matchId, userId) {
         UPDATE matches SET status = 'finished', published = 1 WHERE id = ?
       `).run(matchId);
 
-      db.prepare('UPDATE players SET goals = 0, assists = 0, yellow_cards = 0, red_cards = 0').run();
-
-      const allGoals = db.prepare(`
-        SELECT g.player_id, COUNT(*) as cnt FROM goals g
-        JOIN matches m ON g.match_id = m.id
-        WHERE m.published = 1 AND m.deleted_at IS NULL AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND g.player_id IS NOT NULL GROUP BY g.player_id
-      `).all();
-      for (const g of allGoals) {
-        db.prepare('UPDATE players SET goals = ? WHERE id = ?').run(g.cnt, g.player_id);
-      }
-
-      const allYellow = db.prepare(`
-        SELECT y.player_id, COUNT(*) as cnt FROM yellow_cards y
-        JOIN matches m ON y.match_id = m.id
-        WHERE m.published = 1 AND m.deleted_at IS NULL AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND y.player_id IS NOT NULL GROUP BY y.player_id
-      `).all();
-      for (const y of allYellow) {
-        db.prepare('UPDATE players SET yellow_cards = ? WHERE id = ?').run(y.cnt, y.player_id);
-      }
-
-      const allRed = db.prepare(`
-        SELECT r.player_id, COUNT(*) as cnt FROM red_cards r
-        JOIN matches m ON r.match_id = m.id
-        WHERE m.published = 1 AND m.deleted_at IS NULL AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND r.player_id IS NOT NULL GROUP BY r.player_id
-      `).all();
-      for (const r of allRed) {
-        db.prepare('UPDATE players SET red_cards = ? WHERE id = ?').run(r.cnt, r.player_id);
-      }
+      recalculatePlayerStats();
 
       if (userId) {
         db.prepare(`
@@ -341,4 +332,35 @@ export function publishMatchResult(matchId, userId) {
 
   runTransaction();
   return db.prepare('SELECT * FROM matches WHERE id = ?').get(matchId);
+}
+
+export function recalculatePlayerStats() {
+  db.prepare('UPDATE players SET goals = 0, assists = 0, yellow_cards = 0, red_cards = 0').run();
+
+  const allGoals = db.prepare(`
+    SELECT g.player_id, COUNT(*) as cnt FROM goals g
+    JOIN matches m ON g.match_id = m.id
+    WHERE m.published = 1 AND m.deleted_at IS NULL AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND g.player_id IS NOT NULL GROUP BY g.player_id
+  `).all();
+  for (const g of allGoals) {
+    db.prepare('UPDATE players SET goals = ? WHERE id = ?').run(g.cnt, g.player_id);
+  }
+
+  const allYellow = db.prepare(`
+    SELECT y.player_id, COUNT(*) as cnt FROM yellow_cards y
+    JOIN matches m ON y.match_id = m.id
+    WHERE m.published = 1 AND m.deleted_at IS NULL AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND y.player_id IS NOT NULL GROUP BY y.player_id
+  `).all();
+  for (const y of allYellow) {
+    db.prepare('UPDATE players SET yellow_cards = ? WHERE id = ?').run(y.cnt, y.player_id);
+  }
+
+  const allRed = db.prepare(`
+    SELECT r.player_id, COUNT(*) as cnt FROM red_cards r
+    JOIN matches m ON r.match_id = m.id
+    WHERE m.published = 1 AND m.deleted_at IS NULL AND (m.is_friendly IS NULL OR m.is_friendly = 0) AND r.player_id IS NOT NULL GROUP BY r.player_id
+  `).all();
+  for (const r of allRed) {
+    db.prepare('UPDATE players SET red_cards = ? WHERE id = ?').run(r.cnt, r.player_id);
+  }
 }
