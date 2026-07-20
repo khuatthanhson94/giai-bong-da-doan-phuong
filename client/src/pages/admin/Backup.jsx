@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 
+const API_BASE = (
+  import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? '' : 'https://giai-bong-da-api-v2.onrender.com')
+).replace(/\/$/, '');
+
 export default function Backup() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +38,6 @@ export default function Backup() {
   };
 
   const handleDownloadDb = () => {
-    const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
     const token = localStorage.getItem('token');
     const url = `${API_BASE || window.location.origin}/api/backup/download?token=${token}`;
     
@@ -86,7 +90,6 @@ export default function Backup() {
     const fd = new FormData();
     fd.append('file', file);
 
-    const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
     const token = localStorage.getItem('token');
 
     try {
