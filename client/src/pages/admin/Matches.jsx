@@ -24,6 +24,14 @@ export default function AdminMatches() {
   const [showForm, setShowForm] = useState(false);
   const [selectedMatchIdForResults, setSelectedMatchIdForResults] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  
+  // States for automatic schedule generation modal
+  const [showAutoModal, setShowAutoModal] = useState(false);
+  const [autoForm, setAutoForm] = useState({
+    start_date: new Date().toISOString().split('T')[0],
+    interval_days: '7',
+    group_id: '',
+  });
 
   const load = () => {
     api.get('/matches').then((data) => {
@@ -107,13 +115,28 @@ export default function AdminMatches() {
     }
   };
 
-  const handleAutoGenerate = async () => {
-    if (!selectedGroupId) {
+  const handleAutoGenerateClick = () => {
+    setAutoForm({
+      start_date: new Date().toISOString().split('T')[0],
+      interval_days: '7',
+      group_id: selectedGroupId || '',
+    });
+    setShowAutoModal(true);
+  };
+
+  const handleAutoGenerateSubmit = async (e) => {
+    e.preventDefault();
+    if (!autoForm.group_id) {
       alert('Vui lòng chọn bảng đấu trước khi tự động tạo lịch.');
       return;
     }
     try {
-      await api.post('/matches/generate-group-schedule', { group_id: selectedGroupId });
+      await api.post('/matches/generate-group-schedule', {
+        group_id: Number(autoForm.group_id),
+        start_date: autoForm.start_date,
+        interval_days: Number(autoForm.interval_days),
+      });
+      setShowAutoModal(false);
       load();
       alert('Lịch thi đấu tự động tạo thành công.');
     } catch (err) {
@@ -244,7 +267,7 @@ export default function AdminMatches() {
           {user?.role !== 'scorekeeper' && (
             <>
               <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm py-2 px-4">+ Tạo lịch</button>
-              <button onClick={handleAutoGenerate} className="btn-secondary text-sm py-2 px-4">Tự động tạo lịch</button>
+              <button onClick={handleAutoGenerateClick} className="btn-secondary text-sm py-2 px-4">Tự động tạo lịch</button>
             </>
           )}
         </div>
@@ -528,6 +551,78 @@ export default function AdminMatches() {
             setSelectedMatchIdForResults(null);
           }}
         />
+      )}
+
+      {showAutoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
+          <form onSubmit={handleAutoGenerateSubmit} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-up">
+            <h3 className="font-extrabold text-gray-800 text-lg mb-4">
+              📅 Tự động tạo lịch vòng bảng
+            </h3>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600">Chọn Bảng đấu</label>
+                <select
+                  className="input-field cursor-pointer"
+                  value={autoForm.group_id}
+                  onChange={(e) => setAutoForm({ ...autoForm, group_id: e.target.value })}
+                  required
+                >
+                  <option value="">-- Chọn Bảng đấu --</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600">Ngày bắt đầu giải đấu</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={autoForm.start_date}
+                  onChange={(e) => setAutoForm({ ...autoForm, start_date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600">Tần suất thi đấu</label>
+                <select
+                  className="input-field cursor-pointer"
+                  value={autoForm.interval_days}
+                  onChange={(e) => setAutoForm({ ...autoForm, interval_days: e.target.value })}
+                  required
+                >
+                  <option value="1">Thi đấu liên tục (Hằng ngày)</option>
+                  <option value="2">Nghỉ 1 ngày (Cách 1 ngày)</option>
+                  <option value="7">Thi đấu hàng tuần (Cách 7 ngày)</option>
+                </select>
+              </div>
+
+              <p className="text-[11px] text-red-500 leading-relaxed bg-red-50 p-3 rounded-lg border border-red-100 font-medium">
+                ⚠️ Cảnh báo: Thao tác này sẽ tự động xóa tất cả các trận đấu CHƯA KẾT THÚC của bảng đấu được chọn để xếp lịch mới. Các trận đã có kết quả sẽ được giữ nguyên.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowAutoModal(false)}
+                className="btn-outline text-sm px-4 py-2"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                className="btn-primary text-sm px-5 py-2 shadow-md"
+              >
+                Tạo lịch đấu
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

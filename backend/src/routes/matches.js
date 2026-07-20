@@ -87,7 +87,7 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   try {
-    const { tournament_id, group_id } = req.body;
+    const { tournament_id, group_id, start_date, interval_days } = req.body;
     let tId = tournament_id ? Number(tournament_id) : null;
     if (!tId) {
       const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
@@ -114,6 +114,19 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
+      // Parse custom start date or default to today
+      let baseStartDate = new Date();
+      if (start_date) {
+        // Handle YYYY-MM-DD input cleanly
+        const parts = start_date.split('-');
+        if (parts.length === 3) {
+          baseStartDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        }
+      }
+      
+      // Determine spacing days (1 for continuous, 2 for rest 1 day, 7 for weekly)
+      const spacingDays = interval_days ? Number(interval_days) : 7;
+
       for (const group of groups) {
         const groupTeams = db.prepare(`
           SELECT team_id FROM group_teams WHERE group_id = ?
@@ -130,7 +143,6 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
           AND (team_a_id IN (${placeholders}) OR team_b_id IN (${placeholders}))
         `).run(tId, ...groupTeams, ...groupTeams);
 
-        const startDate = new Date();
         // Berger Round Robin Rotation
         let list = [...groupTeams];
         if (list.length % 2 !== 0) {
@@ -141,8 +153,8 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
         const half = numTeams / 2;
 
         for (let round = 0; round < numRounds; round++) {
-          const d = new Date(startDate);
-          d.setDate(d.getDate() + round * 7); // Schedule weekly
+          const d = new Date(baseStartDate);
+          d.setDate(d.getDate() + round * spacingDays);
           const dateStr = getVNLocalDateString(d);
 
           let matchIdx = 0;
@@ -158,7 +170,7 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
               else if (matchIdx > 3) timeStr = '19:00';
 
               insertMatch.run(
-                `Lượt ${round + 1}`,
+                `Vòng bảng - Lượt ${round + 1}`,
                 dateStr,
                 timeStr,
                 'Sân bóng Phường',
@@ -179,8 +191,8 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
         req.user.username,
         'GENERATE_GROUP_SCHEDULE',
         group_id 
-          ? `Tự động tạo lịch thi đấu cho bảng đấu ID: ${group_id} của giải đấu ID: ${tId}`
-          : `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId}`
+          ? `Tự động tạo lịch thi đấu cho bảng đấu ID: ${group_id} của giải đấu ID: ${tId} (Bắt đầu: ${start_date || 'hôm nay'}, Khoảng cách: ${spacingDays} ngày)`
+          : `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId} (Bắt đầu: ${start_date || 'hôm nay'}, Khoảng cách: ${spacingDays} ngày)`
       );
     } catch (err) {
       db.exec('ROLLBACK');
