@@ -608,6 +608,9 @@ export function initDatabase() {
         }
       }
     }
+    
+    // Automatically merge any duplicate teams in the same tournament
+    mergeDuplicateTeams();
   } catch (err) {
     console.error('Error during V3.0 season/tournament database migration:', err);
   }
@@ -841,3 +844,76 @@ export function autoStartMatches() {
     console.error('[Auto-Start Error]', err.message);
   }
 }
+
+export function mergeDuplicateTeams() {
+  try {
+    const duplicates = db.prepare(`
+      SELECT name, tournament_id, COUNT(*) as c 
+      FROM teams 
+      WHERE deleted_at IS NULL 
+      GROUP BY name, tournament_id 
+      HAVING c > 1
+    `).all();
+
+    if (duplicates.length === 0) return;
+
+    console.log(`[Database] Found ${duplicates.length} duplicate team names. Merging...`);
+    db.exec('BEGIN TRANSACTION');
+    try {
+      for (const dup of duplicates) {
+        const allMatches = db.prepare(`
+          SELECT id FROM teams 
+          WHERE name = ? AND tournament_id = ? AND deleted_at IS NULL
+          ORDER BY id ASC
+        `).all(dup.name, dup.tournament_id);
+
+        const masterId = allMatches[0].id;
+        const duplicateIds = allMatches.slice(1).map(t => t.id);
+
+        for (const dupId of duplicateIds) {
+          // 1. Move players
+          db.prepare('UPDATE players SET team_id = ? WHERE team_id = ?').run(masterId, dupId);
+
+          // 2. Move matches (team_a and team_b)
+          db.prepare('UPDATE matches SET team_a_id = ? WHERE team_a_id = ?').run(masterId, dupId);
+          db.prepare('UPDATE matches SET team_b_id = ? WHERE team_b_id = ?').run(masterId, dupId);
+
+          // 3. Move group assignments
+          const masterGroup = db.prepare('SELECT group_id FROM group_teams WHERE team_id = ?').get(masterId);
+          const dupGroup = db.prepare('SELECT group_id FROM group_teams WHERE team_id = ?').get(dupId);
+          
+          if (dupGroup) {
+            if (masterGroup) {
+              db.prepare('DELETE FROM group_teams WHERE team_id = ?').run(dupId);
+            } else {
+              db.prepare('UPDATE group_teams SET team_id = ? WHERE team_id = ?').run(masterId, dupId);
+            }
+          }
+
+          // 4. Move goals
+          db.prepare('UPDATE goals SET team_id = ? WHERE team_id = ?').run(masterId, dupId);
+
+          // 5. Move yellow cards
+          db.prepare('UPDATE yellow_cards SET team_id = ? WHERE team_id = ?').run(masterId, dupId);
+
+          // 6. Move red cards
+          db.prepare('UPDATE red_cards SET team_id = ? WHERE team_id = ?').run(masterId, dupId);
+
+          // 7. Move users
+          db.prepare('UPDATE users SET team_id = ? WHERE team_id = ?').run(masterId, dupId);
+
+          // 8. Delete the duplicate team
+          db.prepare('DELETE FROM teams WHERE id = ?').run(dupId);
+        }
+      }
+      db.exec('COMMIT');
+      console.log('[Database] Duplicate teams merged successfully.');
+    } catch (migErr) {
+      try { db.exec('ROLLBACK'); } catch (rbErr) {}
+      console.error('[Database] Failed to merge duplicate teams:', migErr.message);
+    }
+  } catch (err) {
+    console.error('[Database] Duplicate teams check failed:', err.message);
+  }
+}
+

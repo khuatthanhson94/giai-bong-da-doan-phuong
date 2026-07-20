@@ -87,7 +87,7 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   try {
-    const { tournament_id } = req.body;
+    const { tournament_id, group_id } = req.body;
     let tId = tournament_id ? Number(tournament_id) : null;
     if (!tId) {
       const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
@@ -97,11 +97,18 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
 
     db.exec('BEGIN IMMEDIATE');
     try {
-      // Delete all scheduled matches that are NOT finished for this tournament
-      db.prepare("DELETE FROM matches WHERE status != 'finished' AND tournament_id = ?").run(tId);
+      let groups = [];
+      if (group_id) {
+        const group = db.prepare('SELECT id, name FROM groups WHERE id = ? AND tournament_id = ? AND deleted_at IS NULL').get(group_id, tId);
+        if (!group) {
+          db.exec('ROLLBACK');
+          return res.status(404).json({ error: 'Không tìm thấy bảng đấu hợp lệ' });
+        }
+        groups = [group];
+      } else {
+        groups = db.prepare('SELECT id, name FROM groups WHERE tournament_id = ? AND deleted_at IS NULL').all(tId);
+      }
 
-      const groups = db.prepare('SELECT id, name FROM groups WHERE tournament_id = ? AND deleted_at IS NULL').all(tId);
-      const startDate = new Date();
       const insertMatch = db.prepare(`
         INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -114,6 +121,16 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
 
         if (groupTeams.length < 2) continue;
 
+        // Delete existing scheduled (unfinished) matches for these teams in this tournament
+        const placeholders = groupTeams.map(() => '?').join(',');
+        db.prepare(`
+          DELETE FROM matches 
+          WHERE status != 'finished' 
+          AND tournament_id = ? 
+          AND (team_a_id IN (${placeholders}) OR team_b_id IN (${placeholders}))
+        `).run(tId, ...groupTeams, ...groupTeams);
+
+        const startDate = new Date();
         // Berger Round Robin Rotation
         let list = [...groupTeams];
         if (list.length % 2 !== 0) {
@@ -158,7 +175,13 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
       }
 
       db.exec('COMMIT');
-      logAction(req.user.username, 'GENERATE_GROUP_SCHEDULE', `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId}`);
+      logAction(
+        req.user.username,
+        'GENERATE_GROUP_SCHEDULE',
+        group_id 
+          ? `Tự động tạo lịch thi đấu cho bảng đấu ID: ${group_id} của giải đấu ID: ${tId}`
+          : `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId}`
+      );
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;

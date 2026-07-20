@@ -124,7 +124,7 @@ export default function AdminMatches() {
     const isKO = m.round ? !/bảng|lượt|group/i.test(m.round) : false;
     const teamA = teams.find(t => t.id === m.team_a_id);
     
-    setSelectedGroupId((isKO || m.is_friendly) ? '' : (teamA?.group_id || ''));
+    setSelectedGroupId((isKO || m.is_friendly) ? '' : (m.group?.id || teamA?.group_id || ''));
     setForm({
       round: m.round || '',
       match_date: m.match_date || '',
@@ -450,8 +450,8 @@ export default function AdminMatches() {
                   />
                 </th>
               )}
-              <th>Vòng</th>
               <th className="w-16 text-center">STT</th>
+              <th>Vòng</th>
               <th>Bảng</th>
               <th>Ngày</th>
               <th>Giờ</th>

@@ -139,14 +139,23 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
     const { teams } = req.body;
     if (!Array.isArray(teams)) return res.status(400).json({ error: 'Dữ liệu đội bóng không hợp lệ' });
 
+    // Determine tournament_id
+    const { tournament_id } = req.query;
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
+    }
+    if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để nhập đội' });
+
     db.exec('BEGIN IMMEDIATE');
     try {
       const insertTeam = db.prepare(`
-        INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO teams (name, logo, jersey_color, description, image, coach, stadium, tournament_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const findGroup = db.prepare('SELECT id FROM groups WHERE name = ?');
-      const insertGroup = db.prepare('INSERT INTO groups (name) VALUES (?)');
+      const findGroup = db.prepare('SELECT id FROM groups WHERE name = ? AND tournament_id = ? AND deleted_at IS NULL');
+      const insertGroup = db.prepare('INSERT INTO groups (name, tournament_id) VALUES (?, ?)');
       const insertGroupTeam = db.prepare('INSERT OR IGNORE INTO group_teams (group_id, team_id) VALUES (?, ?)');
       const checkUserExists = db.prepare('SELECT id FROM users WHERE username = ?');
       const insertUser = db.prepare(`
@@ -157,6 +166,11 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
 
       for (const t of teams) {
         if (!t.name) continue;
+
+        // Skip if team already exists in this tournament
+        const existingTeam = db.prepare('SELECT id FROM teams WHERE name = ? AND tournament_id = ? AND deleted_at IS NULL').get(t.name, tId);
+        if (existingTeam) continue;
+
         const result = insertTeam.run(
           t.name,
           t.logo || null,
@@ -164,7 +178,8 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
           t.description || '',
           t.image || null,
           t.coach || null,
-          t.stadium || null
+          t.stadium || null,
+          tId
         );
         const teamId = result.lastInsertRowid;
 
@@ -180,10 +195,10 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
 
         if (t.group_name && t.group_name.trim()) {
           const gName = t.group_name.trim();
-          let g = findGroup.get(gName);
+          let g = findGroup.get(gName, tId);
           let groupId;
           if (!g) {
-            const groupResult = insertGroup.run(gName);
+            const groupResult = insertGroup.run(gName, tId);
             groupId = groupResult.lastInsertRowid;
           } else {
             groupId = g.id;
@@ -192,7 +207,7 @@ router.post('/import', authRequired, requireRole('admin', 'super_admin'), (req, 
         }
       }
       db.exec('COMMIT');
-      logAction(req.user.username, 'IMPORT_TEAMS', `Nhập danh sách ${teams.length} đội bóng từ tệp Excel`);
+      logAction(req.user.username, 'IMPORT_TEAMS', `Nhập danh sách ${teams.length} đội bóng từ tệp Excel cho giải đấu ID: ${tId}`);
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
@@ -215,6 +230,12 @@ router.post('/', authRequired, requireRole('admin', 'super_admin'), (req, res) =
       if (activeTournament) tId = activeTournament.id;
     }
     if (!tId) return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để phân bổ đội' });
+
+    // Prevent duplicate team names in the same tournament
+    const existingTeam = db.prepare('SELECT id FROM teams WHERE name = ? AND tournament_id = ? AND deleted_at IS NULL').get(name, tId);
+    if (existingTeam) {
+      return res.status(400).json({ error: `Đội bóng "${name}" đã tồn tại trong giải đấu này` });
+    }
 
     db.exec('BEGIN IMMEDIATE');
     try {
