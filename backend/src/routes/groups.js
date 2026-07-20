@@ -127,40 +127,55 @@ router.delete('/:groupId/teams/:teamId', authRequired, requireRole('admin', 'sup
 // ---------- AUTO-GENERATE GROUPS ----------
 router.post('/generate', authRequired, requireRole('admin', 'super_admin'), (req, res) => {
   try {
-    const count = req.body.count || req.body.numGroups;
+    const count = parseInt(req.body.count || req.body.numGroups, 10);
     if (!Number.isInteger(count) || count <= 0) {
       return res.status(400).json({ error: 'Số bảng đấu (count) phải là số nguyên dương' });
     }
 
+    // Xác định tournament_id từ body hoặc lấy giải đang active
+    let tId = req.body.tournament_id ? Number(req.body.tournament_id) : null;
+    if (!tId) {
+      const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+      if (activeTournament) tId = activeTournament.id;
+    }
+    if (!tId) {
+      return res.status(400).json({ error: 'Không tìm thấy giải đấu đang hoạt động để chia bảng' });
+    }
+
     db.exec('BEGIN IMMEDIATE');
     try {
-      // Delete existing groups and assignments
-      db.prepare('DELETE FROM group_teams').run();
-      db.prepare('DELETE FROM groups').run();
+      // Xóa các bảng đấu CŨ của đúng giải đấu này (không xóa giải khác)
+      const oldGroups = db.prepare('SELECT id FROM groups WHERE tournament_id = ? AND deleted_at IS NULL').all(tId);
+      for (const og of oldGroups) {
+        db.prepare('DELETE FROM group_teams WHERE group_id = ?').run(og.id);
+      }
+      db.prepare('DELETE FROM groups WHERE tournament_id = ?').run(tId);
 
-      // Create new groups
+      // Tạo các bảng đấu mới với tournament_id
       const groupNames = Array.from({ length: count }, (_, i) => {
         const char = String.fromCharCode(65 + i); // Bảng A, Bảng B, ...
         return `Bảng ${char}`;
       });
 
       const groupIds = [];
-      const insertGroup = db.prepare('INSERT INTO groups (name) VALUES (?)');
+      const insertGroup = db.prepare('INSERT INTO groups (name, tournament_id) VALUES (?, ?)');
       for (const name of groupNames) {
-        const result = insertGroup.run(name);
+        const result = insertGroup.run(name, tId);
         groupIds.push(result.lastInsertRowid);
       }
 
-      // Fetch all teams
-      const teams = db.prepare('SELECT id FROM teams').all();
+      // Lấy danh sách các đội thuộc giải đấu này
+      const teams = db.prepare(
+        'SELECT id FROM teams WHERE tournament_id = ? AND deleted_at IS NULL'
+      ).all(tId);
 
-      // Shuffle teams (Fisher-Yates)
+      // Trộn ngẫu nhiên (Fisher-Yates)
       for (let i = teams.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [teams[i], teams[j]] = [teams[j], teams[i]];
       }
 
-      // Distribute teams to groups round-robin
+      // Phân bổ đội vào các bảng theo vòng tròn
       const insertGroupTeam = db.prepare('INSERT INTO group_teams (group_id, team_id) VALUES (?, ?)');
       teams.forEach((team, index) => {
         const groupId = groupIds[index % count];
@@ -168,7 +183,7 @@ router.post('/generate', authRequired, requireRole('admin', 'super_admin'), (req
       });
 
       db.exec('COMMIT');
-      logAction(req.user.username, 'AUTO_GENERATE_GROUPS', `Tự động chia đều các đội bóng vào ${count} bảng đấu`);
+      logAction(req.user.username, 'AUTO_GENERATE_GROUPS', `Tự động chia đều ${teams.length} đội bóng vào ${count} bảng đấu (giải ${tId})`);
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
