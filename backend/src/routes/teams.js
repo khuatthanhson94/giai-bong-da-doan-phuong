@@ -13,7 +13,7 @@ function enrichTeam(team) {
 function getTeamStats(teamId) {
   const matches = db.prepare(`
     SELECT * FROM matches
-    WHERE published = 1 AND status = 'finished'
+    WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL
     AND (team_a_id = ? OR team_b_id = ?)
   `).all(teamId, teamId);
 
