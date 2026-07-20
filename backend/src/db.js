@@ -66,7 +66,10 @@ const uploadDir = process.env.VERCEL
 if (process.env.SYNC_DATABASE_URL) {
   try {
     await restoreDatabase(dbPath);
-    await restoreUploads(uploadDir);
+    // Restore uploads in the background so the server can start listening immediately
+    restoreUploads(uploadDir).catch((err) => {
+      console.error('[Sync] Background restore uploads error:', err.message);
+    });
   } catch (err) {
     console.error('[Sync] Error during startup restore:', err.message);
   }
@@ -334,6 +337,12 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_visit_logs_date ON visit_logs(visit_date);
     CREATE INDEX IF NOT EXISTS idx_visit_logs_ip ON visit_logs(ip_address);
+
+    CREATE INDEX IF NOT EXISTS idx_players_team_id ON players(team_id);
+    CREATE INDEX IF NOT EXISTS idx_matches_tournament_id ON matches(tournament_id);
+    CREATE INDEX IF NOT EXISTS idx_goals_match_id ON goals(match_id);
+    CREATE INDEX IF NOT EXISTS idx_yellow_cards_match_id ON yellow_cards(match_id);
+    CREATE INDEX IF NOT EXISTS idx_red_cards_match_id ON red_cards(match_id);
 
     CREATE TABLE IF NOT EXISTS seasons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
