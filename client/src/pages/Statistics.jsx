@@ -79,9 +79,8 @@ export default function Statistics() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <TopList title="Top ghi bàn" items={stats.topScorers} valueKey="goals" color="#0066CC" />
-        <TopList title="Top kiến tạo" items={stats.topAssists} valueKey="assists" color="#00A651" />
         <TopList title="Top thẻ vàng" items={stats.topYellow} valueKey="yellow_cards" color="#EAB308" />
         <TopList title="Top thẻ đỏ" items={stats.topRed} valueKey="red_cards" color="#EF4444" />
       </div>

@@ -16,6 +16,100 @@ export default function RecycleBin() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('teams');
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Reset selection on tab change
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeTab]);
+
+  // Reset selection when data loads
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [data]);
+
+  const handleSelectAll = (e) => {
+    const currentItems = data[activeTab] || [];
+    if (e.target.checked) {
+      setSelectedIds(currentItems.map(item => item.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectItem = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn khôi phục ${selectedIds.length} mục đã chọn không?`)) return;
+    
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    
+    let restoredCount = 0;
+    let failedCount = 0;
+    let lastError = '';
+
+    for (const id of selectedIds) {
+      try {
+        const item = data[activeTab].find(x => x.id === id);
+        const name = item ? (item.name || item.title || `${activeTab}-${id}`) : id;
+        await api.post('/recyclebin/restore', { type: activeTab, id });
+        restoredCount++;
+      } catch (err) {
+        failedCount++;
+        lastError = err.message;
+      }
+    }
+
+    if (restoredCount > 0) {
+      setSuccess(`Khôi phục thành công ${restoredCount} mục.`);
+    }
+    if (failedCount > 0) {
+      setError(`Có ${failedCount} mục khôi phục thất bại. Lỗi: ${lastError}`);
+    }
+    
+    loadRecycleBin();
+  };
+
+  const handleBulkPurge = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`CẢNH BÁO CỰC KỲ NGUY HIỂM: Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${selectedIds.length} mục đã chọn không? Thao tác này KHÔNG THỂ khôi phục và sẽ xóa vĩnh viễn dữ liệu liên quan.`)) return;
+    
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    
+    let purgedCount = 0;
+    let failedCount = 0;
+    let lastError = '';
+
+    for (const id of selectedIds) {
+      try {
+        const item = data[activeTab].find(x => x.id === id);
+        const name = item ? (item.name || item.title || `${activeTab}-${id}`) : id;
+        await api.post('/recyclebin/purge', { type: activeTab, id });
+        purgedCount++;
+      } catch (err) {
+        failedCount++;
+        lastError = err.message;
+      }
+    }
+
+    if (purgedCount > 0) {
+      setSuccess(`Đã xóa vĩnh viễn thành công ${purgedCount} mục.`);
+    }
+    if (failedCount > 0) {
+      setError(`Có ${failedCount} mục xóa thất bại. Lỗi: ${lastError}`);
+    }
+    
+    loadRecycleBin();
+  };
 
   const loadRecycleBin = () => {
     setLoading(true);
@@ -109,6 +203,27 @@ export default function RecycleBin() {
         ))}
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl flex items-center justify-between flex-wrap gap-3 animate-fade-in">
+          <span className="text-sm font-bold text-gray-700">Đã chọn: <span className="text-primary font-black">{selectedIds.length}</span> mục</span>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleBulkRestore}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition cursor-pointer"
+            >
+              Khôi phục các mục đã chọn
+            </button>
+            <button 
+              onClick={handleBulkPurge}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition cursor-pointer"
+            >
+              Xóa vĩnh viễn các mục đã chọn
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Data tables */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
@@ -120,6 +235,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.teams.length > 0 && selectedIds.length === data.teams.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tên đội</th>
                       <th className="p-4">Huấn luyện viên</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -128,10 +244,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.teams.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.teams.map((t) => (
                         <tr key={t.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(t.id)} onChange={() => handleSelectItem(t.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{t.name}</td>
                           <td className="p-4 text-gray-600">{t.coach || 'Không rõ'}</td>
                           <td className="p-4 text-gray-500">{formatTime(t.deleted_at)}</td>
@@ -152,6 +269,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.players.length > 0 && selectedIds.length === data.players.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tên cầu thủ</th>
                       <th className="p-4">Đội bóng</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -160,10 +278,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.players.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.players.map((p) => (
                         <tr key={p.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => handleSelectItem(p.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{p.name} (Số {p.jersey_number})</td>
                           <td className="p-4 text-gray-600">{p.team_name || 'Không rõ'}</td>
                           <td className="p-4 text-gray-500">{formatTime(p.deleted_at)}</td>
@@ -184,6 +303,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.matches.length > 0 && selectedIds.length === data.matches.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Vòng đấu</th>
                       <th className="p-4">Cặp đấu</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -192,10 +312,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.matches.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.matches.map((m) => (
                         <tr key={m.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(m.id)} onChange={() => handleSelectItem(m.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{m.round}</td>
                           <td className="p-4 text-gray-600">{m.team_a_name || 'Đội A'} vs {m.team_b_name || 'Đội B'}</td>
                           <td className="p-4 text-gray-500">{formatTime(m.deleted_at)}</td>
@@ -216,6 +337,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.groups.length > 0 && selectedIds.length === data.groups.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tên bảng</th>
                       <th className="p-4">Thời điểm xóa</th>
                       <th className="p-4 text-right">Thao tác</th>
@@ -223,10 +345,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.groups.length === 0 ? (
-                      <tr><td colSpan="3" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.groups.map((g) => (
                         <tr key={g.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(g.id)} onChange={() => handleSelectItem(g.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{g.name}</td>
                           <td className="p-4 text-gray-500">{formatTime(g.deleted_at)}</td>
                           <td className="p-4 text-right space-x-3">
@@ -246,6 +369,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.news.length > 0 && selectedIds.length === data.news.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tiêu đề tin tức</th>
                       <th className="p-4">Thể loại</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -254,10 +378,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.news.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.news.map((n) => (
                         <tr key={n.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(n.id)} onChange={() => handleSelectItem(n.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800 max-w-xs truncate">{n.title}</td>
                           <td className="p-4 text-gray-600">{n.category}</td>
                           <td className="p-4 text-gray-500">{formatTime(n.deleted_at)}</td>
@@ -278,6 +403,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.sponsors.length > 0 && selectedIds.length === data.sponsors.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tên nhà tài trợ</th>
                       <th className="p-4">Hạng</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -286,10 +412,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.sponsors.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.sponsors.map((s) => (
                         <tr key={s.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(s.id)} onChange={() => handleSelectItem(s.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{s.name}</td>
                           <td className="p-4 text-gray-600 font-semibold">{s.tier}</td>
                           <td className="p-4 text-gray-500">{formatTime(s.deleted_at)}</td>
@@ -310,6 +437,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.seasons.length > 0 && selectedIds.length === data.seasons.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tên Mùa giải</th>
                       <th className="p-4">Năm</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -318,10 +446,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.seasons.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.seasons.map((s) => (
                         <tr key={s.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(s.id)} onChange={() => handleSelectItem(s.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{s.name}</td>
                           <td className="p-4 text-gray-600">{s.year}</td>
                           <td className="p-4 text-gray-500">{formatTime(s.deleted_at)}</td>
@@ -342,6 +471,7 @@ export default function RecycleBin() {
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-gray-50 border-b font-semibold text-gray-700">
                     <tr>
+                      <th className="p-4 w-12"><input type="checkbox" checked={data.tournaments.length > 0 && selectedIds.length === data.tournaments.length} onChange={handleSelectAll} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></th>
                       <th className="p-4">Tên Giải đấu</th>
                       <th className="p-4">Mùa giải</th>
                       <th className="p-4">Thời điểm xóa</th>
@@ -350,10 +480,11 @@ export default function RecycleBin() {
                   </thead>
                   <tbody className="divide-y">
                     {data.tournaments.length === 0 ? (
-                      <tr><td colSpan="4" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Thùng rác trống.</td></tr>
                     ) : (
                       data.tournaments.map((t) => (
                         <tr key={t.id} className="hover:bg-gray-50">
+                          <td className="p-4 w-12"><input type="checkbox" checked={selectedIds.includes(t.id)} onChange={() => handleSelectItem(t.id)} className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" /></td>
                           <td className="p-4 font-bold text-gray-800">{t.name}</td>
                           <td className="p-4 text-gray-600">{t.season_name}</td>
                           <td className="p-4 text-gray-500">{formatTime(t.deleted_at)}</td>
@@ -372,5 +503,5 @@ export default function RecycleBin() {
         )}
       </div>
     </div>
-  );
+);
 }

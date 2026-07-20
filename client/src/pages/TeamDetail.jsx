@@ -100,11 +100,19 @@ export default function TeamDetail() {
             <div className="overflow-x-auto">
               <table className="table-styled">
                 <thead>
-                  <tr><th>Ảnh</th><th>Số áo</th><th>Họ tên</th><th>Vị trí</th><th>Bàn thắng</th></tr>
+                  <tr>
+                    <th className="w-12 text-center">STT</th>
+                    <th>Ảnh</th>
+                    <th>Số áo</th>
+                    <th>Họ tên</th>
+                    <th>Vị trí</th>
+                    <th>Bàn thắng</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {team.players?.map((p) => (
+                  {team.players?.map((p, idx) => (
                     <tr key={p.id}>
+                      <td className="text-center font-semibold text-gray-500">{idx + 1}</td>
                       <td className="w-12 h-12">
                         {p.photo ? (
                           <img src={getFullUrl(p.photo)} alt="Player" className="w-full h-full object-cover rounded-full" />
