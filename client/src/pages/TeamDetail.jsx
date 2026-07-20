@@ -98,32 +98,36 @@ export default function TeamDetail() {
               🏃‍♂️ Danh sách cầu thủ
             </h2>
             <div className="overflow-x-auto">
-              <table className="table-styled">
+              <table className="w-full text-xs md:text-sm border-collapse">
                 <thead>
-                  <tr>
-                    <th className="w-12 text-center">STT</th>
-                    <th>Ảnh</th>
-                    <th>Số áo</th>
-                    <th>Họ tên</th>
-                    <th>Vị trí</th>
-                    <th>Bàn thắng</th>
+                  <tr className="bg-primary text-white">
+                    <th className="px-2 py-2 md:px-3 md:py-3 text-center font-bold w-10">STT</th>
+                    <th className="px-2 py-2 md:px-3 md:py-3 text-left font-bold w-12">Ảnh</th>
+                    <th className="px-2 py-2 md:px-3 md:py-3 text-left font-bold w-12">Số</th>
+                    <th className="px-2 py-2 md:px-3 md:py-3 text-left font-bold">Họ tên</th>
+                    <th className="px-2 py-2 md:px-3 md:py-3 text-left font-bold">Vị trí</th>
+                    <th className="px-2 py-2 md:px-3 md:py-3 text-right font-bold w-16">Bàn</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {team.players?.map((p, idx) => (
-                    <tr key={p.id}>
-                      <td className="text-center font-semibold text-gray-500">{idx + 1}</td>
-                      <td className="w-12 h-12">
-                        {p.photo ? (
-                          <img src={getFullUrl(p.photo)} alt="Player" className="w-full h-full object-cover rounded-full" />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 rounded-full" />
-                        )}
+                    <tr key={p.id} className="hover:bg-blue-50 transition-colors">
+                      <td className="px-2 py-2.5 md:px-3 md:py-3 text-center font-semibold text-gray-500">{idx + 1}</td>
+                      <td className="px-2 py-2.5 md:px-3 md:py-3">
+                        <div className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
+                          {p.photo ? (
+                            <img src={getFullUrl(p.photo)} alt="Player" className="w-full h-full object-cover rounded-full shadow-sm" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-[10px] text-gray-400 font-bold">
+                              {p.name?.charAt(0)}
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="font-bold">{p.jersey_number}</td>
-                      <td>{p.name}</td>
-                      <td>{p.position}</td>
-                      <td className="text-primary font-semibold">{p.goals}</td>
+                      <td className="px-2 py-2.5 md:px-3 md:py-3 font-bold text-gray-700">{p.jersey_number}</td>
+                      <td className="px-2 py-2.5 md:px-3 md:py-3 font-medium text-gray-800 truncate max-w-[120px] sm:max-w-none">{p.name}</td>
+                      <td className="px-2 py-2.5 md:px-3 md:py-3 text-gray-600">{p.position}</td>
+                      <td className="px-2 py-2.5 md:px-3 md:py-3 text-right text-primary font-black">{p.goals}</td>
                     </tr>
                   ))}
                 </tbody>
