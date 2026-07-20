@@ -15,7 +15,7 @@ function enrichMatch(match) {
     SELECT g.id, g.name
     FROM group_teams gt
     JOIN groups g ON gt.group_id = g.id
-    WHERE gt.team_id = ?
+    WHERE gt.team_id = ? AND g.deleted_at IS NULL
   `).get(match.team_a_id) || null);
 
   const goals = db.prepare(`
