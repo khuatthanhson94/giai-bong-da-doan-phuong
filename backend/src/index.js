@@ -96,7 +96,7 @@ app.use('/uploads', express.static(uploadDir, {
 // Redirect requests for missing files to the persistent Render backend
 if (process.env.VERCEL) {
   app.use('/uploads/:filename', (req, res) => {
-    const renderBackend = 'https://giai-bong-da-api-v2.onrender.com';
+    const renderBackend = process.env.RENDER_BACKEND_URL || 'https://giai-bong-da-api-v2.onrender.com';
     res.redirect(`${renderBackend}/uploads/${req.params.filename}`);
   });
 }
@@ -308,7 +308,8 @@ if (!process.env.VERCEL) {
 
     // Keep-alive: tự ping mỗi 14 phút để Render free tier không sleep
     if (process.env.RENDER) {
-      const KEEP_ALIVE_URL = `https://giai-bong-da-doan-phuong-backend.onrender.com/api/health`;
+      const selfUrl = process.env.RENDER_EXTERNAL_URL || 'https://giai-bong-da-api-v2.onrender.com';
+      const KEEP_ALIVE_URL = `${selfUrl}/api/health`;
       setInterval(async () => {
         try {
           const res = await fetch(KEEP_ALIVE_URL);

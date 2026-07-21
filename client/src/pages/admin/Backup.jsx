@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 
 const API_BASE = (
-  import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? '' : 'https://giai-bong-da-api-v2.onrender.com')
+  import.meta.env.VITE_API_URL || ''
 ).replace(/\/$/, '');
 
 export default function Backup() {
