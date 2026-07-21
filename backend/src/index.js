@@ -1,5 +1,6 @@
 process.env.TZ = 'Asia/Ho_Chi_Minh';
 import express from 'express';
+import compression from 'compression';
 import fs from 'fs';
 import cors from 'cors';
 import path from 'path';
@@ -78,13 +79,17 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use((req, res, next) => {
   requestStorage.run(req, () => {
     next();
   });
 });
-app.use('/uploads', express.static(uploadDir));
+app.use('/uploads', express.static(uploadDir, {
+  maxAge: '30d',
+  immutable: true
+}));
 
 // Fallback for static files on ephemeral serverless environment (Vercel)
 // Redirect requests for missing files to the persistent Render backend

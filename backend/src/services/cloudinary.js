@@ -1,16 +1,16 @@
 import { v2 as cloudinary } from 'cloudinary';
 
-const isConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
-);
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'cemwzku3';
+const apiKey = process.env.CLOUDINARY_API_KEY || '866198463243856';
+const apiSecret = process.env.CLOUDINARY_API_SECRET || 'PooOTmoydLFVyYF3eCNv2M85gvc';
+
+const isConfigured = Boolean(cloudName && apiKey && apiSecret);
 
 if (isConfigured) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
   });
   console.log('[Cloudinary] Configured successfully.');
 } else {
