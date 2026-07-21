@@ -1,7 +1,7 @@
 {
   "outputDirectory": "client/dist",
   "env": {
-    "VITE_API_URL": "https://giai-bong-da-api-v2.onrender.com"
+    "VITE_API_URL": "https://giai-bong-da-api-v3.onrender.com"
   },
   "rewrites": [
     {
