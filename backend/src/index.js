@@ -21,6 +21,7 @@ import tournamentsRoutes from './routes/tournaments.js';
 import recyclebinRoutes from './routes/recyclebin.js';
 import aiRoutes from './routes/ai.js';
 import backupRoutes from './routes/backup.js';
+import adminRoutes from './routes/admin.js';
 import { requestStorage } from './utils/context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -144,6 +145,7 @@ app.use('/api/tournaments', tournamentsRoutes);
 app.use('/api/recyclebin', recyclebinRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api', publicRoutes);
 
 // Debug endpoint to list uploaded files (for development)
