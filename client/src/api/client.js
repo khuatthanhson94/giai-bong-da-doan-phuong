@@ -7,7 +7,21 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
+const apiCache = new Map();
+const CACHE_TTL_MS = 15000; // 15 seconds short-lived cache for GET requests
+
+export function clearApiCache() {
+  apiCache.clear();
+}
+
 async function request(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+
+  // Clear cache when performing any write action (POST/PUT/DELETE)
+  if (['POST', 'PUT', 'DELETE'].includes(method)) {
+    clearApiCache();
+  }
+
   const headers = { ...options.headers };
   const isFormData = options.body instanceof FormData;
 
@@ -29,9 +43,18 @@ async function request(url, options = {}) {
     }
   }
 
+  // Check in-memory cache for GET requests
+  const cacheKey = `${method}:${finalUrl}`;
+  if (method === 'GET' && !options.noCache) {
+    const cached = apiCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return cached.data;
+    }
+  }
+
   // Automatically inject tournament_id to POST/PUT request bodies
   let bodyContent = options.body;
-  if (tId && options.method && ['POST', 'PUT'].includes(options.method.toUpperCase()) && !isFormData) {
+  if (tId && ['POST', 'PUT'].includes(method) && !isFormData) {
     if (options.body && typeof options.body === 'object') {
       const updatedBody = { ...options.body };
       if (!updatedBody.hasOwnProperty('tournament_id')) {
@@ -50,19 +73,25 @@ async function request(url, options = {}) {
   const res = await fetch(API + finalUrl, fetchOptions);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+
+  if (method === 'GET') {
+    apiCache.set(cacheKey, { data, timestamp: Date.now() });
+  }
+
   return data;
 }
 
 export const api = {
-  get: (url) => request(url),
-  post: (url, body) => request(url, { method: 'POST', body }),
-  put: (url, body) => request(url, { method: 'PUT', body }),
-  delete: (url) => request(url, { method: 'DELETE' }),
+  get: (url, options) => request(url, { ...options, method: 'GET' }),
+  post: (url, body, options) => request(url, { ...options, method: 'POST', body }),
+  put: (url, body, options) => request(url, { ...options, method: 'PUT', body }),
+  delete: (url, options) => request(url, { ...options, method: 'DELETE' }),
   upload: async (file) => {
     const fd = new FormData();
     fd.append('file', file);
     return request('/upload', { method: 'POST', body: fd, headers: {} });
   },
+  clearCache: clearApiCache
 };
 
 export default api;

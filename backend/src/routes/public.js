@@ -7,6 +7,21 @@ import { getVNLocalDateString } from '../utils/date.js';
 
 const router = Router();
 
+const serverCache = new Map();
+const CACHE_DURATION_MS = 10000; // 10s server cache for public read endpoints
+
+function getCached(key) {
+  const cached = serverCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCache(key, data) {
+  serverCache.set(key, { data, timestamp: Date.now() });
+}
+
 router.get('/home', (req, res) => {
   autoStartMatches();
   const { tournament_id } = req.query;
@@ -15,6 +30,10 @@ router.get('/home', (req, res) => {
     const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
     if (activeTournament) tId = activeTournament.id;
   }
+
+  const cacheKey = `home:${tId || 'active'}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
 
   const settings = {};
   db.prepare('SELECT key, value FROM settings').all().forEach((s) => {
@@ -131,7 +150,9 @@ router.get('/home', (req, res) => {
     // Ignore
   }
 
-  res.json({ settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, visits });
+  const result = { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, visits };
+  setCache(cacheKey, result);
+  res.json(result);
 });
 
 router.get('/standings', (req, res) => {
@@ -141,7 +162,13 @@ router.get('/standings', (req, res) => {
     const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
     if (activeTournament) tId = activeTournament.id;
   }
-  res.json(computeStandings(tId));
+  const cacheKey = `standings:${tId || 'active'}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  const result = computeStandings(tId);
+  setCache(cacheKey, result);
+  res.json(result);
 });
 
 router.get('/statistics', (req, res) => {
@@ -151,7 +178,13 @@ router.get('/statistics', (req, res) => {
     const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
     if (activeTournament) tId = activeTournament.id;
   }
-  res.json(getStatistics(tId));
+  const cacheKey = `statistics:${tId || 'active'}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  const result = getStatistics(tId);
+  setCache(cacheKey, result);
+  res.json(result);
 });
 
 router.get('/settings', (req, res) => {

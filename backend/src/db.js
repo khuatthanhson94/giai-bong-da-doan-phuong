@@ -76,6 +76,14 @@ if (process.env.SYNC_DATABASE_URL) {
 }
 
 const rawDb = new DatabaseSync(dbPath);
+try {
+  rawDb.exec('PRAGMA journal_mode = WAL');
+  rawDb.exec('PRAGMA synchronous = NORMAL');
+  rawDb.exec('PRAGMA cache_size = -16000');
+  rawDb.exec('PRAGMA temp_store = MEMORY');
+} catch (e) {
+  // Ignore pragma errors if unsupported
+}
 
 // Helper to check if a query modifies data
 function triggerSyncIfWrite(sql) {
@@ -109,7 +117,11 @@ export function reopenDatabase(sourcePath) {
   }
 
   activeDb = new DatabaseSync(dbPath);
-  activeDb.exec('PRAGMA foreign_keys = ON');
+  try {
+    activeDb.exec('PRAGMA foreign_keys = ON');
+    activeDb.exec('PRAGMA journal_mode = WAL');
+    activeDb.exec('PRAGMA synchronous = NORMAL');
+  } catch (e) {}
   console.log('[Database] Re-opened active connection.');
 }
 

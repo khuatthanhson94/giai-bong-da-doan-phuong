@@ -10,4 +10,15 @@ export default defineConfig({
       '/uploads': 'http://localhost:3004',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['chart.js', 'react-chartjs-2'],
+          'vendor-excel': ['xlsx'],
+        },
+      },
+    },
+  },
 });
