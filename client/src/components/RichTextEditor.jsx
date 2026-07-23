@@ -22,6 +22,36 @@ const emojiCategories = {
   }
 };
 
+function ensureQuillLoaded() {
+  return new Promise((resolve, reject) => {
+    if (window.Quill) return resolve(window.Quill);
+
+    if (!document.getElementById('quill-css')) {
+      const link = document.createElement('link');
+      link.id = 'quill-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css';
+      document.head.appendChild(link);
+    }
+
+    if (!document.getElementById('quill-js')) {
+      const script = document.createElement('script');
+      script.id = 'quill-js';
+      script.src = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js';
+      script.onload = () => resolve(window.Quill);
+      script.onerror = reject;
+      document.head.appendChild(script);
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.Quill) {
+          clearInterval(checkInterval);
+          resolve(window.Quill);
+        }
+      }, 50);
+    }
+  });
+}
+
 export default function RichTextEditor({ value, onChange }) {
   const containerRef = useRef(null);
   const quillRef = useRef(null);
@@ -31,97 +61,105 @@ export default function RichTextEditor({ value, onChange }) {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    let isSubscribed = true;
 
-    // Register inline styles for alignment so it works on public pages natively
-    if (window.Quill) {
-      const AlignStyle = window.Quill.import("attributors/style/align");
-      window.Quill.register(AlignStyle, true);
-    }
+    ensureQuillLoaded().then((Quill) => {
+      if (!isSubscribed || !containerRef.current || quillRef.current) return;
 
-    // Create editor sub-container
-    const editorContainer = document.createElement("div");
-    containerRef.current.appendChild(editorContainer);
+      // Register inline styles for alignment so it works on public pages natively
+      const AlignStyle = Quill.import("attributors/style/align");
+      Quill.register(AlignStyle, true);
 
-    // Initialize Quill with full rich editing features like news platforms
-    const quill = new window.Quill(editorContainer, {
-      theme: "snow",
-      modules: {
-        toolbar: [
-          [{ font: [] }, { size: ["small", false, "large", "huge"] }],
-          [{ header: [1, 2, 3, 4, false] }],
-          ["bold", "italic", "underline", "strike", "blockquote", "code-block"],
-          [{ color: [] }, { background: [] }],
-          [{ list: "ordered" }, { list: "bullet" }],
-          [{ align: [] }],
-          ["link", "image", "video", "emoji"],
-          ["clean"],
-        ],
-      },
-    });
+      // Create editor sub-container
+      const editorContainer = document.createElement("div");
+      containerRef.current.appendChild(editorContainer);
 
-    quillRef.current = quill;
+      // Initialize Quill with full rich editing features like news platforms
+      const quill = new Quill(editorContainer, {
+        theme: "snow",
+        modules: {
+          toolbar: [
+            [{ font: [] }, { size: ["small", false, "large", "huge"] }],
+            [{ header: [1, 2, 3, 4, false] }],
+            ["bold", "italic", "underline", "strike", "blockquote", "code-block"],
+            [{ color: [] }, { background: [] }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            [{ align: [] }],
+            ["link", "image", "video", "emoji"],
+            ["clean"],
+          ],
+        },
+      });
 
-    // Set initial content
-    if (value) {
-      quill.root.innerHTML = value;
-    }
+      quillRef.current = quill;
 
-    // Set change handler
-    quill.on("text-change", () => {
-      const html = quill.root.innerHTML;
-      onChange(html === "<p><br></p>" ? "" : html);
-    });
+      // Set initial content
+      if (value) {
+        quill.root.innerHTML = value;
+      }
 
-    // Style and configure custom emoji toolbar button
-    const parent = containerRef.current.parentNode;
-    const emojiButton = parent.querySelector(".ql-emoji");
-    if (emojiButton) {
-      emojiButton.innerHTML = '<span style="font-size: 16px; line-height: 1; display: block;">😀</span>';
-      emojiButton.title = "Chèn biểu tượng đặc biệt / Emoji";
-      emojiButton.style.display = "flex";
-      emojiButton.style.alignItems = "center";
-      emojiButton.style.justifyContent = "center";
-    }
+      // Set change handler
+      quill.on("text-change", () => {
+        const html = quill.root.innerHTML;
+        onChange(html === "<p><br></p>" ? "" : html);
+      });
 
-    const toolbar = quill.getModule("toolbar");
-    toolbar.addHandler("emoji", () => {
-      setShowEmojiPicker((prev) => !prev);
-    });
-
-    // Custom Image Handler for file uploading with compression
-    toolbar.addHandler("image", () => {
-      const input = document.createElement("input");
-      input.setAttribute("type", "file");
-      input.setAttribute("accept", "image/*");
-      input.click();
-
-      input.onchange = async () => {
-        const file = input.files?.[0];
-        if (!file) return;
-
-        try {
-          // Resize to max 1000x1000 for news content images
-          const resizedFile = await resizeImage(file, 1000, 1000);
-          // Upload to server
-          const res = await api.upload(resizedFile);
-          const url = getFullUrl(res.url);
-
-          // Insert into editor
-          const range = quill.getSelection();
-          if (range) {
-            quill.insertEmbed(range.index, "image", url);
-            quill.setSelection(range.index + 1);
-          } else {
-            quill.insertEmbed(quill.getLength(), "image", url);
-          }
-        } catch (err) {
-          console.error("Failed to upload image inside rich editor:", err);
-          alert("Tải ảnh lên thất bại: " + err.message);
+      // Style and configure custom emoji toolbar button
+      const parent = containerRef.current.parentNode;
+      if (parent) {
+        const emojiButton = parent.querySelector(".ql-emoji");
+        if (emojiButton) {
+          emojiButton.innerHTML = '<span style="font-size: 16px; line-height: 1; display: block;">😀</span>';
+          emojiButton.title = "Chèn biểu tượng đặc biệt / Emoji";
+          emojiButton.style.display = "flex";
+          emojiButton.style.alignItems = "center";
+          emojiButton.style.justifyContent = "center";
         }
-      };
+      }
+
+      const toolbar = quill.getModule("toolbar");
+      toolbar.addHandler("emoji", () => {
+        setShowEmojiPicker((prev) => !prev);
+      });
+
+      // Custom Image Handler for file uploading with compression
+      toolbar.addHandler("image", () => {
+        const input = document.createElement("input");
+        input.setAttribute("type", "file");
+        input.setAttribute("accept", "image/*");
+        input.click();
+
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return;
+
+          try {
+            // Resize to max 1000x1000 for news content images
+            const resizedFile = await resizeImage(file, 1000, 1000);
+            // Upload to server
+            const res = await api.upload(resizedFile);
+            const url = getFullUrl(res.url);
+
+            // Insert into editor
+            const range = quill.getSelection();
+            if (range) {
+              quill.insertEmbed(range.index, "image", url);
+              quill.setSelection(range.index + 1);
+            } else {
+              quill.insertEmbed(quill.getLength(), "image", url);
+            }
+          } catch (err) {
+            console.error("Failed to upload image inside rich editor:", err);
+            alert("Tải ảnh lên thất bại: " + err.message);
+          }
+        };
+      });
+    }).catch(err => {
+      console.error("Failed to load Quill editor:", err);
     });
 
     return () => {
+      isSubscribed = false;
       if (containerRef.current) {
         containerRef.current.innerHTML = "";
       }

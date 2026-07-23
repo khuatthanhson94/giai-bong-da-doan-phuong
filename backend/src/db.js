@@ -352,6 +352,9 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_players_team_id ON players(team_id);
     CREATE INDEX IF NOT EXISTS idx_matches_tournament_id ON matches(tournament_id);
+    CREATE INDEX IF NOT EXISTS idx_matches_lookup ON matches(published, deleted_at, status, match_date);
+    CREATE INDEX IF NOT EXISTS idx_news_lookup ON news(published, deleted_at, created_at);
+    CREATE INDEX IF NOT EXISTS idx_teams_lookup ON teams(deleted_at, tournament_id);
     CREATE INDEX IF NOT EXISTS idx_goals_match_id ON goals(match_id);
     CREATE INDEX IF NOT EXISTS idx_yellow_cards_match_id ON yellow_cards(match_id);
     CREATE INDEX IF NOT EXISTS idx_red_cards_match_id ON red_cards(match_id);
