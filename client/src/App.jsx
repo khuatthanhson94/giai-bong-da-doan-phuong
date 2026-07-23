@@ -49,12 +49,34 @@ const LoadingFallback = () => (
 
 export default function App() {
   useEffect(() => {
+    // 1. Track visit session
     if (!sessionStorage.getItem('session_tracked')) {
       api.post('/track-visit').then(() => {
         sessionStorage.setItem('session_tracked', 'true');
       }).catch((err) => {
         console.error('Failed to track visit:', err);
       });
+    }
+
+    // 2. Speculative Idle Prefetching: Pre-load public JS chunks & API data when browser is idle
+    const prefetchPublicRoutes = () => {
+      // Prefetch JS modules
+      import('./pages/Schedule');
+      import('./pages/Results');
+      import('./pages/Standings');
+      import('./pages/Teams');
+      import('./pages/News');
+
+      // Pre-warm client API cache in background
+      api.get('/standings').catch(() => {});
+      api.get('/teams').catch(() => {});
+      api.get('/sponsors').catch(() => {});
+    };
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(prefetchPublicRoutes, { timeout: 2000 });
+    } else {
+      setTimeout(prefetchPublicRoutes, 1500);
     }
   }, []);
 
