@@ -400,7 +400,7 @@ export default function Home() {
                   <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-cyan-50 text-cyan-700 border border-cyan-200">
                     💎 Nhà Tài Trợ Kim Cương
                   </span>
-                  <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
+                  <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-8">
                     {sponsors.filter(s => s.tier === 'diamond').map(s => (
                       <a
                         key={s.id}
@@ -421,121 +421,111 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Gold & Silver Tiers in Grid/Flex */}
-              {(sponsors.some(s => s.tier === 'gold') || sponsors.some(s => s.tier === 'silver')) && (
-                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                  {/* Gold Tier */}
-                  {sponsors.some(s => s.tier === 'gold') && (
-                    <div className="space-y-4">
-                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-yellow-50 text-yellow-700 border border-yellow-200">
-                        🥇 Nhà Tài Trợ Vàng
-                      </span>
-                      <div className="flex flex-wrap justify-center gap-4">
-                        {sponsors.filter(s => s.tier === 'gold').map(s => (
-                          <a
-                            key={s.id}
-                            href={s.link || undefined}
-                            target={s.link ? "_blank" : undefined}
-                            rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-5 rounded-2xl border border-yellow-100 shadow-sm hover:shadow-yellow-150/50 hover:shadow-lg hover:-translate-y-1 transition duration-300 w-56 sm:w-60 min-h-[150px] flex flex-col items-center justify-center group"
-                          >
-                            <div className="h-20 w-full flex items-center justify-center p-1">
-                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" />
-                            </div>
-                            <span className="text-xs font-extrabold text-yellow-900 mt-2 line-clamp-2 w-full px-1 text-center group-hover:text-primary transition-colors leading-tight">
-                              {s.short_name || s.name}
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Silver Tier */}
-                  {sponsors.some(s => s.tier === 'silver') && (
-                    <div className="space-y-4">
-                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-gray-100 text-gray-700 border border-gray-300">
-                        🥈 Nhà Tài Trợ Bạc
-                      </span>
-                      <div className="flex flex-wrap justify-center gap-4">
-                        {sponsors.filter(s => s.tier === 'silver').map(s => (
-                          <a
-                            key={s.id}
-                            href={s.link || undefined}
-                            target={s.link ? "_blank" : undefined}
-                            rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-5 rounded-2xl border border-gray-250 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 w-56 sm:w-60 min-h-[150px] flex flex-col items-center justify-center group"
-                          >
-                            <div className="h-20 w-full flex items-center justify-center p-1">
-                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" />
-                            </div>
-                            <span className="text-xs font-extrabold text-gray-800 mt-2 line-clamp-2 w-full px-1 text-center group-hover:text-primary transition-colors leading-tight">
-                              {s.short_name || s.name}
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {/* Gold Tier */}
+              {sponsors.some(s => s.tier === 'gold') && (
+                <div className="space-y-4">
+                  <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-yellow-50 text-yellow-700 border border-yellow-200">
+                    🥇 Nhà Tài Trợ Vàng
+                  </span>
+                  <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6">
+                    {sponsors.filter(s => s.tier === 'gold').map(s => (
+                      <a
+                        key={s.id}
+                        href={s.link || undefined}
+                        target={s.link ? "_blank" : undefined}
+                        rel={s.link ? "noopener noreferrer" : undefined}
+                        className="bg-white p-5 rounded-2xl border border-yellow-100 shadow-sm hover:shadow-yellow-150/50 hover:shadow-lg hover:-translate-y-1 transition duration-300 w-56 sm:w-64 min-h-[150px] flex flex-col items-center justify-center group"
+                      >
+                        <div className="h-20 w-full flex items-center justify-center p-1">
+                          <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                        <span className="text-xs font-extrabold text-yellow-900 mt-2 line-clamp-2 w-full px-1 text-center group-hover:text-primary transition-colors leading-tight">
+                          {s.short_name || s.name}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Bronze & General Tiers */}
-              {(sponsors.some(s => s.tier === 'bronze') || sponsors.some(s => s.tier === 'general')) && (
-                <div className="space-y-6 max-w-4xl mx-auto pt-4 border-t border-dashed border-gray-200">
-                  {/* Bronze Tier */}
-                  {sponsors.some(s => s.tier === 'bronze') && (
-                    <div className="space-y-3">
-                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-amber-50 text-amber-800 border border-amber-200">
-                        🥉 Nhà Tài Trợ Đồng
-                      </span>
-                      <div className="flex flex-wrap justify-center gap-4">
-                        {sponsors.filter(s => s.tier === 'bronze').map(s => (
-                          <a
-                            key={s.id}
-                            href={s.link || undefined}
-                            target={s.link ? "_blank" : undefined}
-                            rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-44 sm:w-48 min-h-[120px] flex flex-col items-center justify-center group"
-                          >
-                            <div className="h-16 w-full flex items-center justify-center">
-                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" />
-                            </div>
-                            <span className="text-xs font-bold text-amber-800 mt-2 line-clamp-2 w-full px-1 text-center group-hover:text-primary transition-colors leading-tight">
-                              {s.short_name || s.name}
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {/* Silver Tier */}
+              {sponsors.some(s => s.tier === 'silver') && (
+                <div className="space-y-4">
+                  <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-gray-100 text-gray-700 border border-gray-300">
+                    🥈 Nhà Tài Trợ Bạc
+                  </span>
+                  <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6">
+                    {sponsors.filter(s => s.tier === 'silver').map(s => (
+                      <a
+                        key={s.id}
+                        href={s.link || undefined}
+                        target={s.link ? "_blank" : undefined}
+                        rel={s.link ? "noopener noreferrer" : undefined}
+                        className="bg-white p-5 rounded-2xl border border-gray-250 shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 w-52 sm:w-56 min-h-[145px] flex flex-col items-center justify-center group"
+                      >
+                        <div className="h-20 w-full flex items-center justify-center p-1">
+                          <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                        <span className="text-xs font-extrabold text-gray-800 mt-2 line-clamp-2 w-full px-1 text-center group-hover:text-primary transition-colors leading-tight">
+                          {s.short_name || s.name}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  {/* General / Companion Tier */}
-                  {sponsors.some(s => s.tier === 'general') && (
-                    <div className="space-y-3">
-                      <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-gray-50 text-gray-500 border border-gray-200">
-                        🤝 Đơn vị Đồng Hành
-                      </span>
-                      <div className="flex flex-wrap justify-center gap-3">
-                        {sponsors.filter(s => s.tier === 'general').map(s => (
-                          <a
-                            key={s.id}
-                            href={s.link || undefined}
-                            target={s.link ? "_blank" : undefined}
-                            rel={s.link ? "noopener noreferrer" : undefined}
-                            className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 sm:w-40 min-h-[105px] flex flex-col items-center justify-center group"
-                          >
-                            <div className="h-12 w-full flex items-center justify-center">
-                              <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain opacity-80 group-hover:opacity-100 transition duration-300" />
-                            </div>
-                            <span className="text-[11px] font-semibold text-gray-600 mt-1.5 line-clamp-2 w-full px-0.5 text-center group-hover:text-primary transition-colors leading-tight">
-                              {s.short_name || s.name}
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {/* Bronze Tier */}
+              {sponsors.some(s => s.tier === 'bronze') && (
+                <div className="space-y-3 pt-2">
+                  <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-amber-50 text-amber-800 border border-amber-200">
+                    🥉 Nhà Tài Trợ Đồng
+                  </span>
+                  <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-5">
+                    {sponsors.filter(s => s.tier === 'bronze').map(s => (
+                      <a
+                        key={s.id}
+                        href={s.link || undefined}
+                        target={s.link ? "_blank" : undefined}
+                        rel={s.link ? "noopener noreferrer" : undefined}
+                        className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-44 sm:w-48 min-h-[125px] flex flex-col items-center justify-center group"
+                      >
+                        <div className="h-16 w-full flex items-center justify-center">
+                          <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                        <span className="text-xs font-bold text-amber-800 mt-2 line-clamp-2 w-full px-1 text-center group-hover:text-primary transition-colors leading-tight">
+                          {s.short_name || s.name}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* General / Companion Tier */}
+              {sponsors.some(s => s.tier === 'general') && (
+                <div className="space-y-3 pt-2">
+                  <span className="inline-block px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest bg-gray-50 text-gray-500 border border-gray-200">
+                    🤝 Đơn vị Đồng Hành
+                  </span>
+                  <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4">
+                    {sponsors.filter(s => s.tier === 'general').map(s => (
+                      <a
+                        key={s.id}
+                        href={s.link || undefined}
+                        target={s.link ? "_blank" : undefined}
+                        rel={s.link ? "noopener noreferrer" : undefined}
+                        className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-300 w-36 sm:w-40 min-h-[105px] flex flex-col items-center justify-center group"
+                      >
+                        <div className="h-12 w-full flex items-center justify-center">
+                          <img src={s.logo ? getFullUrl(s.logo) : getFullUrl(settings?.logo_url)} alt={s.name} className="max-h-full max-w-full object-contain opacity-80 group-hover:opacity-100 transition duration-300" />
+                        </div>
+                        <span className="text-[11px] font-semibold text-gray-600 mt-1.5 line-clamp-2 w-full px-0.5 text-center group-hover:text-primary transition-colors leading-tight">
+                          {s.short_name || s.name}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
