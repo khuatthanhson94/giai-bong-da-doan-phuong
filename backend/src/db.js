@@ -672,15 +672,15 @@ export function initDatabase() {
     db.prepare('DELETE FROM groups WHERE tournament_id IS NULL').run();
     console.log('[Database] Cleaned up stale NULL tournament_id groups and their assignments.');
 
-    // 3. Set tournament_id for other orphaned records
+    // 3. Set tournament_id for other orphaned records without triggering cloud sync during init
     const activeT = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
     if (activeT) {
       const tId = activeT.id;
-      db.prepare('UPDATE teams SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-      db.prepare('UPDATE matches SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-      db.prepare('UPDATE news SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-      db.prepare('UPDATE gallery SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-      db.prepare('UPDATE sponsors SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+      activeDb.exec(`UPDATE teams SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+      activeDb.exec(`UPDATE matches SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+      activeDb.exec(`UPDATE news SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+      activeDb.exec(`UPDATE gallery SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+      activeDb.exec(`UPDATE sponsors SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
       console.log(`[Database] Mapped orphaned records to tournament ID: ${tId}`);
     }
   } catch (err) {
