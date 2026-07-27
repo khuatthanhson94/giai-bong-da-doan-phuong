@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
     let sql = 'SELECT * FROM sponsors WHERE deleted_at IS NULL';
     const params = [];
     if (tournament_id) {
-      sql += ' AND tournament_id = ?';
+      sql += ' AND (tournament_id = ? OR tournament_id IS NULL)';
       params.push(Number(tournament_id));
     }
     sql += ' ORDER BY order_index ASC, id DESC';
