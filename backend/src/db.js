@@ -29,12 +29,8 @@ if (isVercel) {
     }
   }
 } else if (isRender) {
-  // Use persistent disk on Render
-  dataDir = '/opt/render/project/backend/data';
-  // Fallback if backend folder doesn't exist
-  if (!fs.existsSync('/opt/render/project/backend')) {
-    dataDir = '/opt/render/project/data';
-  }
+  // Use /tmp/data for Render (database file is restored from Neon PostgreSQL cloud backup on startup)
+  dataDir = '/tmp/data';
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, 'tournament.db');
 
@@ -42,12 +38,11 @@ if (isVercel) {
   if (!fs.existsSync(dbPath) && fs.existsSync(templateDbPath)) {
     try {
       fs.copyFileSync(templateDbPath, dbPath);
-      console.log(`Copied database template to Render persistent disk: ${dbPath}`);
+      console.log(`Copied database template to /tmp/data on Render: ${dbPath}`);
     } catch (e) {
-      console.error('Failed to copy database template to Render persistent disk:', e);
+      console.error('Failed to copy database template:', e);
     }
   }
-  console.log('Using persistent disk on Render:', dbPath);
 } else {
   dataDir = path.join(__dirname, '..', 'data');
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
