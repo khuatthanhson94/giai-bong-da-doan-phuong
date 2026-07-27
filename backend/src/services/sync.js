@@ -40,10 +40,12 @@ export async function restoreDatabase(dbPath) {
 
   console.log(`[Sync] Restoring database from cloud storage (${dbUrls.length} Neon instances configured)...`);
   
-  let restored = false;
+  let latestData = null;
+  let latestTime = null;
+  let latestSource = null;
 
   for (const { name, url } of dbUrls) {
-    console.log(`[Sync] Attempting restore from ${name}...`);
+    console.log(`[Sync] Attempting check/restore from ${name}...`);
     let client = null;
     try {
       client = new Client({ connectionString: url });
@@ -59,27 +61,30 @@ export async function restoreDatabase(dbPath) {
 
       try { await client.query(`DROP TABLE IF EXISTS uploaded_files;`); } catch (e) {}
 
-      const res = await client.query("SELECT data FROM sqlite_sync WHERE key = $1", ["tournament.db"]);
+      const res = await client.query("SELECT data, updated_at FROM sqlite_sync WHERE key = $1", ["tournament.db"]);
       if (res.rows.length > 0 && res.rows[0].data) {
-        const dir = path.dirname(dbPath);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(dbPath, res.rows[0].data);
-        console.log(`[Sync] Successfully restored database size: ${res.rows[0].data.length} bytes from ${name}`);
-        lastSyncStatus.lastRestoreSuccess = `${new Date().toISOString()} (from ${name})`;
-        restored = true;
-        await client.end();
-        break;
-      } else {
-        console.log(`[Sync] No database backup found in ${name}, trying next...`);
-        await client.end();
+        const rowTime = new Date(res.rows[0].updated_at).getTime();
+        console.log(`[Sync] Found backup in ${name} updated at: ${res.rows[0].updated_at}`);
+        if (!latestTime || rowTime > latestTime) {
+          latestTime = rowTime;
+          latestData = res.rows[0].data;
+          latestSource = name;
+        }
       }
+      await client.end();
     } catch (err) {
-      console.warn(`[Sync] Failed to restore from ${name}: ${err.message}`);
+      console.warn(`[Sync] Failed to query ${name}: ${err.message}`);
       if (client) { try { await client.end(); } catch (e) {} }
     }
   }
 
-  if (!restored) {
+  if (latestData) {
+    const dir = path.dirname(dbPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(dbPath, latestData);
+    console.log(`[Sync] Successfully restored latest database (${latestData.length} bytes) from ${latestSource}`);
+    lastSyncStatus.lastRestoreSuccess = `${new Date().toISOString()} (from ${latestSource})`;
+  } else {
     console.log("[Sync] Starting with local/template database (no valid backup found on connected Neon instances).");
     lastSyncStatus.lastRestoreSuccess = new Date().toISOString() + " (Fresh/Template)";
   }
