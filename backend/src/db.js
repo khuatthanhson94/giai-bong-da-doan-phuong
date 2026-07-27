@@ -589,31 +589,31 @@ export function initDatabase() {
 
   // Seed default season and tournament if empty, mapping existing database items
   try {
-    const seasonCount = db.prepare('SELECT COUNT(*) as count FROM seasons').get();
+    const seasonCount = activeDb.prepare('SELECT COUNT(*) as count FROM seasons').get();
     if (!seasonCount || seasonCount.count === 0) {
       console.log('No seasons found. Creating default V3.0 season...');
-      db.prepare("INSERT INTO seasons (name, year, status) VALUES ('Mùa giải 2026', 2026, 'active')").run();
+      activeDb.prepare("INSERT INTO seasons (name, year, status) VALUES ('Mùa giải 2026', 2026, 'active')").run();
     }
     
-    const defaultSeason = db.prepare("SELECT id FROM seasons WHERE name = 'Mùa giải 2026'").get();
+    const defaultSeason = activeDb.prepare("SELECT id FROM seasons WHERE name = 'Mùa giải 2026'").get();
     if (defaultSeason) {
-      const tournamentCount = db.prepare('SELECT COUNT(*) as count FROM tournaments').get();
+      const tournamentCount = activeDb.prepare('SELECT COUNT(*) as count FROM tournaments').get();
       if (!tournamentCount || tournamentCount.count === 0) {
         console.log('No tournaments found. Creating default V3.0 tournament and mapping existing data...');
-        db.prepare(`
+        activeDb.prepare(`
           INSERT INTO tournaments (season_id, name, format, status, points_win, points_draw, points_loss)
           VALUES (?, 'Giải Bóng đá Thanh niên 2026', 'group_knockout', 'active', 3, 1, 0)
         `).run(defaultSeason.id);
         
-        const defaultTournament = db.prepare("SELECT id FROM tournaments WHERE name = 'Giải Bóng đá Thanh niên 2026'").get();
+        const defaultTournament = activeDb.prepare("SELECT id FROM tournaments WHERE name = 'Giải Bóng đá Thanh niên 2026'").get();
         if (defaultTournament) {
           const tId = defaultTournament.id;
-          db.prepare('UPDATE teams SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-          db.prepare('UPDATE groups SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-          db.prepare('UPDATE matches SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-          db.prepare('UPDATE news SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-          db.prepare('UPDATE gallery SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
-          db.prepare('UPDATE sponsors SET tournament_id = ? WHERE tournament_id IS NULL').run(tId);
+          activeDb.exec(`UPDATE teams SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+          activeDb.exec(`UPDATE groups SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+          activeDb.exec(`UPDATE matches SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+          activeDb.exec(`UPDATE news SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+          activeDb.exec(`UPDATE gallery SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
+          activeDb.exec(`UPDATE sponsors SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
           console.log(`Mapped all existing teams, matches, groups, news, gallery, and sponsors to default tournament ID: ${tId}`);
         }
       }
@@ -626,16 +626,16 @@ export function initDatabase() {
   }
 
   // Automatically seed users if empty
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
+  const userCount = activeDb.prepare('SELECT COUNT(*) as count FROM users').get();
   if (!userCount || userCount.count === 0) {
     console.log('Database empty. Running automatic seed of default users...');
     const adminHash = bcrypt.hashSync('admin123', 10);
     const bientapHash = bcrypt.hashSync('bientap123', 10);
     const nhapketquaHash = bcrypt.hashSync('ketqua123', 10);
 
-    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('admin', ?, 'super_admin')").run(adminHash);
-    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('bientap', ?, 'editor')").run(bientapHash);
-    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('nhapketqua', ?, 'scorekeeper')").run(nhapketquaHash);
+    activeDb.prepare("INSERT INTO users (username, password_hash, role) VALUES ('admin', ?, 'super_admin')").run(adminHash);
+    activeDb.prepare("INSERT INTO users (username, password_hash, role) VALUES ('bientap', ?, 'editor')").run(bientapHash);
+    activeDb.prepare("INSERT INTO users (username, password_hash, role) VALUES ('nhapketqua', ?, 'scorekeeper')").run(nhapketquaHash);
     
     // Seed settings
     const settings = [
@@ -649,7 +649,7 @@ export function initDatabase() {
       ['about', 'Giải bóng đá Thanh niên do Đoàn phường tổ chức nhằm tạo sân chơi lành mạnh, rèn luyện thể chất và tinh thần đoàn kết cho thanh niên trên địa bàn phường.'],
       ['livestream_url', ''],
     ];
-    const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+    const upsert = activeDb.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
     for (const [k, v] of settings) upsert.run(k, v);
     
     console.log('Seeded:');
@@ -662,18 +662,18 @@ export function initDatabase() {
   try {
     cleanOldRecycleBin();
     // Clean up stale group teams pointing to deleted groups
-    db.prepare('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE deleted_at IS NOT NULL)').run();
+    activeDb.exec('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE deleted_at IS NOT NULL)');
     console.log('[Database] Cleaned up stale group_teams assignments.');
 
     // Clean up duplicate groups that have NULL tournament_id, and update other orphans
     // 1. Delete group_teams assignments for groups with NULL tournament_id
-    db.prepare('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE tournament_id IS NULL)').run();
+    activeDb.exec('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE tournament_id IS NULL)');
     // 2. Delete the groups themselves
-    db.prepare('DELETE FROM groups WHERE tournament_id IS NULL').run();
+    activeDb.exec('DELETE FROM groups WHERE tournament_id IS NULL');
     console.log('[Database] Cleaned up stale NULL tournament_id groups and their assignments.');
 
     // 3. Set tournament_id for other orphaned records without triggering cloud sync during init
-    const activeT = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+    const activeT = activeDb.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
     if (activeT) {
       const tId = activeT.id;
       activeDb.exec(`UPDATE teams SET tournament_id = ${tId} WHERE tournament_id IS NULL`);
