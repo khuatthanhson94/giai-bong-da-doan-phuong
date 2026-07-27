@@ -11,7 +11,10 @@ const TIERS = [
   { value: 'general', label: '🤝 Đồng hành' }
 ];
 
+import { useTournament } from '../../context/TournamentContext';
+
 export default function AdminSponsors() {
+  const { selectedTournamentId } = useTournament();
   const [sponsors, setSponsors] = useState([]);
   const [form, setForm] = useState({
     name: '',
@@ -29,7 +32,8 @@ export default function AdminSponsors() {
   const fileInputRef = useRef(null);
 
   const load = () => {
-    api.get('/sponsors').then((data) => {
+    const query = selectedTournamentId ? `?tournament_id=${selectedTournamentId}` : '';
+    api.get(`/sponsors${query}`).then((data) => {
       setSponsors(data);
       setSelectedIds([]);
     });
@@ -52,7 +56,7 @@ export default function AdminSponsors() {
   useEffect(() => {
     load();
     api.get('/settings').then(setSettings).catch(console.error);
-  }, []);
+  }, [selectedTournamentId]);
 
   const handleLogoChange = async (e) => {
     const file = e.target.files[0];
@@ -72,10 +76,11 @@ export default function AdminSponsors() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = { ...form, tournament_id: selectedTournamentId };
       if (editId) {
-        await api.put(`/sponsors/${editId}`, form);
+        await api.put(`/sponsors/${editId}`, payload);
       } else {
-        await api.post('/sponsors', form);
+        await api.post('/sponsors', payload);
       }
       load();
       setShowForm(false);
