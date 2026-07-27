@@ -5,22 +5,27 @@ import MatchCard, { Countdown } from '../components/MatchCard';
 import StandingsTable from '../components/StandingsTable';
 import { getFullUrl } from '../utils/url';
 
+import { useTournament } from '../context/TournamentContext';
+
 export default function Home() {
+  const { selectedTournamentId } = useTournament();
   const [data, setData] = useState(null);
   const [teams, setTeams] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [activeHomeTab, setActiveHomeTab] = useState('group');
 
   const loadHomeData = () => {
-    api.get('/home').then(setData).catch(console.error);
+    const query = selectedTournamentId ? `?tournament_id=${selectedTournamentId}` : '';
+    api.get(`/home${query}`).then(setData).catch(console.error);
   };
 
   // Fetch home data, teams list and sponsors
   useEffect(() => {
     loadHomeData();
-    api.get('/teams').then(setTeams).catch(console.error);
-    api.get('/sponsors').then(setSponsors).catch(console.error);
-  }, []);
+    const query = selectedTournamentId ? `?tournament_id=${selectedTournamentId}` : '';
+    api.get(`/teams${query}`).then(setTeams).catch(console.error);
+    api.get(`/sponsors${query}`).then(setSponsors).catch(console.error);
+  }, [selectedTournamentId]);
 
   // Poll home data every 5 seconds if there are active live matches
   useEffect(() => {
