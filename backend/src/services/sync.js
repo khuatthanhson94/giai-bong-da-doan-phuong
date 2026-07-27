@@ -163,7 +163,7 @@ export function scheduleSync(dbPath) {
       console.error("[Sync] Background backup error:", err.message);
       lastSyncStatus.lastBackupError = err.message;
     });
-  }, 2000); // sync 2 seconds after last write
+  }, 10000); // sync 10 seconds after last write (optimized network transfer)
 }
 
 export function getSyncStatus() {
