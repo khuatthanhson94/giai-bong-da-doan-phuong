@@ -71,6 +71,11 @@ export async function restoreDatabase(dbPath) {
       );
     `);
 
+    // Clean up old heavy uploaded_files table from Neon if it exists to keep Neon usage under 5MB
+    try {
+      await client.query(`DROP TABLE IF EXISTS uploaded_files;`);
+    } catch (e) {}
+
     const res = await client.query("SELECT data FROM sqlite_sync WHERE key = $1", ["tournament.db"]);
     if (res.rows.length > 0 && res.rows[0].data) {
       const dir = path.dirname(dbPath);
