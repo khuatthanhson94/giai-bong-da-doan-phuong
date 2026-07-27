@@ -21,7 +21,3 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-    disk:
-      name: data
-      mountPath: /opt/render/project/backend/data
-      sizeGB: 1
