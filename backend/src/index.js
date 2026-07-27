@@ -159,11 +159,13 @@ app.get('/api/debug/uploads', (req, res) => {
 });
 
 app.get('/api/debug/sync', async (req, res) => {
-  const url = process.env.SYNC_DATABASE_URL;
-  if (!url) {
+  const urlPrimary = process.env.SYNC_DATABASE_URL;
+  const urlBackup = process.env.SYNC_DATABASE_URL_BACKUP;
+  
+  if (!urlPrimary && !urlBackup) {
     return res.json({
       configured: false,
-      message: 'SYNC_DATABASE_URL is not set on Render dashboard environment variables.'
+      message: 'No SYNC_DATABASE_URL or SYNC_DATABASE_URL_BACKUP set in environment.'
     });
   }
 
@@ -171,63 +173,47 @@ app.get('/api/debug/sync', async (req, res) => {
   const localExists = fs.existsSync(dbPath);
   const localSize = localExists ? fs.statSync(dbPath).size : 0;
 
-  let dbPathDebug = dbPath;
-  let connectionStatus = 'unknown';
-  let cloudDbInfo = null;
-  let error = null;
-
-  try {
-    const pg = await import('pg');
-    const client = new pg.default.Client({ connectionString: url });
-    await client.connect();
-    connectionStatus = 'connected';
-
+  const pg = await import('pg');
+  const checkNeon = async (url, name) => {
+    if (!url) return { configured: false };
     try {
-      const tableCheck = await client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'sqlite_sync'
-        );
-      `);
-      
-      const hasTable = tableCheck.rows[0].exists;
-      if (hasTable) {
+      const client = new pg.default.Client({ connectionString: url });
+      await client.connect();
+      try {
         const metadata = await client.query('SELECT LENGTH(data) as size, updated_at FROM sqlite_sync WHERE key = $1', ['tournament.db']);
         if (metadata.rows.length > 0) {
-          cloudDbInfo = {
-            found: true,
+          return {
+            configured: true,
+            status: 'connected',
             sizeBytes: parseInt(metadata.rows[0].size),
             updatedAt: metadata.rows[0].updated_at
           };
-        } else {
-          cloudDbInfo = { found: false, message: 'Table exists but tournament.db key not found.' };
         }
-      } else {
-        cloudDbInfo = { found: false, message: 'sqlite_sync table does not exist.' };
+        return { configured: true, status: 'connected', found: false, message: 'Table exists but tournament.db key not found.' };
+      } finally {
+        await client.end();
       }
-    } finally {
-      await client.end();
+    } catch (err) {
+      return { configured: true, status: 'failed', error: err.message };
     }
-  } catch (err) {
-    connectionStatus = 'failed';
-    error = err.message;
-  }
+  };
+
+  const primaryStatus = await checkNeon(urlPrimary, 'Primary');
+  const backupStatus = await checkNeon(urlBackup, 'Backup');
 
   const { getSyncStatus } = await import('./services/sync.js');
   const syncStatus = getSyncStatus();
 
   res.json({
     configured: true,
-    maskedUrl: url.replace(/:([^:@]+)@/, ':****@'),
-    connectionStatus,
     syncStatus,
     localDb: {
-      path: dbPathDebug,
+      path: dbPath,
       exists: localExists,
       sizeBytes: localSize
     },
-    cloudDb: cloudDbInfo,
-    error
+    primaryNeon: primaryStatus,
+    backupNeon: backupStatus
   });
 });
 
