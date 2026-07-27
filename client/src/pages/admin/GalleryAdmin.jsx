@@ -3,17 +3,23 @@ import api from '../../api/client';
 
 import { getFullUrl } from '../../utils/url';
 
+import { useTournament } from '../../context/TournamentContext';
+
 export default function AdminGallery() {
+  const { selectedTournamentId } = useTournament();
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ title: '', image_url: '', video_url: '', album: 'Chung', type: 'image' });
   const [showForm, setShowForm] = useState(false);
 
-  const load = () => api.get('/gallery').then(setItems);
-  useEffect(() => { load(); }, []);
+  const load = () => {
+    const query = selectedTournamentId ? `?tournament_id=${selectedTournamentId}` : '';
+    api.get(`/gallery${query}`).then(setItems);
+  };
+  useEffect(() => { load(); }, [selectedTournamentId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await api.post('/gallery', form);
+    await api.post('/gallery', { ...form, tournament_id: selectedTournamentId });
     setForm({ title: '', image_url: '', video_url: '', album: 'Chung', type: 'image' });
     setShowForm(false);
     load();

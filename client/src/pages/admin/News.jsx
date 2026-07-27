@@ -4,18 +4,24 @@ import RichTextEditor from '../../components/RichTextEditor';
 import { getFullUrl } from '../../utils/url';
 import { resizeImage } from '../../utils/imageResize';
 
+import { useTournament } from '../../context/TournamentContext';
+
 export default function AdminNews() {
+  const { selectedTournamentId } = useTournament();
   const [news, setNews] = useState([]);
   const [form, setForm] = useState({ title: '', content: '', category: 'general', image: '', video_url: '', published: 1 });
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  const load = () => api.get('/news/admin/all').then((data) => {
-    setNews(data);
-    setSelectedIds([]);
-  });
-  useEffect(() => { load(); }, []);
+  const load = () => {
+    const query = selectedTournamentId ? `?tournament_id=${selectedTournamentId}` : '';
+    api.get(`/news/admin/all${query}`).then((data) => {
+      setNews(data);
+      setSelectedIds([]);
+    });
+  };
+  useEffect(() => { load(); }, [selectedTournamentId]);
 
   const handleBulkDelete = async () => {
     if (!selectedIds.length) return;
@@ -33,8 +39,9 @@ export default function AdminNews() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editId) await api.put(`/news/${editId}`, form);
-    else await api.post('/news', form);
+    const payload = { ...form, tournament_id: selectedTournamentId };
+    if (editId) await api.put(`/news/${editId}`, payload);
+    else await api.post('/news', payload);
     setShowForm(false);
     setEditId(null);
     setForm({ title: '', content: '', category: 'general', image: '', video_url: '', published: 1 });
