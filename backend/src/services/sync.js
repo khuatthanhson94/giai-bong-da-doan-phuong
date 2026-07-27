@@ -145,8 +145,8 @@ export async function backupDatabase(dbPath) {
 
 // Debounced sync scheduling
 export function scheduleSync(dbPath) {
-  const url = process.env.SYNC_DATABASE_URL;
-  if (!url) return;
+  const dbUrls = getDatabaseUrls();
+  if (dbUrls.length === 0) return;
 
   if (!isReadyToBackup) {
     console.warn("[Sync] Schedule backup skipped: database is not ready.");

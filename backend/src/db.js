@@ -58,7 +58,7 @@ const uploadDir = process.env.VERCEL
       : path.join(__dirname, '..', 'uploads'));
 
 // Top-level await to restore SQLite database from PostgreSQL cloud storage on startup
-if (process.env.SYNC_DATABASE_URL) {
+if (process.env.SYNC_DATABASE_URL || process.env.SYNC_DATABASE_URL_BACKUP) {
   try {
     await restoreDatabase(dbPath);
     // Restore uploads in the background so the server can start listening immediately
