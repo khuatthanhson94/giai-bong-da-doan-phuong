@@ -114,6 +114,13 @@ export async function backupDatabase(dbPath) {
 
       try {
         await client.query(`
+          CREATE TABLE IF NOT EXISTS sqlite_sync (
+            key VARCHAR(255) PRIMARY KEY,
+            data BYTEA,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        await client.query(`
           INSERT INTO sqlite_sync (key, data, updated_at)
           VALUES ($1, $2, CURRENT_TIMESTAMP)
           ON CONFLICT (key) DO UPDATE
