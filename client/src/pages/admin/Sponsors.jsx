@@ -87,6 +87,7 @@ export default function AdminSponsors() {
       setForm({ name: '', short_name: '', logo: '', link: '', tier: 'general', order_index: 0 });
       setLogoPreview('');
       setEditId(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       alert(err.message || 'Có lỗi xảy ra khi lưu nhà tài trợ.');
     }
@@ -128,6 +129,7 @@ export default function AdminSponsors() {
             setEditId(null);
             setForm({ name: '', short_name: '', logo: '', link: '', tier: 'general', order_index: 0 });
             setLogoPreview('');
+            if (fileInputRef.current) fileInputRef.current.value = '';
           }}
           className="btn-primary text-sm py-2 px-4 self-center sm:self-auto"
         >
