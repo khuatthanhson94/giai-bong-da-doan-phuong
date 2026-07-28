@@ -125,6 +125,9 @@ export function reopenDatabase(sourcePath) {
     activeDb.exec('PRAGMA synchronous = NORMAL');
   } catch (e) {}
   console.log('[Database] Re-opened active connection.');
+  if (sourcePath) {
+    scheduleSync(dbPath);
+  }
 }
 
 // Proxy wrapper for SQLite DatabaseSync to automatically backup changes

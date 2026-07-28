@@ -262,13 +262,10 @@ app.post('/api/admin/restore-database', upload.single('database'), async (req, r
   if (!req.file) return res.status(400).json({ error: 'Không có file database' });
   
   try {
-    const { dbPath } = await import('./db.js');
+    const { reopenDatabase, dbPath } = await import('./db.js');
     
-    // Copy uploaded database to replace current one
-    fs.copyFileSync(req.file.path, dbPath);
-    
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+    // Reopen database using uploaded file safely
+    reopenDatabase(req.file.path);
 
     // Sync to cloud backup immediately
     try {
