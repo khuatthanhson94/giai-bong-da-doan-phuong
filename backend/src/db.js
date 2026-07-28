@@ -47,16 +47,22 @@ const uploadDir = process.env.VERCEL
       ? path.join(dataDir, 'uploads')
       : path.join(__dirname, '..', 'uploads'));
 
+// Track whether we successfully restored existing data from Neon.
+// Used later in initDatabase() to skip seeding when real data already exists.
+let restoredExistingData = false;
+
 // Top-level await to restore SQLite database from PostgreSQL cloud storage on startup
 if (process.env.SYNC_DATABASE_URL || process.env.SYNC_DATABASE_URL_BACKUP) {
   try {
-    await restoreDatabase(dbPath);
+    restoredExistingData = await restoreDatabase(dbPath);
     // Restore uploads in the background so the server can start listening immediately
     restoreUploads(uploadDir).catch((err) => {
       console.error('[Sync] Background restore uploads error:', err.message);
     });
   } catch (err) {
     console.error('[Sync] Error during startup restore:', err.message);
+    // restoreDatabase threw unexpectedly — do NOT allow backup to avoid overwriting cloud data
+    restoredExistingData = false;
   }
 }
 
@@ -68,6 +74,16 @@ try {
   rawDb.exec('PRAGMA temp_store = MEMORY');
 } catch (e) {
   // Ignore pragma errors if unsupported
+}
+
+export function checkpointDatabase() {
+  try {
+    if (activeDb) {
+      activeDb.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    }
+  } catch (err) {
+    console.warn('[Database] WAL checkpoint error:', err.message);
+  }
 }
 
 // Helper to check if a query modifies data
@@ -82,6 +98,7 @@ let activeDb = rawDb;
 
 export function reopenDatabase(sourcePath) {
   try {
+    checkpointDatabase();
     activeDb.close();
     console.log('[Database] Closed active connection.');
   } catch (err) {
@@ -124,13 +141,25 @@ export const db = new Proxy({}, {
       return function (sql) {
         const stmt = activeDb.prepare(sql);
         const rawRun = stmt.run;
-        
+        const rawGet = stmt.get;
+        const rawAll = stmt.all;
+
         stmt.run = function (...args) {
           const result = rawRun.apply(stmt, args);
           triggerSyncIfWrite(sql);
           return result;
         };
-        
+        stmt.get = function (...args) {
+          const result = rawGet.apply(stmt, args);
+          triggerSyncIfWrite(sql);
+          return result;
+        };
+        stmt.all = function (...args) {
+          const result = rawAll.apply(stmt, args);
+          triggerSyncIfWrite(sql);
+          return result;
+        };
+
         return stmt;
       };
     }
@@ -141,6 +170,25 @@ export const db = new Proxy({}, {
     return value;
   }
 });
+
+let isShuttingDown = false;
+async function handleProcessExit(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`[Database] Caught signal ${signal}. Flushing WAL & backing up database to cloud...`);
+  checkpointDatabase();
+  try {
+    const { backupDatabase } = await import('./services/sync.js');
+    await backupDatabase(dbPath);
+    console.log('[Database] Graceful shutdown cloud backup complete.');
+  } catch (err) {
+    console.error('[Database] Graceful shutdown cloud backup error:', err.message);
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => handleProcessExit('SIGTERM'));
+process.on('SIGINT', () => handleProcessExit('SIGINT'));
 
 export { dbPath, uploadDir };
 // Enable foreign key constraints for cascade deletes
@@ -615,10 +663,19 @@ export function initDatabase() {
     console.error('Error during V3.0 season/tournament database migration:', err);
   }
 
-  // Automatically seed users if empty
+  // Automatically seed users only if the database is truly empty (no restore happened)
+  // If restoredExistingData is true, we trust the restored DB already has users.
   const userCount = activeDb.prepare('SELECT COUNT(*) as count FROM users').get();
+  const teamsCount = activeDb.prepare('SELECT COUNT(*) as count FROM teams').get();
+  const hasRealData = (teamsCount && teamsCount.count > 0) || restoredExistingData;
+
   if (!userCount || userCount.count === 0) {
-    console.log('Database empty. Running automatic seed of default users...');
+    if (hasRealData) {
+      // Teams exist but no users — only seed users, leave other data intact
+      console.log('[Database] Teams found but no users. Seeding default users only...');
+    } else {
+      console.log('[Database] Database empty. Running automatic seed of default users...');
+    }
     const adminHash = bcrypt.hashSync('admin123', 10);
     const bientapHash = bcrypt.hashSync('bientap123', 10);
     const nhapketquaHash = bcrypt.hashSync('ketqua123', 10);
@@ -626,22 +683,24 @@ export function initDatabase() {
     activeDb.prepare("INSERT INTO users (username, password_hash, role) VALUES ('admin', ?, 'super_admin')").run(adminHash);
     activeDb.prepare("INSERT INTO users (username, password_hash, role) VALUES ('bientap', ?, 'editor')").run(bientapHash);
     activeDb.prepare("INSERT INTO users (username, password_hash, role) VALUES ('nhapketqua', ?, 'scorekeeper')").run(nhapketquaHash);
-    
-    // Seed settings
-    const settings = [
-      ['tournament_name', 'Giải Bóng đá Thanh niên Đoàn phường 2026'],
-      ['slogan', 'Đoàn kết - Kỷ luật - Sáng tạo - Thành công'],
-      ['banner', ''],
-      ['union_logo', ''],
-      ['contact_phone', '0123 456 789'],
-      ['contact_email', 'doanphuong@example.com'],
-      ['contact_address', 'UBND Phường, Quận/Huyện, Tỉnh/TP'],
-      ['about', 'Giải bóng đá Thanh niên do Đoàn phường tổ chức nhằm tạo sân chơi lành mạnh, rèn luyện thể chất và tinh thần đoàn kết cho thanh niên trên địa bàn phường.'],
-      ['livestream_url', ''],
-    ];
-    const upsert = activeDb.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-    for (const [k, v] of settings) upsert.run(k, v);
-    
+
+    if (!hasRealData) {
+      // Only seed settings when starting from scratch (no real data at all)
+      const settings = [
+        ['tournament_name', 'Giải Bóng đá Thanh niên Đoàn phường 2026'],
+        ['slogan', 'Đoàn kết - Kỷ luật - Sáng tạo - Thành công'],
+        ['banner', ''],
+        ['union_logo', ''],
+        ['contact_phone', '0123 456 789'],
+        ['contact_email', 'doanphuong@example.com'],
+        ['contact_address', 'UBND Phường, Quận/Huyện, Tỉnh/TP'],
+        ['about', 'Giải bóng đá Thanh niên do Đoàn phường tổ chức nhằm tạo sân chơi lành mạnh, rèn luyện thể chất và tinh thần đoàn kết cho thanh niên trên địa bàn phường.'],
+        ['livestream_url', ''],
+      ];
+      const upsert = activeDb.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+      for (const [k, v] of settings) upsert.run(k, v);
+    }
+
     console.log('Seeded:');
     console.log('- admin / admin123 (super_admin)');
     console.log('- bientap / bientap123 (editor)');
@@ -651,18 +710,24 @@ export function initDatabase() {
   // Run recycle bin auto-cleanup on startup
   try {
     cleanOldRecycleBin();
-    // Clean up stale group teams pointing to deleted groups
+    // Clean up stale group teams pointing to SOFT-DELETED groups (deleted_at IS NOT NULL)
     activeDb.exec('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE deleted_at IS NOT NULL)');
     console.log('[Database] Cleaned up stale group_teams assignments.');
 
-    // Clean up duplicate groups that have NULL tournament_id, and update other orphans
-    // 1. Delete group_teams assignments for groups with NULL tournament_id
-    activeDb.exec('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE tournament_id IS NULL)');
-    // 2. Delete the groups themselves
-    activeDb.exec('DELETE FROM groups WHERE tournament_id IS NULL');
-    console.log('[Database] Cleaned up stale NULL tournament_id groups and their assignments.');
+    // Only delete NULL tournament_id groups if there are actual tournaments in the DB.
+    // This prevents wiping groups from a freshly-restored database that hasn't been
+    // migrated yet, or when restore failed and DB is in an intermediate state.
+    const tournamentCountForCleanup = activeDb.prepare('SELECT COUNT(*) as count FROM tournaments WHERE deleted_at IS NULL').get();
+    if (tournamentCountForCleanup && tournamentCountForCleanup.count > 0) {
+      // Clean up groups that truly have no tournament (orphaned, not migrated ones)
+      activeDb.exec('DELETE FROM group_teams WHERE group_id IN (SELECT id FROM groups WHERE tournament_id IS NULL)');
+      activeDb.exec('DELETE FROM groups WHERE tournament_id IS NULL');
+      console.log('[Database] Cleaned up stale NULL tournament_id groups and their assignments.');
+    } else {
+      console.log('[Database] Skipping NULL tournament_id group cleanup: no tournaments found yet (safe skip).');
+    }
 
-    // 3. Set tournament_id for other orphaned records without triggering cloud sync during init
+    // Set tournament_id for other orphaned records without triggering cloud sync during init
     const activeT = activeDb.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
     if (activeT) {
       const tId = activeT.id;
