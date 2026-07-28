@@ -33,16 +33,6 @@ if (isVercel) {
   dataDir = '/tmp/data';
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, 'tournament.db');
-
-  const templateDbPath = path.join(__dirname, '..', 'data', 'tournament.db');
-  if (!fs.existsSync(dbPath) && fs.existsSync(templateDbPath)) {
-    try {
-      fs.copyFileSync(templateDbPath, dbPath);
-      console.log(`Copied database template to /tmp/data on Render: ${dbPath}`);
-    } catch (e) {
-      console.error('Failed to copy database template:', e);
-    }
-  }
 } else {
   dataDir = path.join(__dirname, '..', 'data');
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });

@@ -85,6 +85,17 @@ export async function restoreDatabase(dbPath) {
     console.log(`[Sync] Successfully restored latest database (${latestData.length} bytes) from ${latestSource}`);
     lastSyncStatus.lastRestoreSuccess = `${new Date().toISOString()} (from ${latestSource})`;
   } else {
+    const dir = path.dirname(dbPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const templateDbPath = path.join(process.cwd(), 'data', 'tournament.db');
+    if (!fs.existsSync(dbPath) && fs.existsSync(templateDbPath)) {
+      try {
+        fs.copyFileSync(templateDbPath, dbPath);
+        console.log("[Sync] Copied initial template database file to " + dbPath);
+      } catch (e) {
+        console.error("[Sync] Failed to copy initial template database:", e.message);
+      }
+    }
     console.log("[Sync] Starting with local/template database (no valid backup found on connected Neon instances).");
     lastSyncStatus.lastRestoreSuccess = new Date().toISOString() + " (Fresh/Template)";
   }
