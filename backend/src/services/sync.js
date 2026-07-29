@@ -20,12 +20,22 @@ export let lastSyncStatus = {
 // Helper to delay execution
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-function getDatabaseUrls() {
-  const primary = process.env.SYNC_DATABASE_URL ? process.env.SYNC_DATABASE_URL.trim() : null;
+export function getDatabaseUrls() {
+  const primary = (
+    process.env.SYNC_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.NEON_DATABASE_URL
+  );
+  const cleanPrimary = primary ? primary.trim() : null;
   const backup = process.env.SYNC_DATABASE_URL_BACKUP ? process.env.SYNC_DATABASE_URL_BACKUP.trim() : null;
   const list = [];
-  if (primary) list.push({ name: 'Primary Neon', url: primary });
-  if (backup) list.push({ name: 'Backup Neon', url: backup });
+  if (cleanPrimary && (cleanPrimary.startsWith('postgres://') || cleanPrimary.startsWith('postgresql://'))) {
+    list.push({ name: 'Primary Neon', url: cleanPrimary });
+  }
+  if (backup && (backup.startsWith('postgres://') || backup.startsWith('postgresql://'))) {
+    list.push({ name: 'Backup Neon', url: backup });
+  }
   return list;
 }
 
@@ -281,7 +291,7 @@ export function scheduleSync(dbPath) {
       console.error("[Sync] Background backup error:", err.message);
       lastSyncStatus.lastBackupError = err.message;
     });
-  }, 1000); // Sync 1 second after write
+  }, 500); // Sync 500ms after write
 }
 
 export function getSyncStatus() {

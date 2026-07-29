@@ -159,13 +159,18 @@ app.get('/api/debug/uploads', (req, res) => {
 });
 
 app.get('/api/debug/sync', async (req, res) => {
-  const urlPrimary = process.env.SYNC_DATABASE_URL;
+  const urlPrimary = (
+    process.env.SYNC_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.NEON_DATABASE_URL
+  );
   const urlBackup = process.env.SYNC_DATABASE_URL_BACKUP;
   
   if (!urlPrimary && !urlBackup) {
     return res.json({
       configured: false,
-      message: 'No SYNC_DATABASE_URL or SYNC_DATABASE_URL_BACKUP set in environment.'
+      message: 'No SYNC_DATABASE_URL, DATABASE_URL, POSTGRES_URL, or SYNC_DATABASE_URL_BACKUP set in environment.'
     });
   }
 
@@ -282,7 +287,13 @@ app.post('/api/admin/restore-database', upload.single('database'), async (req, r
 });
 
 app.get('/api/debug/raw-db-url', (req, res) => {
-  res.json({ url: process.env.SYNC_DATABASE_URL || 'not set' });
+  const url = (
+    process.env.SYNC_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.NEON_DATABASE_URL
+  );
+  res.json({ url: url ? url.substring(0, 15) + '...' : 'not set' });
 });
 
 if (!process.env.VERCEL) {
