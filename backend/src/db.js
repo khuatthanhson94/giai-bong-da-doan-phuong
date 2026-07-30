@@ -801,10 +801,10 @@ export function performAutoBackup() {
 
 export function cleanOldRecycleBin() {
   try {
-    const threshold = "datetime('now', '-30 days')";
+    const whereClause = "WHERE deleted_at IS NOT NULL AND julianday(deleted_at) < julianday('now', '-30 days')";
     
     // Deleting teams and their players
-    const oldTeams = db.prepare(`SELECT id FROM teams WHERE deleted_at < ${threshold}`).all();
+    const oldTeams = db.prepare(`SELECT id FROM teams ${whereClause}`).all();
     for (const team of oldTeams) {
       db.prepare('DELETE FROM players WHERE team_id = ?').run(team.id);
       db.prepare('DELETE FROM group_teams WHERE team_id = ?').run(team.id);
@@ -813,20 +813,20 @@ export function cleanOldRecycleBin() {
       db.prepare('DELETE FROM teams WHERE id = ?').run(team.id);
     }
 
-    db.prepare(`DELETE FROM players WHERE deleted_at < ${threshold}`).run();
-    db.prepare(`DELETE FROM matches WHERE deleted_at < ${threshold}`).run();
-    db.prepare(`DELETE FROM groups WHERE deleted_at < ${threshold}`).run();
-    db.prepare(`DELETE FROM news WHERE deleted_at < ${threshold}`).run();
-    db.prepare(`DELETE FROM sponsors WHERE deleted_at < ${threshold}`).run();
+    db.prepare(`DELETE FROM players ${whereClause}`).run();
+    db.prepare(`DELETE FROM matches ${whereClause}`).run();
+    db.prepare(`DELETE FROM groups ${whereClause}`).run();
+    db.prepare(`DELETE FROM news ${whereClause}`).run();
+    db.prepare(`DELETE FROM sponsors ${whereClause}`).run();
     
     // Deleting seasons and their tournaments
-    const oldSeasons = db.prepare(`SELECT id FROM seasons WHERE deleted_at < ${threshold}`).all();
+    const oldSeasons = db.prepare(`SELECT id FROM seasons ${whereClause}`).all();
     for (const season of oldSeasons) {
       db.prepare('DELETE FROM tournaments WHERE season_id = ?').run(season.id);
       db.prepare('DELETE FROM seasons WHERE id = ?').run(season.id);
     }
     
-    db.prepare(`DELETE FROM tournaments WHERE deleted_at < ${threshold}`).run();
+    db.prepare(`DELETE FROM tournaments ${whereClause}`).run();
     
     console.log('[RecycleBin] Auto-purged old items deleted more than 30 days ago.');
   } catch (err) {

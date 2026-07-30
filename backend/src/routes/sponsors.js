@@ -59,21 +59,27 @@ router.post('/', authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN), (req
 
 // PUT update sponsor (Admin only)
 router.put('/:id', authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN), (req, res) => {
-  const { name, short_name, logo, link, tier, order_index } = req.body;
   const { id } = req.params;
   
-  if (!name) {
-    return res.status(400).json({ error: 'Tên nhà tài trợ không được trống' });
-  }
-  
   try {
-    const targetSponsor = db.prepare('SELECT name FROM sponsors WHERE id = ? AND deleted_at IS NULL').get(id);
+    const targetSponsor = db.prepare('SELECT * FROM sponsors WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!targetSponsor) return res.status(404).json({ error: 'Không tìm thấy nhà tài trợ' });
 
-    const result = db.prepare(`
+    const name = req.body.name !== undefined ? req.body.name : targetSponsor.name;
+    const short_name = req.body.short_name !== undefined ? req.body.short_name : targetSponsor.short_name;
+    const logo = req.body.logo !== undefined ? req.body.logo : targetSponsor.logo;
+    const link = req.body.link !== undefined ? req.body.link : targetSponsor.link;
+    const tier = req.body.tier !== undefined ? req.body.tier : targetSponsor.tier;
+    const order_index = req.body.order_index !== undefined ? Number(req.body.order_index) : targetSponsor.order_index;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Tên nhà tài trợ không được trống' });
+    }
+
+    db.prepare(`
       UPDATE sponsors SET name = ?, short_name = ?, logo = ?, link = ?, tier = ?, order_index = ?
       WHERE id = ?
-    `).run(name, short_name || null, logo || null, link || '', tier || 'general', Number(order_index) || 0, id);
+    `).run(name, short_name, logo, link, tier, order_index, id);
     
     logAction(req.user.username, 'UPDATE_SPONSOR', `Cập nhật nhà tài trợ: ${targetSponsor.name}`);
     res.json({ message: 'Cập nhật nhà tài trợ thành công' });

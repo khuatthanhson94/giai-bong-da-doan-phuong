@@ -62,11 +62,24 @@ router.post('/', adminOnly, (req, res) => {
 
 // CRUD: Update Tournament
 router.put('/:id', adminOnly, (req, res) => {
-  const { name, logo, banner, format, points_win, points_draw, points_loss, advance_count, status, settings } = req.body;
-  if (!name) return res.status(400).json({ error: 'Thiếu tên giải đấu' });
   try {
-    const item = db.prepare('SELECT name FROM tournaments WHERE id = ?').get(req.params.id);
+    const item = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(req.params.id);
     if (!item) return res.status(404).json({ error: 'Không tìm thấy giải đấu' });
+
+    const name = req.body.name !== undefined ? req.body.name : item.name;
+    if (!name) return res.status(400).json({ error: 'Thiếu tên giải đấu' });
+
+    const logo = req.body.logo !== undefined ? req.body.logo : item.logo;
+    const banner = req.body.banner !== undefined ? req.body.banner : item.banner;
+    const format = req.body.format !== undefined ? req.body.format : item.format;
+    const points_win = req.body.points_win !== undefined ? Number(req.body.points_win) : item.points_win;
+    const points_draw = req.body.points_draw !== undefined ? Number(req.body.points_draw) : item.points_draw;
+    const points_loss = req.body.points_loss !== undefined ? Number(req.body.points_loss) : item.points_loss;
+    const advance_count = req.body.advance_count !== undefined ? Number(req.body.advance_count) : item.advance_count;
+    const status = req.body.status !== undefined ? req.body.status : item.status;
+    const settings = req.body.settings !== undefined 
+      ? (typeof req.body.settings === 'string' ? req.body.settings : JSON.stringify(req.body.settings))
+      : item.settings;
 
     db.prepare(`
       UPDATE tournaments
@@ -74,15 +87,15 @@ router.put('/:id', adminOnly, (req, res) => {
       WHERE id = ?
     `).run(
       name,
-      logo || null,
-      banner || null,
-      format || 'group_knockout',
-      Number(points_win ?? 3),
-      Number(points_draw ?? 1),
-      Number(points_loss ?? 0),
-      Number(advance_count ?? 2),
-      status || 'draft',
-      settings ? (typeof settings === 'string' ? settings : JSON.stringify(settings)) : null,
+      logo,
+      banner,
+      format,
+      points_win,
+      points_draw,
+      points_loss,
+      advance_count,
+      status,
+      settings,
       req.params.id
     );
 

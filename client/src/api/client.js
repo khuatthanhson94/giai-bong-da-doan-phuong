@@ -55,7 +55,7 @@ async function request(url, options = {}) {
   // Automatically inject tournament_id to POST/PUT request bodies
   let bodyContent = options.body;
   if (tId && ['POST', 'PUT'].includes(method) && !isFormData) {
-    if (options.body && typeof options.body === 'object') {
+    if (options.body && typeof options.body === 'object' && !Array.isArray(options.body)) {
       const updatedBody = { ...options.body };
       if (!updatedBody.hasOwnProperty('tournament_id')) {
         updatedBody.tournament_id = Number(tId);

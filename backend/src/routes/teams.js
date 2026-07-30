@@ -282,8 +282,16 @@ router.put('/:id', authRequired, (req, res) => {
       return res.status(403).json({ error: 'Không có quyền chỉnh sửa đội này' });
     }
 
-    const { name, logo, jersey_color, description, image, coach, stadium } = req.body;
-    const originalTeam = db.prepare('SELECT name FROM teams WHERE id = ?').get(req.params.id);
+    const originalTeam = db.prepare('SELECT * FROM teams WHERE id = ?').get(req.params.id);
+    if (!originalTeam) return res.status(404).json({ error: 'Không tìm thấy đội' });
+
+    const name = req.body.name !== undefined ? req.body.name : originalTeam.name;
+    const logo = req.body.logo !== undefined ? req.body.logo : originalTeam.logo;
+    const jersey_color = req.body.jersey_color !== undefined ? req.body.jersey_color : originalTeam.jersey_color;
+    const description = req.body.description !== undefined ? req.body.description : originalTeam.description;
+    const image = req.body.image !== undefined ? req.body.image : originalTeam.image;
+    const coach = req.body.coach !== undefined ? req.body.coach : originalTeam.coach;
+    const stadium = req.body.stadium !== undefined ? req.body.stadium : originalTeam.stadium;
 
     let info;
     if (isTeamAdmin) {

@@ -67,12 +67,20 @@ router.put('/:id', authRequired, (req, res, next) => {
   if (!canManageNews(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
-  const { title, content, image, video_url, category, published } = req.body;
-  const item = db.prepare('SELECT title FROM news WHERE id = ?').get(req.params.id);
+  const item = db.prepare('SELECT * FROM news WHERE id = ?').get(req.params.id);
+  if (!item) return res.status(404).json({ error: 'Không tìm thấy tin tức' });
+
+  const title = req.body.title !== undefined ? req.body.title : item.title;
+  const content = req.body.content !== undefined ? req.body.content : item.content;
+  const image = req.body.image !== undefined ? req.body.image : item.image;
+  const video_url = req.body.video_url !== undefined ? req.body.video_url : item.video_url;
+  const category = req.body.category !== undefined ? req.body.category : item.category;
+  const published = req.body.published !== undefined ? req.body.published : item.published;
+
   db.prepare(`
     UPDATE news SET title=?, content=?, image=?, video_url=?, category=?, published=? WHERE id=?
   `).run(title, content, image, video_url, category, published, req.params.id);
-  logAction(req.user.username, 'UPDATE_NEWS', `Cập nhật tin tức: ${item?.title || title}`);
+  logAction(req.user.username, 'UPDATE_NEWS', `Cập nhật tin tức: ${item.title}`);
   res.json({ message: 'Cập nhật thành công' });
 });
 

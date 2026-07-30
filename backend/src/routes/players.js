@@ -75,24 +75,30 @@ router.post('/', authRequired, (req, res) => {
 
 // Update player (admin and matching team accounts)
 router.put('/:id', authRequired, (req, res) => {
-  const { team_id, name, dob, jersey_number, position, photo } = req.body;
   const id = req.params.id;
 
   try {
-    const player = db.prepare('SELECT team_id, name FROM players WHERE id = ?').get(id);
+    const player = db.prepare('SELECT * FROM players WHERE id = ?').get(id);
     if (!player) return res.status(404).json({ error: 'Không tìm thấy cầu thủ' });
 
+    const targetTeamId = req.body.team_id !== undefined ? Number(req.body.team_id) : player.team_id;
     const isTeamAdmin = req.user.role === 'team' && 
                         Number(player.team_id) === Number(req.user.team_id) && 
-                        Number(team_id) === Number(req.user.team_id);
+                        targetTeamId === Number(req.user.team_id);
     const isAdmin = ['admin', 'super_admin'].includes(req.user.role);
     if (!isTeamAdmin && !isAdmin) {
       return res.status(403).json({ error: 'Không có quyền' });
     }
 
+    const name = req.body.name !== undefined ? req.body.name : player.name;
+    const dob = req.body.dob !== undefined ? req.body.dob : player.dob;
+    const jersey_number = req.body.jersey_number !== undefined ? Number(req.body.jersey_number) : player.jersey_number;
+    const position = req.body.position !== undefined ? req.body.position : player.position;
+    const photo = req.body.photo !== undefined ? req.body.photo : player.photo;
+
     db.prepare(`
       UPDATE players SET team_id=?, name=?, dob=?, jersey_number=?, position=?, photo=? WHERE id=?
-    `).run(Number(team_id), name, dob, Number(jersey_number), position, photo, id);
+    `).run(targetTeamId, name, dob, jersey_number, position, photo, id);
     logAction(req.user.username, 'UPDATE_PLAYER', `Cập nhật thông tin cầu thủ: ${player.name} (ID: ${id})`);
     res.json({ message: 'Cập nhật thành công' });
   } catch (err) {

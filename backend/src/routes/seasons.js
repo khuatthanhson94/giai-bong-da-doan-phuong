@@ -45,17 +45,23 @@ router.post('/', adminOnly, (req, res) => {
 
 // CRUD: Update Season
 router.put('/:id', adminOnly, (req, res) => {
-  const { name, year, logo, banner, status } = req.body;
-  if (!name || !year) return res.status(400).json({ error: 'Thiếu thông tin cập nhật' });
   try {
-    const item = db.prepare('SELECT name FROM seasons WHERE id = ?').get(req.params.id);
+    const item = db.prepare('SELECT * FROM seasons WHERE id = ?').get(req.params.id);
     if (!item) return res.status(404).json({ error: 'Không tìm thấy mùa giải' });
+
+    const name = req.body.name !== undefined ? req.body.name : item.name;
+    const year = req.body.year !== undefined ? Number(req.body.year) : item.year;
+    const logo = req.body.logo !== undefined ? req.body.logo : item.logo;
+    const banner = req.body.banner !== undefined ? req.body.banner : item.banner;
+    const status = req.body.status !== undefined ? req.body.status : item.status;
+
+    if (!name || !year) return res.status(400).json({ error: 'Thiếu thông tin cập nhật' });
 
     db.prepare(`
       UPDATE seasons
       SET name = ?, year = ?, logo = ?, banner = ?, status = ?
       WHERE id = ?
-    `).run(name, Number(year), logo || null, banner || null, status || 'active', req.params.id);
+    `).run(name, year, logo, banner, status, req.params.id);
 
     logAction(req.user.username, 'UPDATE_SEASON', `Cập nhật mùa giải: ${item.name} thành ${name}`);
     res.json({ message: 'Cập nhật thành công' });

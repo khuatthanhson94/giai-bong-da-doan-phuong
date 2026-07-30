@@ -134,13 +134,14 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
 
         if (groupTeams.length < 2) continue;
 
-        // Delete existing scheduled (unfinished) matches for these teams in this tournament
+        // Delete existing scheduled (unfinished, non-live) matches without events for these teams in this tournament
         const placeholders = groupTeams.map(() => '?').join(',');
         db.prepare(`
           DELETE FROM matches 
-          WHERE status != 'finished' 
+          WHERE status = 'scheduled' 
           AND tournament_id = ? 
           AND (team_a_id IN (${placeholders}) OR team_b_id IN (${placeholders}))
+          AND id NOT IN (SELECT match_id FROM goals UNION SELECT match_id FROM yellow_cards UNION SELECT match_id FROM red_cards)
         `).run(tId, ...groupTeams, ...groupTeams);
 
         // Berger Round Robin Rotation
@@ -277,24 +278,21 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
 
       const insertMatch = db.prepare(`
         INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes, tournament_id)
-        VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)
-      `);
+      for (const matchDef of config.matches || []) {
+        const teamA = resolveTeam(matchDef.teamA);
+        const teamB = resolveTeam(matchDef.teamB);
+        if (!teamA || !teamB) continue;
 
-      for (const m of config.startingMatches) {
-        const teamAId = resolveTeam(m.home);
-        const teamBId = resolveTeam(m.away);
-        if (teamAId === teamBId) {
-          throw new Error(`Hai đội đấu nhau trong một trận không thể trùng nhau.`);
-        }
-        const notes = `KO_ID: ${m.id}${m.notes ? ' | ' + m.notes : ''}`;
-        insertMatch.run(
-          config.startingRound,
-          m.match_date || '',
-          m.match_time || '08:00',
-          m.venue || 'Sân bóng Phường',
-          teamAId,
-          teamBId,
-          notes,
+        db.prepare(`
+          INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')
+        `).run(
+          matchDef.round || config.startingRound,
+          matchDef.date || getVNLocalDateString(new Date()),
+          matchDef.time || '15:00',
+          matchDef.venue || 'Sân vận động trung tâm',
+          teamA,
+          teamB,
           tId
         );
       }
@@ -340,15 +338,24 @@ router.put('/:id', authRequired, (req, res, next) => {
   }
   next();
 }, (req, res) => {
-  const { round, match_date, match_time, venue, team_a_id, team_b_id, is_friendly } = req.body;
-  const m = db.prepare('SELECT team_a_id, team_b_id, round FROM matches WHERE id = ?').get(req.params.id);
+  const m = db.prepare('SELECT * FROM matches WHERE id = ?').get(req.params.id);
+  if (!m) return res.status(404).json({ error: 'Không tìm thấy trận đấu' });
+
+  const round = req.body.round !== undefined ? req.body.round : m.round;
+  const match_date = req.body.match_date !== undefined ? req.body.match_date : m.match_date;
+  const match_time = req.body.match_time !== undefined ? req.body.match_time : m.match_time;
+  const venue = req.body.venue !== undefined ? req.body.venue : m.venue;
+  const team_a_id = req.body.team_a_id !== undefined ? req.body.team_a_id : m.team_a_id;
+  const team_b_id = req.body.team_b_id !== undefined ? req.body.team_b_id : m.team_b_id;
+  const is_friendly = req.body.is_friendly !== undefined ? (req.body.is_friendly ? 1 : 0) : m.is_friendly;
+
   db.prepare(`
     UPDATE matches SET round=?, match_date=?, match_time=?, venue=?, team_a_id=?, team_b_id=?, is_friendly=?
     WHERE id=?
-  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, is_friendly ? 1 : 0, req.params.id);
-  const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_a_id);
-  const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(m.team_b_id);
-  logAction(req.user.username, 'UPDATE_MATCH', `Cập nhật lịch trận đấu ${teamA?.name || m.team_a_id} vs ${teamB?.name || m.team_b_id} (Vòng: ${m.round})`);
+  `).run(round, match_date, match_time, venue, team_a_id, team_b_id, is_friendly, req.params.id);
+  const teamA = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_a_id);
+  const teamB = db.prepare('SELECT name FROM teams WHERE id = ?').get(team_b_id);
+  logAction(req.user.username, 'UPDATE_MATCH', `Cập nhật lịch trận đấu ${teamA?.name || team_a_id} vs ${teamB?.name || team_b_id} (Vòng: ${round})`);
   res.json({ message: 'Cập nhật thành công' });
 });
 
