@@ -276,8 +276,6 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
         throw new Error(`Kiểu nguồn đội không hợp lệ: ${source.type}`);
       };
 
-      const insertMatch = db.prepare(`
-        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes, tournament_id)
       for (const matchDef of config.matches || []) {
         const teamA = resolveTeam(matchDef.teamA);
         const teamB = resolveTeam(matchDef.teamB);

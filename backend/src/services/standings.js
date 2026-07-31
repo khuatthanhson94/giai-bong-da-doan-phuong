@@ -304,8 +304,8 @@ export function publishMatchResult(matchId, userId) {
                   if (teamAId !== null && teamBId !== null) {
                     const nextNotes = `KO_ID: ${m.id}${m.notes ? ' | ' + m.notes : ''}`;
                     db.prepare(`
-                      INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes)
-                      VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?)
+                      INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes, tournament_id)
+                      VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)
                     `).run(
                       r.round,
                       m.match_date || '',
@@ -313,7 +313,8 @@ export function publishMatchResult(matchId, userId) {
                       m.venue || 'Sân bóng Phường',
                       teamAId,
                       teamBId,
-                      nextNotes
+                      nextNotes,
+                      updatedMatch.tournament_id
                     );
                   }
                 }
