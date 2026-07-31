@@ -211,7 +211,7 @@ export default function Results() {
 
                   <div className="text-center px-2 flex-shrink-0">
                     <div className="text-2xl sm:text-3xl font-black text-primary bg-blue-50 border border-blue-200 px-3.5 py-1.5 rounded-2xl shadow-inner font-mono tracking-tighter">
-                      {m.score_a} - {m.score_b}
+                      {m.score_a ?? 0} - {m.score_b ?? 0}
                     </div>
                     <span className="text-[10px] font-bold text-gray-400 block mt-1">FT (90')</span>
                   </div>
@@ -230,7 +230,7 @@ export default function Results() {
               </div>
 
               <div className="mt-3 pt-2 text-xs text-gray-500 flex justify-between items-center border-t">
-                <span className="truncate">📅 {m.match_date} • 🏟️ {m.venue}</span>
+                <span className="truncate">📅 {m.match_date} • 🏟️ {m.venue || 'Chưa xếp sân'}</span>
                 <span className="text-primary font-bold group-hover:underline flex-shrink-0 ml-2">Xem chi tiết →</span>
               </div>
             </div>
@@ -251,12 +251,18 @@ export default function Results() {
         const eventsB = getEventsForTeam(selected, selected.team_b_id);
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 p-6 space-y-6 relative my-auto">
+          <div
+            onClick={() => setIsModalOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 p-6 space-y-6 relative my-auto"
+            >
               {/* Close button */}
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-4 right-4 w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center font-bold text-lg transition"
+                className="absolute top-4 right-4 w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full flex items-center justify-center font-bold text-lg transition z-10"
               >
                 ✕
               </button>
@@ -283,7 +289,7 @@ export default function Results() {
 
                 <div className="text-center px-2 sm:px-4 flex-shrink-0">
                   <div className="text-3xl sm:text-4xl font-black text-primary bg-blue-50 border border-blue-200 px-4 py-2 rounded-2xl shadow-inner font-mono tracking-tighter">
-                    {selected.score_a} - {selected.score_b}
+                    {selected.score_a ?? 0} - {selected.score_b ?? 0}
                   </div>
                   <span className="text-xs font-bold text-gray-400 block mt-2">FT (90')</span>
                 </div>
@@ -302,7 +308,7 @@ export default function Results() {
 
               {/* Match info row */}
               <div className="text-xs text-gray-500 flex flex-wrap items-center justify-between gap-2 bg-gray-50 p-3 rounded-xl border">
-                <span>🏟️ Sân: <strong className="text-gray-700">{selected.venue}</strong></span>
+                <span>🏟️ Sân: <strong className="text-gray-700">{selected.venue || 'Chưa cập nhật'}</strong></span>
                 <span>📅 Ngày: <strong className="text-gray-700">{selected.match_date} {selected.match_time}</strong></span>
               </div>
 
