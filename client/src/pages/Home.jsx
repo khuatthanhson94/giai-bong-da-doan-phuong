@@ -106,21 +106,36 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-4">
               {liveMatches.map((m) => {
                 const getEventsForTeam = (teamId) => {
-                  const list = [];
-                  
+                  const map = new Map();
+
+                  const addEvent = (key, type, icon, player_name, minute, suffix = '') => {
+                    const name = player_name || 'Vô danh';
+                    if (!map.has(key)) {
+                      map.set(key, {
+                        type,
+                        icon,
+                        player_name: name,
+                        minutes: [],
+                        suffix,
+                        minMinute: Number(minute) || 0
+                      });
+                    }
+                    const item = map.get(key);
+                    item.minutes.push(Number(minute) || 0);
+                    if ((Number(minute) || 0) < item.minMinute) {
+                      item.minMinute = Number(minute) || 0;
+                    }
+                  };
+
                   // Goals
                   if (m.goals) {
                     m.goals.forEach(g => {
                       const isNormalGoalForThisTeam = g.team_id === teamId && !g.is_own_goal;
                       const isOwnGoalForOpponent = g.team_id !== teamId && g.is_own_goal;
-                      if (isNormalGoalForThisTeam || isOwnGoalForOpponent) {
-                        list.push({
-                          type: 'goal',
-                          icon: '⚽',
-                          player_name: g.player_name,
-                          minute: g.minute,
-                          suffix: g.is_own_goal ? ' (OG)' : '',
-                        });
+                      if (isNormalGoalForThisTeam) {
+                        addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute);
+                      } else if (isOwnGoalForOpponent) {
+                        addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG)');
                       }
                     });
                   }
@@ -129,13 +144,7 @@ export default function Home() {
                   if (m.yellow_cards) {
                     m.yellow_cards.forEach(y => {
                       if (y.team_id === teamId) {
-                        list.push({
-                          type: 'yellow',
-                          icon: '🟨',
-                          player_name: y.player_name,
-                          minute: y.minute,
-                          suffix: '',
-                        });
+                        addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.minute);
                       }
                     });
                   }
@@ -144,19 +153,19 @@ export default function Home() {
                   if (m.red_cards) {
                     m.red_cards.forEach(r => {
                       if (r.team_id === teamId) {
-                        list.push({
-                          type: 'red',
-                          icon: '🟥',
-                          player_name: r.player_name,
-                          minute: r.minute,
-                          suffix: '',
-                        });
+                        addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.minute);
                       }
                     });
                   }
 
-                  // Sort chronologically by minute
-                  return list.sort((a, b) => Number(a.minute) - Number(b.minute));
+                  const list = Array.from(map.values()).map(item => {
+                    item.minutes.sort((a, b) => a - b);
+                    item.minutesStr = item.minutes.map(min => `${min}'`).join(', ');
+                    return item;
+                  });
+
+                  // Sort chronologically by earliest event minute
+                  return list.sort((a, b) => a.minMinute - b.minMinute);
                 };
 
                 const eventsA = getEventsForTeam(m.team_a_id);
@@ -219,7 +228,7 @@ export default function Home() {
                             <div key={idx} className="flex items-center gap-1 font-medium truncate">
                               <span className="text-[10px] sm:text-xs">{evt.icon}</span>
                               <span>{evt.player_name}</span>
-                              <span className="text-gray-400">({evt.minute}')</span>
+                              <span className="text-gray-400">({evt.minutesStr})</span>
                               {evt.suffix && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">{evt.suffix}</span>}
                             </div>
                           ))}
@@ -230,7 +239,7 @@ export default function Home() {
                           {eventsB.map((evt, idx) => (
                             <div key={idx} className="flex items-center justify-end gap-1 font-medium truncate">
                               {evt.suffix && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">{evt.suffix}</span>}
-                              <span className="text-gray-400">({evt.minute}')</span>
+                              <span className="text-gray-400">({evt.minutesStr})</span>
                               <span>{evt.player_name}</span>
                               <span className="text-[10px] sm:text-xs">{evt.icon}</span>
                             </div>

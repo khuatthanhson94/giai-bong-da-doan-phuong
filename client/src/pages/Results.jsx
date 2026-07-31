@@ -120,48 +120,106 @@ export default function Results() {
               <span>📅 {selected.match_date} {selected.match_time}</span>
             </p>
 
-            {selected.goals?.length > 0 && (
-              <div className="mb-6 bg-gray-50 p-4 rounded-xl">
-                <h3 className="font-bold text-youth mb-3 flex items-center gap-2">
-                  <span>⚽</span> Bàn thắng
-                </h3>
-                <div className="space-y-2">
-                  {selected.goals.map((g) => (
-                    <div key={g.id} className="text-sm text-gray-700 flex justify-between bg-white px-3 py-1.5 rounded border border-gray-100">
-                      <span>🏃‍♂️ {g.player_name} ({g.team_name})</span>
-                      <span className="font-semibold text-primary">{g.minute}'</span>
-                    </div>
-                  ))}
+            {selected.goals?.length > 0 && (() => {
+              const map = new Map();
+              selected.goals.forEach(g => {
+                const key = `${g.player_name}_${g.team_name}_${g.is_own_goal ? 'og' : 'normal'}`;
+                if (!map.has(key)) {
+                  map.set(key, {
+                    player_name: g.player_name,
+                    team_name: g.team_name,
+                    is_own_goal: g.is_own_goal,
+                    minutes: [],
+                    minMinute: Number(g.minute) || 0
+                  });
+                }
+                const item = map.get(key);
+                item.minutes.push(Number(g.minute) || 0);
+                if ((Number(g.minute) || 0) < item.minMinute) {
+                  item.minMinute = Number(g.minute) || 0;
+                }
+              });
+              const groupedGoals = Array.from(map.values()).map(item => {
+                item.minutes.sort((a, b) => a - b);
+                return item;
+              }).sort((a, b) => a.minMinute - b.minMinute);
+
+              return (
+                <div className="mb-6 bg-gray-50 p-4 rounded-xl">
+                  <h3 className="font-bold text-youth mb-3 flex items-center gap-2">
+                    <span>⚽</span> Bàn thắng
+                  </h3>
+                  <div className="space-y-2">
+                    {groupedGoals.map((g, idx) => (
+                      <div key={idx} className="text-sm text-gray-700 flex justify-between bg-white px-3 py-1.5 rounded border border-gray-100">
+                        <span>
+                          🏃‍♂️ {g.player_name} ({g.team_name})
+                          {g.is_own_goal ? <span className="text-red-500 font-bold text-xs ml-1">(Phản lưới)</span> : null}
+                        </span>
+                        <span className="font-semibold text-primary">
+                          {g.minutes.map(m => `${m}'`).join(', ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="grid grid-cols-2 gap-4 mb-6">
-              {selected.yellow_cards?.length > 0 && (
-                <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100/30">
-                  <h3 className="font-bold text-yellow-600 mb-2 flex items-center gap-1.5">
-                    <span>🟨</span> Thẻ vàng
-                  </h3>
-                  <div className="space-y-1">
-                    {selected.yellow_cards.map((y) => (
-                      <p key={y.id} className="text-xs text-gray-600">{y.minute}' - {y.player_name}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {selected.yellow_cards?.length > 0 && (() => {
+                const map = new Map();
+                selected.yellow_cards.forEach(y => {
+                  const key = y.player_name;
+                  if (!map.has(key)) {
+                    map.set(key, { player_name: y.player_name, minutes: [], minMinute: Number(y.minute) || 0 });
+                  }
+                  const item = map.get(key);
+                  item.minutes.push(Number(y.minute) || 0);
+                  if ((Number(y.minute) || 0) < item.minMinute) item.minMinute = Number(y.minute) || 0;
+                });
+                const groupedYellows = Array.from(map.values()).map(i => { i.minutes.sort((a,b)=>a-b); return i; }).sort((a,b)=>a.minMinute-b.minMinute);
 
-              {selected.red_cards?.length > 0 && (
-                <div className="bg-red-50/50 p-4 rounded-xl border border-red-100/30">
-                  <h3 className="font-bold text-red-600 mb-2 flex items-center gap-1.5">
-                    <span>🟥</span> Thẻ đỏ
-                  </h3>
-                  <div className="space-y-1">
-                    {selected.red_cards.map((r) => (
-                      <p key={r.id} className="text-xs text-gray-600">{r.minute}' - {r.player_name}</p>
-                    ))}
+                return (
+                  <div className="bg-yellow-50/50 p-4 rounded-xl border border-yellow-100/30">
+                    <h3 className="font-bold text-yellow-600 mb-2 flex items-center gap-1.5">
+                      <span>🟨</span> Thẻ vàng
+                    </h3>
+                    <div className="space-y-1">
+                      {groupedYellows.map((y, idx) => (
+                        <p key={idx} className="text-xs text-gray-600">{y.minutes.map(m => `${m}'`).join(', ')} - {y.player_name}</p>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
+
+              {selected.red_cards?.length > 0 && (() => {
+                const map = new Map();
+                selected.red_cards.forEach(r => {
+                  const key = r.player_name;
+                  if (!map.has(key)) {
+                    map.set(key, { player_name: r.player_name, minutes: [], minMinute: Number(r.minute) || 0 });
+                  }
+                  const item = map.get(key);
+                  item.minutes.push(Number(r.minute) || 0);
+                  if ((Number(r.minute) || 0) < item.minMinute) item.minMinute = Number(r.minute) || 0;
+                });
+                const groupedReds = Array.from(map.values()).map(i => { i.minutes.sort((a,b)=>a-b); return i; }).sort((a,b)=>a.minMinute-b.minMinute);
+
+                return (
+                  <div className="bg-red-50/50 p-4 rounded-xl border border-red-100/30">
+                    <h3 className="font-bold text-red-600 mb-2 flex items-center gap-1.5">
+                      <span>🟥</span> Thẻ đỏ
+                    </h3>
+                    <div className="space-y-1">
+                      {groupedReds.map((r, idx) => (
+                        <p key={idx} className="text-xs text-gray-600">{r.minutes.map(m => `${m}'`).join(', ')} - {r.player_name}</p>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {selected.motm && (
