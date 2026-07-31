@@ -85,13 +85,17 @@ export default function LiveScore() {
   const getEventsForTeam = (m, teamId) => {
     const map = new Map();
 
-    const addEvent = (key, type, icon, player_name, minute, suffix = '') => {
+    const addEvent = (key, type, icon, player_name, jersey_number, team_name, minute, suffix = '') => {
       const name = player_name || 'Vô danh';
+      const jerseyStr = jersey_number ? ` #${jersey_number}` : '';
+      const fullName = `${name}${jerseyStr}`;
+
       if (!map.has(key)) {
         map.set(key, {
           type,
           icon,
-          player_name: name,
+          player_name: fullName,
+          team_name,
           minutes: [],
           suffix,
           minMinute: Number(minute) || 0
@@ -111,9 +115,9 @@ export default function LiveScore() {
         const isOwnGoalByThisTeam = g.team_id === teamId && g.is_own_goal;
 
         if (isNormalGoalForThisTeam) {
-          addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute);
+          addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute);
         } else if (isOwnGoalForOpponent || isOwnGoalByThisTeam) {
-          addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG - Phản lưới)');
+          addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute, ' (OG - Phản lưới)');
         }
       });
     }
@@ -121,7 +125,7 @@ export default function LiveScore() {
     if (m.yellow_cards) {
       m.yellow_cards.forEach(y => {
         if (y.team_id === teamId) {
-          addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.minute);
+          addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.jersey_number, y.team_name, y.minute);
         }
       });
     }
@@ -129,7 +133,7 @@ export default function LiveScore() {
     if (m.red_cards) {
       m.red_cards.forEach(r => {
         if (r.team_id === teamId) {
-          addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.minute);
+          addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.jersey_number, r.team_name, r.minute);
         }
       });
     }

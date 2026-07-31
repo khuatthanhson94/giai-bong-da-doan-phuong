@@ -64,25 +64,28 @@ router.get('/home', (req, res) => {
   allMatchesSql += ' ORDER BY m.match_date, m.match_time';
   const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
     const goals = db.prepare(`
-      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id
+      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id, t.name as team_name
       FROM goals g
       LEFT JOIN players p ON g.player_id = p.id
+      LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
       WHERE g.match_id = ?
       ORDER BY g.minute ASC
     `).all(m.id);
 
     const yellow_cards = db.prepare(`
-      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id
+      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id, t.name as team_name
       FROM yellow_cards y
       LEFT JOIN players p ON y.player_id = p.id
+      LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
       WHERE y.match_id = ?
       ORDER BY y.minute ASC
     `).all(m.id);
 
     const red_cards = db.prepare(`
-      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id
+      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id, t.name as team_name
       FROM red_cards r
       LEFT JOIN players p ON r.player_id = p.id
+      LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
       WHERE r.match_id = ?
       ORDER BY r.minute ASC
     `).all(m.id);
@@ -190,25 +193,28 @@ router.get('/livescore', (req, res) => {
 
   const liveMatches = db.prepare(liveMatchesSql).all(...liveParams).map((m) => {
     const goals = db.prepare(`
-      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id
+      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id, t.name as team_name
       FROM goals g
       LEFT JOIN players p ON g.player_id = p.id
+      LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
       WHERE g.match_id = ?
       ORDER BY g.minute ASC
     `).all(m.id);
 
     const yellow_cards = db.prepare(`
-      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id
+      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id, t.name as team_name
       FROM yellow_cards y
       LEFT JOIN players p ON y.player_id = p.id
+      LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
       WHERE y.match_id = ?
       ORDER BY y.minute ASC
     `).all(m.id);
 
     const red_cards = db.prepare(`
-      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id
+      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id, t.name as team_name
       FROM red_cards r
       LEFT JOIN players p ON r.player_id = p.id
+      LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
       WHERE r.match_id = ?
       ORDER BY r.minute ASC
     `).all(m.id);

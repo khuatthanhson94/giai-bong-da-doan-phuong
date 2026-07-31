@@ -22,19 +22,21 @@ function enrichMatch(match) {
     SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, t.name as team_name
     FROM goals g 
     LEFT JOIN players p ON g.player_id = p.id 
-    LEFT JOIN teams t ON g.team_id = t.id
+    LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
     WHERE g.match_id = ? ORDER BY g.minute
   `).all(match.id);
   const yellows = db.prepare(`
-    SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number
+    SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, t.name as team_name
     FROM yellow_cards y 
     LEFT JOIN players p ON y.player_id = p.id 
+    LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
     WHERE y.match_id = ? ORDER BY y.minute
   `).all(match.id);
   const reds = db.prepare(`
-    SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number
+    SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, t.name as team_name
     FROM red_cards r 
     LEFT JOIN players p ON r.player_id = p.id 
+    LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
     WHERE r.match_id = ? ORDER BY r.minute
   `).all(match.id);
   const motm = match.motm_player_id

@@ -53,13 +53,17 @@ export default function Results() {
   const getEventsForTeam = (m, teamId) => {
     const map = new Map();
 
-    const addEvent = (key, type, icon, player_name, minute, suffix = '') => {
+    const addEvent = (key, type, icon, player_name, jersey_number, team_name, minute, suffix = '') => {
       const name = player_name || 'Vô danh';
+      const jerseyStr = jersey_number ? ` #${jersey_number}` : '';
+      const fullName = `${name}${jerseyStr}`;
+      
       if (!map.has(key)) {
         map.set(key, {
           type,
           icon,
-          player_name: name,
+          player_name: fullName,
+          team_name,
           minutes: [],
           suffix,
           minMinute: Number(minute) || 0
@@ -79,9 +83,9 @@ export default function Results() {
         const isOwnGoalByThisTeam = g.team_id === teamId && g.is_own_goal;
 
         if (isNormalGoalForThisTeam) {
-          addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute);
+          addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute);
         } else if (isOwnGoalForOpponent || isOwnGoalByThisTeam) {
-          addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG - Phản lưới)');
+          addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute, ' (OG - Phản lưới)');
         }
       });
     }
@@ -89,7 +93,7 @@ export default function Results() {
     if (m.yellow_cards) {
       m.yellow_cards.forEach(y => {
         if (y.team_id === teamId) {
-          addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.minute);
+          addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.jersey_number, y.team_name, y.minute);
         }
       });
     }
@@ -97,7 +101,7 @@ export default function Results() {
     if (m.red_cards) {
       m.red_cards.forEach(r => {
         if (r.team_id === teamId) {
-          addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.minute);
+          addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.jersey_number, r.team_name, r.minute);
         }
       });
     }
@@ -297,13 +301,15 @@ export default function Results() {
               <span>📅 {selected.match_date} {selected.match_time}</span>
             </p>
 
+            {/* Goals List with Player Name, #Jersey, Team Name */}
             {selected.goals?.length > 0 && (() => {
               const map = new Map();
               selected.goals.forEach(g => {
-                const key = `${g.player_name}_${g.team_name}_${g.is_own_goal ? 'og' : 'normal'}`;
+                const key = `${g.player_name}_${g.jersey_number || ''}_${g.team_name || ''}_${g.is_own_goal ? 'og' : 'normal'}`;
                 if (!map.has(key)) {
                   map.set(key, {
                     player_name: g.player_name,
+                    jersey_number: g.jersey_number,
                     team_name: g.team_name,
                     is_own_goal: g.is_own_goal,
                     minutes: [],
@@ -328,12 +334,15 @@ export default function Results() {
                   </h3>
                   <div className="space-y-2">
                     {groupedGoals.map((g, idx) => (
-                      <div key={idx} className="text-sm text-gray-700 flex justify-between bg-white px-3 py-1.5 rounded border border-gray-100">
-                        <span>
-                          🏃‍♂️ {g.player_name} ({g.team_name})
-                          {g.is_own_goal ? <span className="text-red-500 font-bold text-xs ml-1">(Phản lưới - OG)</span> : null}
-                        </span>
-                        <span className="font-bold text-primary">
+                      <div key={idx} className="text-sm text-gray-700 flex flex-wrap items-center justify-between bg-white px-3 py-2 rounded border border-gray-100 gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>🏃‍♂️</span>
+                          <span className="font-bold text-gray-900">{g.player_name}</span>
+                          {g.jersey_number ? <span className="text-primary font-extrabold bg-blue-50 px-1.5 py-0.5 rounded text-xs">#{g.jersey_number}</span> : null}
+                          {g.team_name ? <span className="text-gray-500 text-xs font-semibold">({g.team_name})</span> : null}
+                          {g.is_own_goal ? <span className="text-red-500 font-bold text-xs bg-red-50 px-1.5 py-0.5 rounded border border-red-200">(Phản lưới - OG)</span> : null}
+                        </div>
+                        <span className="font-black text-primary bg-gray-50 px-2 py-0.5 rounded border text-xs">
                           {g.minutes.map(m => `${m}'`).join(', ')}
                         </span>
                       </div>
@@ -343,13 +352,14 @@ export default function Results() {
               );
             })()}
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Cards Grid with Player Name, #Jersey, Team Name */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               {selected.yellow_cards?.length > 0 && (() => {
                 const map = new Map();
                 selected.yellow_cards.forEach(y => {
-                  const key = y.player_name;
+                  const key = `${y.player_name}_${y.jersey_number || ''}_${y.team_name || ''}`;
                   if (!map.has(key)) {
-                    map.set(key, { player_name: y.player_name, minutes: [], minMinute: Number(y.minute) || 0 });
+                    map.set(key, { player_name: y.player_name, jersey_number: y.jersey_number, team_name: y.team_name, minutes: [], minMinute: Number(y.minute) || 0 });
                   }
                   const item = map.get(key);
                   item.minutes.push(Number(y.minute) || 0);
@@ -362,9 +372,14 @@ export default function Results() {
                     <h3 className="font-bold text-yellow-600 mb-2 flex items-center gap-1.5 text-xs sm:text-sm">
                       <span>🟨</span> Thẻ vàng
                     </h3>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {groupedYellows.map((y, idx) => (
-                        <p key={idx} className="text-xs text-gray-600 font-medium">{y.minutes.map(m => `${m}'`).join(', ')} - {y.player_name}</p>
+                        <div key={idx} className="text-xs text-gray-700 font-medium flex items-center gap-1 flex-wrap">
+                          <span className="font-bold text-primary">{y.minutes.map(m => `${m}'`).join(', ')}</span> - 
+                          <span className="font-bold text-gray-900">{y.player_name}</span>
+                          {y.jersey_number ? <span className="text-yellow-700 font-bold bg-yellow-100 px-1 py-0.5 rounded text-[10px]">#{y.jersey_number}</span> : null}
+                          {y.team_name ? <span className="text-gray-500 text-[11px]">({y.team_name})</span> : null}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -374,9 +389,9 @@ export default function Results() {
               {selected.red_cards?.length > 0 && (() => {
                 const map = new Map();
                 selected.red_cards.forEach(r => {
-                  const key = r.player_name;
+                  const key = `${r.player_name}_${r.jersey_number || ''}_${r.team_name || ''}`;
                   if (!map.has(key)) {
-                    map.set(key, { player_name: r.player_name, minutes: [], minMinute: Number(r.minute) || 0 });
+                    map.set(key, { player_name: r.player_name, jersey_number: r.jersey_number, team_name: r.team_name, minutes: [], minMinute: Number(r.minute) || 0 });
                   }
                   const item = map.get(key);
                   item.minutes.push(Number(r.minute) || 0);
@@ -389,9 +404,14 @@ export default function Results() {
                     <h3 className="font-bold text-red-600 mb-2 flex items-center gap-1.5 text-xs sm:text-sm">
                       <span>🟥</span> Thẻ đỏ
                     </h3>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {groupedReds.map((r, idx) => (
-                        <p key={idx} className="text-xs text-gray-600 font-medium">{r.minutes.map(m => `${m}'`).join(', ')} - {r.player_name}</p>
+                        <div key={idx} className="text-xs text-gray-700 font-medium flex items-center gap-1 flex-wrap">
+                          <span className="font-bold text-primary">{r.minutes.map(m => `${m}'`).join(', ')}</span> - 
+                          <span className="font-bold text-gray-900">{r.player_name}</span>
+                          {r.jersey_number ? <span className="text-red-700 font-bold bg-red-100 px-1 py-0.5 rounded text-[10px]">#{r.jersey_number}</span> : null}
+                          {r.team_name ? <span className="text-gray-500 text-[11px]">({r.team_name})</span> : null}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -399,12 +419,17 @@ export default function Results() {
               })()}
             </div>
 
+            {/* MOTM Player */}
             {selected.motm && (
               <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200/50 flex items-center gap-3">
                 <span className="text-2xl">⭐</span>
                 <div>
-                  <h3 className="font-bold text-yellow-800 text-sm">Cầu thủ xuất sắc nhất trận</h3>
-                  <p className="text-sm font-bold text-gray-800">{selected.motm.name} #{selected.motm.jersey_number}</p>
+                  <h3 className="font-bold text-yellow-800 text-sm">Cầu thủ xuất sắc nhất trận (MOTM)</h3>
+                  <p className="text-sm font-bold text-gray-900 flex items-center gap-1.5 mt-0.5">
+                    <span>{selected.motm.name}</span>
+                    {selected.motm.jersey_number ? <span className="text-primary font-black bg-blue-100 px-1.5 py-0.5 rounded text-xs">#{selected.motm.jersey_number}</span> : null}
+                    {selected.motm.team_name ? <span className="text-gray-600 font-semibold text-xs">({selected.motm.team_name})</span> : null}
+                  </p>
                 </div>
               </div>
             )}
