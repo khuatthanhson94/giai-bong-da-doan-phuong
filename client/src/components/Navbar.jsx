@@ -6,6 +6,7 @@ import { useTournament } from '../context/TournamentContext';
 
 const primaryNavItems = [
   { to: '/', label: 'Trang chủ' },
+  { to: '/truc-tiep', label: '🔴 Trực tiếp' },
   { to: '/lich-thi-dau', label: 'Lịch đấu' },
   { to: '/ket-qua', label: 'Kết quả' },
   { to: '/bang-xep-hang', label: 'BXH' },
@@ -23,6 +24,7 @@ const secondaryNavItems = [
 
 const mobileNavItems = [
   { to: '/', label: 'Trang chủ' },
+  { to: '/truc-tiep', label: '🔴 Trực tiếp (Livescore)' },
   { to: '/gioi-thieu', label: 'Giới thiệu' },
   { to: '/lich-thi-dau', label: 'Lịch thi đấu' },
   { to: '/ket-qua', label: 'Kết quả' },

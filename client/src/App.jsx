@@ -18,6 +18,7 @@ const Players = lazy(() => import('./pages/Players'));
 const Statistics = lazy(() => import('./pages/Statistics'));
 const News = lazy(() => import('./pages/News'));
 const NewsDetail = lazy(() => import('./pages/NewsDetail'));
+const LiveScore = lazy(() => import('./pages/LiveScore'));
 const Gallery = lazy(() => import('./pages/Gallery'));
 const Contact = lazy(() => import('./pages/Contact'));
 
@@ -86,6 +87,8 @@ export default function App() {
         {/* Public site */}
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
+          <Route path="truc-tiep" element={<LiveScore />} />
+          <Route path="livescore" element={<LiveScore />} />
           <Route path="gioi-thieu" element={<About />} />
           <Route path="lich-thi-dau" element={<Schedule />} />
           <Route path="ket-qua" element={<PublicResults />} />

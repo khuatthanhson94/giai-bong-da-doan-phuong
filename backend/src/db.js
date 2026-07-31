@@ -920,7 +920,8 @@ export function autoStartMatches() {
     const now = new Date();
     const scheduled = db.prepare("SELECT * FROM matches WHERE status = 'scheduled' AND deleted_at IS NULL").all();
     for (const match of scheduled) {
-      const matchStart = new Date(`${match.match_date}T${match.match_time}:00`);
+      const timeStr = match.match_time ? match.match_time.substring(0, 5) : '00:00';
+      const matchStart = new Date(`${match.match_date}T${timeStr}:00+07:00`);
       if (now >= matchStart) {
         db.prepare(`
           UPDATE matches 
