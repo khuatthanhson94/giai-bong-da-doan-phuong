@@ -10,6 +10,7 @@ export default function LiveScore() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [showDemo, setShowDemo] = useState(false);
 
   const fetchLiveScore = () => {
     const query = selectedTournamentId ? `?tournament_id=${selectedTournamentId}` : '';
@@ -42,7 +43,43 @@ export default function LiveScore() {
     );
   }
 
-  const { liveMatches = [], upcomingMatches = [], todayMatches = [], settings = {} } = data || {};
+  const { liveMatches: dbLiveMatches = [], upcomingMatches = [], todayMatches = [], settings = {} } = data || {};
+  
+  // Sample demo match data for instant preview when no live matches are running
+  const demoMatch = {
+    id: 'demo-live-1',
+    round: 'Bảng A - Lượt 3 (Đang diễn ra)',
+    team_a_name: 'FC Thanh Niên Phường',
+    team_b_name: 'FC Liên Quân Khối Phố',
+    score_a: 3,
+    score_b: 2,
+    match_time: 'Phút 88\'',
+    match_date: 'Hôm nay',
+    venue: 'Sân vận động Trung tâm',
+    status: 'live',
+    notes: 'Trận đấu kịch tính với cú hat-trick của Nguyễn Văn A!',
+    team_a_id: 1,
+    team_b_id: 2,
+    goals: [
+      { player_name: 'Nguyễn Văn A', team_id: 1, minute: 15, is_own_goal: 0 },
+      { player_name: 'Nguyễn Văn A', team_id: 1, minute: 38, is_own_goal: 0 },
+      { player_name: 'Trần Văn B', team_id: 2, minute: 45, is_own_goal: 0 },
+      { player_name: 'Lê Văn C', team_id: 2, minute: 62, is_own_goal: 0 },
+      { player_name: 'Nguyễn Văn A', team_id: 1, minute: 88, is_own_goal: 0 }
+    ],
+    yellow_cards: [
+      { player_name: 'Phạm Văn D', team_id: 1, minute: 30 },
+      { player_name: 'Hoàng Văn E', team_id: 2, minute: 70 }
+    ],
+    red_cards: [
+      { player_name: 'Hoàng Văn E', team_id: 2, minute: 82 }
+    ]
+  };
+
+  const liveMatches = dbLiveMatches.length > 0 
+    ? dbLiveMatches 
+    : (showDemo ? [demoMatch] : []);
+
   const hasLive = liveMatches.length > 0;
 
   const getEventsForTeam = (m, teamId) => {
@@ -110,15 +147,26 @@ export default function LiveScore() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-red-600 rounded-full animate-ping"></span>
+            <span className="w-3.5 h-3.5 bg-red-600 rounded-full animate-ping"></span>
             <h1 className="text-2xl sm:text-3xl font-black text-red-600 tracking-tight flex items-center gap-2">
               🔴 TRỰC TIẾP LIVESCORE
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Cập nhật tỷ số, diễn biến và kết quả các trận đấu bóng đá theo thời gian thực</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Cập nhật tỷ số, cầu thủ ghi bàn và diễn biến trận đấu theo thời gian thực</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowDemo(!showDemo)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+              showDemo
+                ? 'bg-purple-100 border-purple-300 text-purple-800'
+                : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {showDemo ? '⏹️ Tắt minh họa Demo' : '🧪 Xem minh họa trận Live mẫu'}
+          </button>
+          
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 border transition ${
@@ -130,6 +178,7 @@ export default function LiveScore() {
             <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
             {autoRefresh ? 'Tự động cập nhật (5s)' : 'Tự động cập nhật: TẮT'}
           </button>
+          
           <button
             onClick={fetchLiveScore}
             className="p-1.5 rounded-lg bg-blue-50 border border-blue-200 text-primary hover:bg-blue-100 text-xs font-medium"
@@ -161,20 +210,24 @@ export default function LiveScore() {
       {/* LIVE MATCHES SECTION */}
       {hasLive ? (
         <div className="space-y-6 mb-12">
-          <h2 className="text-xl font-bold text-red-600 flex items-center gap-2 border-b pb-2">
-            <span>⚽</span> Các trận đấu đang đá ({liveMatches.length})
-          </h2>
+          <div className="flex items-center justify-between border-b pb-2">
+            <h2 className="text-xl font-bold text-red-600 flex items-center gap-2">
+              <span>⚽</span> Các trận đấu đang diễn ra ({liveMatches.length})
+            </h2>
+            {showDemo && <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-full">Đang hiển thị trận đấu mẫu (Demo)</span>}
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             {liveMatches.map((m) => {
               const eventsA = getEventsForTeam(m, m.team_a_id);
               const eventsB = getEventsForTeam(m, m.team_b_id);
 
               return (
-                <div key={m.id} className="bg-white p-6 rounded-2xl border-2 border-red-400 shadow-md space-y-4">
+                <div key={m.id} className="bg-white p-6 rounded-2xl border-2 border-red-400 shadow-lg space-y-5">
                   <div className="flex justify-between items-center text-xs font-bold text-gray-500">
                     <span className="text-primary">{m.round}</span>
-                    <span className="bg-red-600 text-white px-2.5 py-0.5 rounded-full font-extrabold text-[10px] tracking-wider animate-pulse">
-                      🔴 LIVE
+                    <span className="bg-red-600 text-white px-3 py-1 rounded-full font-extrabold text-[10px] tracking-wider animate-pulse flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full"></span> LIVE
                     </span>
                   </div>
 
@@ -210,46 +263,58 @@ export default function LiveScore() {
                     </div>
                   </div>
 
-                  {/* Goal & Event list grouped on 1 line per player */}
-                  {(eventsA.length > 0 || eventsB.length > 0) && (
-                    <div className="grid grid-cols-2 gap-4 text-xs text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      {/* Team A */}
-                      <div className="space-y-1 text-left border-r pr-2 border-gray-200">
-                        {eventsA.map((evt, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 font-medium">
-                            <span>{evt.icon}</span>
-                            <span className="font-semibold text-gray-800">{evt.player_name}</span>
-                            <span className="text-primary font-bold">({evt.minutesStr})</span>
-                            {evt.suffix && <span className="text-red-600 font-bold text-[10px] bg-red-100 px-1 rounded">{evt.suffix}</span>}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Team B */}
-                      <div className="space-y-1 text-right pl-2">
-                        {eventsB.map((evt, idx) => (
-                          <div key={idx} className="flex items-center justify-end gap-1.5 font-medium">
-                            {evt.suffix && <span className="text-red-600 font-bold text-[10px] bg-red-100 px-1 rounded">{evt.suffix}</span>}
-                            <span className="text-primary font-bold">({evt.minutesStr})</span>
-                            <span className="font-semibold text-gray-800">{evt.player_name}</span>
-                            <span>{evt.icon}</span>
-                          </div>
-                        ))}
-                      </div>
+                  {/* Goalscorers & Pitch Events Section (Gộp cầu thủ ghi bàn trên 1 dòng theo thời gian) */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg">
+                      <span>⚽</span> CẦU THỦ GHI BÀN & DIỄN BIẾN TRÊN SÂN
                     </div>
-                  )}
 
-                  <div className="text-xs text-gray-500 flex justify-between pt-1 border-t">
+                    {(eventsA.length > 0 || eventsB.length > 0) ? (
+                      <div className="grid grid-cols-2 gap-4 text-xs text-gray-700 bg-blue-50/40 p-3.5 rounded-xl border border-blue-100">
+                        {/* Team A Events */}
+                        <div className="space-y-2 text-left border-r pr-3 border-gray-200">
+                          {eventsA.map((evt, idx) => (
+                            <div key={idx} className="flex flex-wrap items-center gap-1 font-medium leading-relaxed">
+                              <span>{evt.icon}</span>
+                              <span className="font-bold text-gray-900">{evt.player_name}</span>
+                              <span className="text-primary font-black">({evt.minutesStr})</span>
+                              {evt.suffix && <span className="text-red-600 font-bold text-[10px] bg-red-100 px-1 rounded">{evt.suffix}</span>}
+                            </div>
+                          ))}
+                          {eventsA.length === 0 && <span className="text-[11px] text-gray-400 italic">Chưa có sự kiện</span>}
+                        </div>
+
+                        {/* Team B Events */}
+                        <div className="space-y-2 text-right pl-3">
+                          {eventsB.map((evt, idx) => (
+                            <div key={idx} className="flex flex-wrap items-center justify-end gap-1 font-medium leading-relaxed">
+                              {evt.suffix && <span className="text-red-600 font-bold text-[10px] bg-red-100 px-1 rounded">{evt.suffix}</span>}
+                              <span className="text-primary font-black">({evt.minutesStr})</span>
+                              <span className="font-bold text-gray-900">{evt.player_name}</span>
+                              <span>{evt.icon}</span>
+                            </div>
+                          ))}
+                          {eventsB.length === 0 && <span className="text-[11px] text-gray-400 italic">Chưa có sự kiện</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic text-center py-2 bg-gray-50 rounded-lg">Chưa có bàn thắng hoặc thẻ phạt trong trận này</p>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-gray-500 flex justify-between pt-2 border-t">
                     <span>🏟️ {m.venue}</span>
                     <span>📅 {m.match_date}</span>
                   </div>
+
+                  {m.notes && <div className="text-xs text-gray-500 italic bg-gray-50 p-2.5 rounded-lg border">{m.notes}</div>}
                 </div>
               );
             })}
           </div>
         </div>
       ) : (
-        /* NO LIVE MATCH STATUS BANNER */
+        /* NO LIVE MATCH STATUS BANNER WITH DEMO TOGGLE */
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-8 rounded-2xl text-center space-y-4 mb-12 shadow-sm">
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl mx-auto shadow border border-blue-100">
             ⏰
@@ -257,9 +322,15 @@ export default function LiveScore() {
           <div>
             <h3 className="text-xl font-bold text-gray-800">Hiện chưa có trận đấu nào đang diễn ra</h3>
             <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-              Khi trận đấu bắt đầu, kết quả và diễn biến bàn thắng sẽ được tự động cập nhật trực tiếp tại màn hình này.
+              Khi có trận đấu bắt đầu, diễn biến và cầu thủ ghi bàn sẽ tự động cập nhật trực tiếp tại đây. Bạn có thể nhấn xem trận đấu mẫu bên dưới.
             </p>
           </div>
+          <button
+            onClick={() => setShowDemo(true)}
+            className="btn-primary text-xs inline-flex items-center gap-2 px-5 py-2.5 rounded-xl"
+          >
+            🧪 Bật xem thử trận đấu mẫu (Demo Live)
+          </button>
         </div>
       )}
 
