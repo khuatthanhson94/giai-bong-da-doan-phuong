@@ -414,56 +414,7 @@ export default function Results() {
                 )}
               </div>
 
-              {/* Detailed Goal Breakdown */}
-              {selected.goals?.length > 0 && (() => {
-                const map = new Map();
-                selected.goals.forEach(g => {
-                  const key = `${g.player_name}_${g.jersey_number || ''}_${g.team_name || ''}_${g.is_own_goal ? 'og' : 'normal'}`;
-                  if (!map.has(key)) {
-                    map.set(key, {
-                      player_name: g.player_name,
-                      jersey_number: g.jersey_number,
-                      team_name: g.team_name,
-                      is_own_goal: g.is_own_goal,
-                      minutes: [],
-                      minMinute: Number(g.minute) || 0
-                    });
-                  }
-                  const item = map.get(key);
-                  item.minutes.push(Number(g.minute) || 0);
-                  if ((Number(g.minute) || 0) < item.minMinute) {
-                    item.minMinute = Number(g.minute) || 0;
-                  }
-                });
-                const groupedGoals = Array.from(map.values()).map(item => {
-                  item.minutes.sort((a, b) => a - b);
-                  return item;
-                }).sort((a, b) => a.minMinute - b.minMinute);
 
-                return (
-                  <div className="bg-gray-50 p-4 rounded-xl border">
-                    <h3 className="font-bold text-youth mb-3 flex items-center gap-2 text-xs sm:text-sm">
-                      <span>⚽</span> DANH SÁCH CHI TIẾT BÀN THẮNG
-                    </h3>
-                    <div className="space-y-2">
-                      {groupedGoals.map((g, idx) => (
-                        <div key={idx} className="text-xs sm:text-sm text-gray-700 flex flex-wrap items-center justify-between bg-white px-3 py-2 rounded border border-gray-100 gap-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span>🏃‍♂️</span>
-                            <span className="font-bold text-gray-900">{g.player_name}</span>
-                            {g.jersey_number ? <span className="text-primary font-extrabold bg-blue-50 px-1.5 py-0.5 rounded text-xs">#{g.jersey_number}</span> : null}
-                            {g.team_name ? <span className="text-gray-500 text-xs font-semibold">({g.team_name})</span> : null}
-                            {g.is_own_goal ? <span className="text-red-500 font-bold text-xs bg-red-50 px-1.5 py-0.5 rounded border border-red-200">(Phản lưới - OG)</span> : null}
-                          </div>
-                          <span className="font-black text-primary bg-gray-50 px-2 py-0.5 rounded border text-xs">
-                            Phút: {g.minutes.map(m => `${m}'`).join(', ')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Detailed Cards Breakdown */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -674,56 +625,7 @@ export default function Results() {
                 )}
               </div>
 
-              {/* Detailed Goal Breakdown */}
-              {selected.goals?.length > 0 && (() => {
-                const map = new Map();
-                selected.goals.forEach(g => {
-                  const key = `${g.player_name}_${g.jersey_number || ''}_${g.team_name || ''}_${g.is_own_goal ? 'og' : 'normal'}`;
-                  if (!map.has(key)) {
-                    map.set(key, {
-                      player_name: g.player_name,
-                      jersey_number: g.jersey_number,
-                      team_name: g.team_name,
-                      is_own_goal: g.is_own_goal,
-                      minutes: [],
-                      minMinute: Number(g.minute) || 0
-                    });
-                  }
-                  const item = map.get(key);
-                  item.minutes.push(Number(g.minute) || 0);
-                  if ((Number(g.minute) || 0) < item.minMinute) {
-                    item.minMinute = Number(g.minute) || 0;
-                  }
-                });
-                const groupedGoals = Array.from(map.values()).map(item => {
-                  item.minutes.sort((a, b) => a - b);
-                  return item;
-                }).sort((a, b) => a.minMinute - b.minMinute);
 
-                return (
-                  <div className="bg-gray-50 p-4 rounded-xl border">
-                    <h3 className="font-bold text-youth mb-3 flex items-center gap-2 text-xs sm:text-sm">
-                      <span>⚽</span> DANH SÁCH CHI TIẾT BÀN THẮNG
-                    </h3>
-                    <div className="space-y-2">
-                      {groupedGoals.map((g, idx) => (
-                        <div key={idx} className="text-xs sm:text-sm text-gray-700 flex flex-wrap items-center justify-between bg-white px-3 py-2 rounded border border-gray-100 gap-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span>🏃‍♂️</span>
-                            <span className="font-bold text-gray-900">{g.player_name}</span>
-                            {g.jersey_number ? <span className="text-primary font-extrabold bg-blue-50 px-1.5 py-0.5 rounded text-xs">#{g.jersey_number}</span> : null}
-                            {g.team_name ? <span className="text-gray-500 text-xs font-semibold">({g.team_name})</span> : null}
-                            {g.is_own_goal ? <span className="text-red-500 font-bold text-xs bg-red-50 px-1.5 py-0.5 rounded border border-red-200">(Phản lưới - OG)</span> : null}
-                          </div>
-                          <span className="font-black text-primary bg-gray-50 px-2 py-0.5 rounded border text-xs">
-                            Phút: {g.minutes.map(m => `${m}'`).join(', ')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Detailed Cards Breakdown */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
