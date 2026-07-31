@@ -52,12 +52,15 @@ export default function Results() {
     return activeTab === 'group' ? isGroupRound : !isGroupRound;
   });
 
-  const getEventsForTeam = (m, teamId) => {
-    if (!m) return [];
+  const getEventsForTeam = (m, targetTeamId) => {
+    if (!m || !targetTeamId) return [];
     const map = new Map();
+    const targetIdStr = String(targetTeamId);
+    const teamAIdStr = String(m.team_a_id);
+    const teamBIdStr = String(m.team_b_id);
 
     const addEvent = (key, type, icon, player_name, jersey_number, team_name, minute, suffix = '') => {
-      const name = player_name || 'Vô danh';
+      const name = player_name || 'Cầu thủ';
       const jerseyStr = jersey_number ? ` #${jersey_number}` : '';
       const fullName = `${name}${jerseyStr}`;
       
@@ -79,32 +82,50 @@ export default function Results() {
       }
     };
 
-    if (m.goals) {
-      m.goals.forEach(g => {
-        const isNormalGoalForThisTeam = g.team_id === teamId && !g.is_own_goal;
-        const isOwnGoalForOpponent = g.team_id !== teamId && g.is_own_goal;
-        const isOwnGoalByThisTeam = g.team_id === teamId && g.is_own_goal;
+    const resolveTeamIdStr = (item) => {
+      if (item.team_id) return String(item.team_id);
+      if (item.team_name) {
+        const teamAName = m.team_a_name || m.team_a?.name;
+        const teamBName = m.team_b_name || m.team_b?.name;
+        if (teamAName && item.team_name === teamAName) return teamAIdStr;
+        if (teamBName && item.team_name === teamBName) return teamBIdStr;
+      }
+      return null;
+    };
 
-        if (isNormalGoalForThisTeam) {
-          addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute);
-        } else if (isOwnGoalForOpponent || isOwnGoalByThisTeam) {
-          addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute, ' (OG - Phản lưới)');
+    if (m.goals) {
+      m.goals.forEach((g, idx) => {
+        const resolvedTeamIdStr = resolveTeamIdStr(g);
+        const isOwnGoal = Boolean(g.is_own_goal);
+
+        if (!isOwnGoal) {
+          const isForTarget = resolvedTeamIdStr ? (resolvedTeamIdStr === targetIdStr) : (targetIdStr === teamAIdStr);
+          if (isForTarget) {
+            addEvent(`goal:${g.player_name}_${g.player_id || idx}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute);
+          }
+        } else {
+          const isForTarget = resolvedTeamIdStr ? (resolvedTeamIdStr !== targetIdStr) : (targetIdStr === teamBIdStr);
+          if (isForTarget) {
+            addEvent(`og:${g.player_name}_${g.player_id || idx}`, 'goal', '⚽', g.player_name, g.jersey_number, g.team_name, g.minute, ' (OG - Phản lưới)');
+          }
         }
       });
     }
 
     if (m.yellow_cards) {
-      m.yellow_cards.forEach(y => {
-        if (y.team_id === teamId) {
-          addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.jersey_number, y.team_name, y.minute);
+      m.yellow_cards.forEach((y, idx) => {
+        const resolvedTeamIdStr = resolveTeamIdStr(y) || targetIdStr;
+        if (resolvedTeamIdStr === targetIdStr) {
+          addEvent(`yellow:${y.player_name}_${y.player_id || idx}`, 'yellow', '🟨', y.player_name, y.jersey_number, y.team_name, y.minute);
         }
       });
     }
 
     if (m.red_cards) {
-      m.red_cards.forEach(r => {
-        if (r.team_id === teamId) {
-          addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.jersey_number, r.team_name, r.minute);
+      m.red_cards.forEach((r, idx) => {
+        const resolvedTeamIdStr = resolveTeamIdStr(r) || targetIdStr;
+        if (resolvedTeamIdStr === targetIdStr) {
+          addEvent(`red:${r.player_name}_${r.player_id || idx}`, 'red', '🟥', r.player_name, r.jersey_number, r.team_name, r.minute);
         }
       });
     }

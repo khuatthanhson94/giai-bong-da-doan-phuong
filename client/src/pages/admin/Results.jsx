@@ -173,15 +173,25 @@ export default function AdminResults() {
   };
 
   const getMergedForm = () => {
+    const currentMatch = matches.find(m => m.id === selectedId);
+    const teamAId = currentMatch ? currentMatch.team_a_id : null;
+    const teamBId = currentMatch ? currentMatch.team_b_id : null;
+
     return {
       score_a: form.score_a,
       score_b: form.score_b,
       goals: [
-        ...form.goals_a.map(g => ({ player_id: g.player_id, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 })),
-        ...form.goals_b.map(g => ({ player_id: g.player_id, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 }))
+        ...form.goals_a.map(g => ({ player_id: g.player_id || null, player_name: g.player_name || null, team_id: teamAId, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 })),
+        ...form.goals_b.map(g => ({ player_id: g.player_id || null, player_name: g.player_name || null, team_id: teamBId, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 }))
       ],
-      yellow_cards: [...form.yellow_cards_a, ...form.yellow_cards_b],
-      red_cards: [...form.red_cards_a, ...form.red_cards_b],
+      yellow_cards: [
+        ...form.yellow_cards_a.map(y => ({ player_id: y.player_id || null, player_name: y.player_name || null, team_id: teamAId, minute: y.minute })),
+        ...form.yellow_cards_b.map(y => ({ player_id: y.player_id || null, player_name: y.player_name || null, team_id: teamBId, minute: y.minute }))
+      ],
+      red_cards: [
+        ...form.red_cards_a.map(r => ({ player_id: r.player_id || null, player_name: r.player_name || null, team_id: teamAId, minute: r.minute })),
+        ...form.red_cards_b.map(r => ({ player_id: r.player_id || null, player_name: r.player_name || null, team_id: teamBId, minute: r.minute }))
+      ],
       motm_player_id: form.motm_player_id ? Number(form.motm_player_id) : null,
       notes: form.notes,
       status: form.status,
