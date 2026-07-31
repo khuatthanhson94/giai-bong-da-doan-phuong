@@ -293,12 +293,102 @@ export default function Home() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Latest result */}
-          {latestMatch && (
-            <section>
-              <h2 className="section-title">Kết quả gần nhất</h2>
-              <MatchCard match={latestMatch} showScore />
-            </section>
-          )}
+          {latestMatch && (() => {
+            const eventsA = getEventsForTeam(latestMatch, latestMatch.team_a_id);
+            const eventsB = getEventsForTeam(latestMatch, latestMatch.team_b_id);
+
+            return (
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="section-title mb-0">Kết quả gần nhất</h2>
+                  <Link to={`/ket-qua?match_id=${latestMatch.id}`} className="text-xs font-bold text-primary hover:underline">
+                    Xem trang Kết quả →
+                  </Link>
+                </div>
+                
+                <Link
+                  to={`/ket-qua?match_id=${latestMatch.id}`}
+                  className="block bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition space-y-4 cursor-pointer hover:border-blue-300"
+                >
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-500">
+                    <span className="text-primary truncate max-w-[200px]">{latestMatch.round}</span>
+                    <span className="bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full font-bold text-[11px]">
+                      Đã kết thúc
+                    </span>
+                  </div>
+
+                  {/* Scoreboard row */}
+                  <div className="flex items-center justify-between gap-2 sm:gap-4 border-b pb-4">
+                    <div className="flex-1 text-center">
+                      {latestMatch.team_a_logo ? (
+                        <img src={getFullUrl(latestMatch.team_a_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 mx-auto object-contain mb-1.5 bg-gray-50 rounded-full p-1 border border-gray-100" />
+                      ) : (
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-base sm:text-xl mb-1.5">
+                          {latestMatch.team_a_name?.charAt(0)}
+                        </div>
+                      )}
+                      <p className="font-extrabold text-xs sm:text-sm text-gray-800 break-words leading-tight">{latestMatch.team_a_name}</p>
+                    </div>
+
+                    <div className="text-center px-2 sm:px-4 flex-shrink-0">
+                      <div className="text-2xl sm:text-4xl font-black text-primary bg-blue-50 border border-blue-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-inner font-mono tracking-tighter">
+                        {latestMatch.score_a} - {latestMatch.score_b}
+                      </div>
+                      <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 block mt-1.5">FT (90')</span>
+                    </div>
+
+                    <div className="flex-1 text-center">
+                      {latestMatch.team_b_logo ? (
+                        <img src={getFullUrl(latestMatch.team_b_logo)} alt="" className="w-12 h-12 sm:w-16 sm:h-16 mx-auto object-contain mb-1.5 bg-gray-50 rounded-full p-1 border border-gray-100" />
+                      ) : (
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full bg-gradient-to-br from-primary to-youth flex items-center justify-center text-white font-bold text-base sm:text-xl mb-1.5">
+                          {latestMatch.team_b_name?.charAt(0)}
+                        </div>
+                      )}
+                      <p className="font-extrabold text-xs sm:text-sm text-gray-800 break-words leading-tight">{latestMatch.team_b_name}</p>
+                    </div>
+                  </div>
+
+                  {/* Goalscorers & Pitch Events Section (LiveScore Style) */}
+                  {(eventsA.length > 0 || eventsB.length > 0) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 bg-blue-50/40 p-3 rounded-xl border border-blue-100">
+                      {/* Team A Events */}
+                      <div className="space-y-1 text-left sm:border-r sm:pr-2 border-gray-200 pb-1 sm:pb-0 border-b sm:border-b-0">
+                        <div className="font-bold text-[10px] text-primary sm:hidden mb-0.5">🛡️ {latestMatch.team_a_name}</div>
+                        {eventsA.map((evt, idx) => (
+                          <div key={idx} className="flex flex-wrap items-center gap-1 font-medium break-words">
+                            <span className="text-xs flex-shrink-0">{evt.icon}</span>
+                            <span className="font-bold text-gray-900">{evt.player_name}</span>
+                            <span className="text-primary font-bold whitespace-nowrap">({evt.minutesStr})</span>
+                            {evt.suffix && <span className="text-red-600 font-bold text-[9px] bg-red-100 px-1 rounded whitespace-nowrap">{evt.suffix}</span>}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Team B Events */}
+                      <div className="space-y-1 text-left sm:text-right sm:pl-2 pt-1 sm:pt-0">
+                        <div className="font-bold text-[10px] text-primary sm:hidden mb-0.5">🛡️ {latestMatch.team_b_name}</div>
+                        {eventsB.map((evt, idx) => (
+                          <div key={idx} className="flex flex-wrap items-center sm:justify-end gap-1 font-medium break-words">
+                            <span className="sm:hidden flex-shrink-0 text-xs">{evt.icon}</span>
+                            {evt.suffix && <span className="text-red-600 font-bold text-[9px] bg-red-100 px-1 rounded whitespace-nowrap">{evt.suffix}</span>}
+                            <span className="text-primary font-bold whitespace-nowrap">({evt.minutesStr})</span>
+                            <span className="font-bold text-gray-900">{evt.player_name}</span>
+                            <span className="hidden sm:inline-block text-xs flex-shrink-0">{evt.icon}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-500 flex justify-between items-center pt-2 border-t">
+                    <span className="truncate">🏟️ {latestMatch.venue} • 📅 {latestMatch.match_date}</span>
+                    <span className="text-primary font-bold flex-shrink-0 ml-2">Xem chi tiết →</span>
+                  </div>
+                </Link>
+              </section>
+            );
+          })()}
 
           {/* Top scorers */}
           <section>
