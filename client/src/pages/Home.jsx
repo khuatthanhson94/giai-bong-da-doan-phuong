@@ -183,8 +183,8 @@ export default function Home() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-16">
-        {/* Live Matches Panel */}
-        {liveMatches && liveMatches.length > 0 ? (
+        {/* Live Matches Panel (Only visible when matches are live) */}
+        {liveMatches && liveMatches.length > 0 && (
           <section className="bg-red-50 border-2 border-red-500/30 p-6 md:p-8 rounded-2xl space-y-4 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -285,21 +285,6 @@ export default function Home() {
                 );
               })}
             </div>
-          </section>
-        ) : (
-          <section className="bg-gradient-to-r from-blue-900 via-primary to-youth text-white p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="w-3.5 h-3.5 bg-red-500 rounded-full animate-ping flex-shrink-0"></span>
-              <div>
-                <div className="font-extrabold text-sm sm:text-base flex items-center gap-2">
-                  <span>🔴 Trung tâm LiveScore trực tiếp</span>
-                </div>
-                <p className="text-xs text-blue-100 mt-0.5">Tự động cập nhật diễn biến, bàn thắng & tỷ số các trận đấu theo thời gian thực</p>
-              </div>
-            </div>
-            <Link to="/truc-tiep" className="bg-white/20 hover:bg-white/30 text-white px-5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap border border-white/20">
-              Mở màn hình Livescore →
-            </Link>
           </section>
         )}
 
