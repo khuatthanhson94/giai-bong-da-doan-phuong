@@ -7,6 +7,67 @@ import { getFullUrl } from '../utils/url';
 
 import { useTournament } from '../context/TournamentContext';
 
+const getEventsForTeam = (m, teamId) => {
+  if (!m) return [];
+  const map = new Map();
+
+  const addEvent = (key, type, icon, player_name, minute, suffix = '') => {
+    const name = player_name || 'Vô danh';
+    if (!map.has(key)) {
+      map.set(key, {
+        type,
+        icon,
+        player_name: name,
+        minutes: [],
+        suffix,
+        minMinute: Number(minute) || 0
+      });
+    }
+    const item = map.get(key);
+    item.minutes.push(Number(minute) || 0);
+    if ((Number(minute) || 0) < item.minMinute) {
+      item.minMinute = Number(minute) || 0;
+    }
+  };
+
+  if (m.goals) {
+    m.goals.forEach(g => {
+      const isNormalGoalForThisTeam = g.team_id === teamId && !g.is_own_goal;
+      const isOwnGoalForOpponent = g.team_id !== teamId && g.is_own_goal;
+      const isOwnGoalByThisTeam = g.team_id === teamId && g.is_own_goal;
+      if (isNormalGoalForThisTeam) {
+        addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute);
+      } else if (isOwnGoalForOpponent || isOwnGoalByThisTeam) {
+        addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG - Phản lưới)');
+      }
+    });
+  }
+
+  if (m.yellow_cards) {
+    m.yellow_cards.forEach(y => {
+      if (y.team_id === teamId) {
+        addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.minute);
+      }
+    });
+  }
+
+  if (m.red_cards) {
+    m.red_cards.forEach(r => {
+      if (r.team_id === teamId) {
+        addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.minute);
+      }
+    });
+  }
+
+  const list = Array.from(map.values()).map(item => {
+    item.minutes.sort((a, b) => a - b);
+    item.minutesStr = item.minutes.map(min => `${min}'`).join(', ');
+    return item;
+  });
+
+  return list.sort((a, b) => a.minMinute - b.minMinute);
+};
+
 export default function Home() {
   const { selectedTournamentId } = useTournament();
   const [data, setData] = useState(null);
@@ -110,72 +171,8 @@ export default function Home() {
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               {liveMatches.map((m) => {
-                const getEventsForTeam = (teamId) => {
-                  const map = new Map();
-
-                  const addEvent = (key, type, icon, player_name, minute, suffix = '') => {
-                    const name = player_name || 'Vô danh';
-                    if (!map.has(key)) {
-                      map.set(key, {
-                        type,
-                        icon,
-                        player_name: name,
-                        minutes: [],
-                        suffix,
-                        minMinute: Number(minute) || 0
-                      });
-                    }
-                    const item = map.get(key);
-                    item.minutes.push(Number(minute) || 0);
-                    if ((Number(minute) || 0) < item.minMinute) {
-                      item.minMinute = Number(minute) || 0;
-                    }
-                  };
-
-                  // Goals
-                  if (m.goals) {
-                    m.goals.forEach(g => {
-                      const isNormalGoalForThisTeam = g.team_id === teamId && !g.is_own_goal;
-                      const isOwnGoalForOpponent = g.team_id !== teamId && g.is_own_goal;
-                      const isOwnGoalByThisTeam = g.team_id === teamId && g.is_own_goal;
-                      if (isNormalGoalForThisTeam) {
-                        addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute);
-                      } else if (isOwnGoalForOpponent || isOwnGoalByThisTeam) {
-                        addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG - Phản lưới)');
-                      }
-                    });
-                  }
-
-                  // Yellow Cards
-                  if (m.yellow_cards) {
-                    m.yellow_cards.forEach(y => {
-                      if (y.team_id === teamId) {
-                        addEvent(`yellow:${y.player_name}`, 'yellow', '🟨', y.player_name, y.minute);
-                      }
-                    });
-                  }
-
-                  // Red Cards
-                  if (m.red_cards) {
-                    m.red_cards.forEach(r => {
-                      if (r.team_id === teamId) {
-                        addEvent(`red:${r.player_name}`, 'red', '🟥', r.player_name, r.minute);
-                      }
-                    });
-                  }
-
-                  const list = Array.from(map.values()).map(item => {
-                    item.minutes.sort((a, b) => a - b);
-                    item.minutesStr = item.minutes.map(min => `${min}'`).join(', ');
-                    return item;
-                  });
-
-                  // Sort chronologically by earliest event minute
-                  return list.sort((a, b) => a.minMinute - b.minMinute);
-                };
-
-                const eventsA = getEventsForTeam(m.team_a_id);
-                const eventsB = getEventsForTeam(m.team_b_id);
+                const eventsA = getEventsForTeam(m, m.team_a_id);
+                const eventsB = getEventsForTeam(m, m.team_b_id);
 
                 return (
                   <div key={m.id} className="bg-white p-4 sm:p-5 rounded-xl border border-red-200 shadow-sm space-y-3">
