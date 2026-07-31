@@ -137,10 +137,11 @@ export default function Home() {
                     m.goals.forEach(g => {
                       const isNormalGoalForThisTeam = g.team_id === teamId && !g.is_own_goal;
                       const isOwnGoalForOpponent = g.team_id !== teamId && g.is_own_goal;
+                      const isOwnGoalByThisTeam = g.team_id === teamId && g.is_own_goal;
                       if (isNormalGoalForThisTeam) {
                         addEvent(`goal:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute);
-                      } else if (isOwnGoalForOpponent) {
-                        addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG)');
+                      } else if (isOwnGoalForOpponent || isOwnGoalByThisTeam) {
+                        addEvent(`og:${g.player_name}`, 'goal', '⚽', g.player_name, g.minute, ' (OG - Phản lưới)');
                       }
                     });
                   }
@@ -177,10 +178,10 @@ export default function Home() {
                 const eventsB = getEventsForTeam(m.team_b_id);
 
                 return (
-                  <div key={m.id} className="bg-white p-5 rounded-xl border border-red-200 shadow-sm space-y-3">
+                  <div key={m.id} className="bg-white p-4 sm:p-5 rounded-xl border border-red-200 shadow-sm space-y-3">
                     <div className="flex justify-between items-center text-xs font-semibold text-gray-500">
-                      <span>{m.round}</span>
-                      <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black tracking-wide">LIVE</span>
+                      <span className="truncate max-w-[200px]">{m.round}</span>
+                      <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded font-black tracking-wide flex-shrink-0">LIVE</span>
                     </div>
                     
                     {/* Scoreboard row */}
@@ -194,13 +195,13 @@ export default function Home() {
                             {m.team_a_name?.charAt(0)}
                           </div>
                         )}
-                        <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
+                        <span className="font-extrabold text-gray-800 text-xs sm:text-sm break-words leading-tight">
                           {m.team_a_name}
                         </span>
                       </div>
 
                       {/* Score */}
-                      <div className="flex flex-col items-center justify-center px-2 sm:px-4 min-w-[70px] sm:min-w-[100px] text-center">
+                      <div className="flex flex-col items-center justify-center px-2 sm:px-4 min-w-[70px] sm:min-w-[100px] text-center flex-shrink-0">
                         <div className="text-2xl sm:text-4xl font-black text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl shadow-inner font-mono tracking-tighter">
                           {m.score_a} - {m.score_b}
                         </div>
@@ -218,35 +219,38 @@ export default function Home() {
                             {m.team_b_name?.charAt(0)}
                           </div>
                         )}
-                        <span className="font-extrabold text-gray-800 text-xs sm:text-sm line-clamp-2 h-8 sm:h-10 leading-snug">
+                        <span className="font-extrabold text-gray-800 text-xs sm:text-sm break-words leading-tight">
                           {m.team_b_name}
                         </span>
                       </div>
                     </div>
 
-                    {/* Timeline Event list */}
+                    {/* Timeline Event list (Responsive grid for mobile) */}
                     {(eventsA.length > 0 || eventsB.length > 0) && (
-                      <div className="grid grid-cols-2 gap-4 text-[11px] sm:text-xs text-gray-600 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px] sm:text-xs text-gray-600 pt-1 bg-gray-50/50 p-2.5 rounded-lg border">
                         {/* Team A events */}
-                        <div className="space-y-1 text-left border-r pr-2 border-gray-100">
+                        <div className="space-y-1 text-left sm:border-r sm:pr-2 border-gray-200 pb-1 sm:pb-0 border-b sm:border-b-0">
+                          <div className="font-bold text-[10px] text-primary sm:hidden mb-0.5">🛡️ {m.team_a_name}</div>
                           {eventsA.map((evt, idx) => (
-                            <div key={idx} className="flex items-center gap-1 font-medium truncate">
-                              <span className="text-[10px] sm:text-xs">{evt.icon}</span>
-                              <span>{evt.player_name}</span>
-                              <span className="text-gray-400">({evt.minutesStr})</span>
-                              {evt.suffix && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">{evt.suffix}</span>}
+                            <div key={idx} className="flex flex-wrap items-center gap-1 font-medium break-words">
+                              <span className="text-[10px] sm:text-xs flex-shrink-0">{evt.icon}</span>
+                              <span className="font-bold text-gray-900">{evt.player_name}</span>
+                              <span className="text-primary font-bold whitespace-nowrap">({evt.minutesStr})</span>
+                              {evt.suffix && <span className="text-red-600 font-bold text-[9px] bg-red-100 px-1 rounded whitespace-nowrap">{evt.suffix}</span>}
                             </div>
                           ))}
                         </div>
 
                         {/* Team B events */}
-                        <div className="space-y-1 text-right pl-2">
+                        <div className="space-y-1 text-left sm:text-right sm:pl-2 pt-1 sm:pt-0">
+                          <div className="font-bold text-[10px] text-primary sm:hidden mb-0.5">🛡️ {m.team_b_name}</div>
                           {eventsB.map((evt, idx) => (
-                            <div key={idx} className="flex items-center justify-end gap-1 font-medium truncate">
-                              {evt.suffix && <span className="text-red-500 font-bold text-[9px] bg-red-50 px-1 rounded">{evt.suffix}</span>}
-                              <span className="text-gray-400">({evt.minutesStr})</span>
-                              <span>{evt.player_name}</span>
-                              <span className="text-[10px] sm:text-xs">{evt.icon}</span>
+                            <div key={idx} className="flex flex-wrap items-center sm:justify-end gap-1 font-medium break-words">
+                              <span className="sm:hidden flex-shrink-0 text-[10px] sm:text-xs">{evt.icon}</span>
+                              {evt.suffix && <span className="text-red-600 font-bold text-[9px] bg-red-100 px-1 rounded whitespace-nowrap">{evt.suffix}</span>}
+                              <span className="text-primary font-bold whitespace-nowrap">({evt.minutesStr})</span>
+                              <span className="font-bold text-gray-900">{evt.player_name}</span>
+                              <span className="hidden sm:inline-block text-[10px] sm:text-xs flex-shrink-0">{evt.icon}</span>
                             </div>
                           ))}
                         </div>
