@@ -1,4 +1,5 @@
 process.env.TZ = 'Asia/Ho_Chi_Minh';
+import 'dotenv/config';
 import express from 'express';
 import compression from 'compression';
 import fs from 'fs';
@@ -26,7 +27,7 @@ import { requestStorage } from './utils/context.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3004;
+const PORT = process.env.PORT || 5000;
 
 initDatabase();
 

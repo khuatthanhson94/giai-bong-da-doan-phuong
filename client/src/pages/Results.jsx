@@ -4,12 +4,23 @@ import { getFullUrl } from '../utils/url';
 
 export default function Results() {
   const [matches, setMatches] = useState([]);
+  const [rounds, setRounds] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [filters, setFilters] = useState({ round: '', team_id: '' });
   const [selected, setSelected] = useState(null);
   const [activeTab, setActiveTab] = useState('group'); // 'group' or 'knockout'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const detailRef = useRef(null);
 
   useEffect(() => {
+    Promise.all([
+      api.get('/matches/rounds'),
+      api.get('/teams'),
+    ]).then(([r, t]) => {
+      setRounds(r || []);
+      setTeams(t || []);
+    });
+
     api.get('/matches?status=finished&published=1').then((res) => {
       setMatches(res);
       const searchParams = new URLSearchParams(window.location.search);
@@ -36,6 +47,7 @@ export default function Results() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    setFilters(prev => ({ ...prev, round: '' }));
     const filtered = matches.filter((m) => {
       const isGroup = /bảng|lượt|group/i.test(m.round);
       return tab === 'group' ? isGroup : !isGroup;
@@ -43,10 +55,26 @@ export default function Results() {
     setSelected(filtered.length > 0 ? filtered[0] : null);
   };
 
-  // Filter matches based on active tab
+  // Filter dropdown rounds based on active tab
+  const displayedRounds = rounds.filter((r) => {
+    const isGroupRound = /bảng|lượt|group/i.test(r);
+    return activeTab === 'group' ? isGroupRound : !isGroupRound;
+  });
+
+  // Filter matches based on active tab & selected filters
   const displayedMatches = matches.filter((m) => {
     const isGroupRound = /bảng|lượt|group/i.test(m.round);
-    return activeTab === 'group' ? isGroupRound : !isGroupRound;
+    const tabMatch = activeTab === 'group' ? isGroupRound : !isGroupRound;
+    if (!tabMatch) return false;
+
+    if (filters.round && m.round !== filters.round) return false;
+    if (filters.team_id) {
+      const targetIdStr = String(filters.team_id);
+      const teamAStr = String(m.team_a_id || m.team_a?.id);
+      const teamBStr = String(m.team_b_id || m.team_b?.id);
+      if (teamAStr !== targetIdStr && teamBStr !== targetIdStr) return false;
+    }
+    return true;
   });
 
   const getEventsForTeam = (m, targetTeamId) => {
@@ -169,6 +197,50 @@ export default function Results() {
             🏆 Vòng Knockout
           </button>
         </div>
+      </div>
+
+      {/* Filter panel (Round and Team Selectors) */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200 shadow-sm mb-6 flex flex-wrap gap-3 sm:gap-4 items-center">
+        <div className="flex flex-col gap-1 min-w-[160px] flex-1 sm:flex-none">
+          <label className="text-[11px] sm:text-xs font-extrabold text-gray-600 flex items-center gap-1">
+            <span>🎯</span> Vòng đấu
+          </label>
+          <select
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            value={filters.round}
+            onChange={(e) => setFilters({ ...filters, round: e.target.value })}
+          >
+            <option value="">Tất cả các vòng</option>
+            {displayedRounds.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[160px] flex-1 sm:flex-none">
+          <label className="text-[11px] sm:text-xs font-extrabold text-gray-600 flex items-center gap-1">
+            <span>🛡️</span> Đội bóng
+          </label>
+          <select
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            value={filters.team_id}
+            onChange={(e) => setFilters({ ...filters, team_id: e.target.value })}
+          >
+            <option value="">Tất cả các đội</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {(filters.round || filters.team_id) && (
+          <button
+            onClick={() => setFilters({ round: '', team_id: '' })}
+            className="self-end px-3.5 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-extrabold text-xs transition-all flex items-center gap-1 border border-red-200"
+          >
+            <span>✕</span> Xóa bộ lọc
+          </button>
+        )}
       </div>
 
       {/* Matches Grid - Condensed Schedule Style */}
