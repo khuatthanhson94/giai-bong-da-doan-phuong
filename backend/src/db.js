@@ -992,16 +992,25 @@ export function autoStartMatches() {
     const todayStr = getVNLocalDateString();
     const now = new Date();
 
-    // Auto-correct any future match incorrectly marked as 'live'
+    // Reset any non-finished knockout match back to 'scheduled' if it was mistakenly auto-started
     db.prepare(`
       UPDATE matches 
       SET status = 'scheduled' 
       WHERE status = 'live' 
-        AND match_date > ? 
+        AND score_a IS NULL 
+        AND score_b IS NULL 
+        AND (round LIKE '%Tứ%' OR round LIKE '%Bán%' OR round LIKE '%Chung%' OR round LIKE '%Quarter%' OR round LIKE '%Semi%' OR round LIKE '%Final%')
         AND deleted_at IS NULL
-    `).run(todayStr);
+    `).run();
 
-    const scheduled = db.prepare("SELECT * FROM matches WHERE status = 'scheduled' AND deleted_at IS NULL").all();
+    // Auto-start ONLY group stage matches whose scheduled time has arrived today
+    const scheduled = db.prepare(`
+      SELECT * FROM matches 
+      WHERE status = 'scheduled' 
+        AND deleted_at IS NULL 
+        AND (round LIKE '%bảng%' OR round LIKE '%lượt%' OR round LIKE '%group%')
+    `).all();
+
     for (const match of scheduled) {
       if (!match.match_date || match.match_date !== todayStr) continue;
 
