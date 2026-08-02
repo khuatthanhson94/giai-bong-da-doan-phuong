@@ -62,20 +62,20 @@ const config = {
     {
       round: 'Bán kết',
       matches: [
-        { id: 'SF1', home: { type: 'winner', matchId: 'QF1' }, away: { type: 'winner', matchId: 'QF2' }, match_date: '2026-08-05', match_time: '08:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' },
-        { id: 'SF2', home: { type: 'winner', matchId: 'QF3' }, away: { type: 'winner', matchId: 'QF4' }, match_date: '2026-08-05', match_time: '15:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' }
+        { id: 'SF1', home: { type: 'winner', matchId: 'QF1' }, away: { type: 'winner', matchId: 'QF2' }, match_date: '2026-08-06', match_time: '07:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' },
+        { id: 'SF2', home: { type: 'winner', matchId: 'QF3' }, away: { type: 'winner', matchId: 'QF4' }, match_date: '2026-08-06', match_time: '18:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' }
       ]
     },
     {
       round: 'Tranh Hạng 3',
       matches: [
-        { id: '3P', home: { type: 'loser', matchId: 'SF1' }, away: { type: 'loser', matchId: 'SF2' }, match_date: '2026-08-07', match_time: '08:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' }
+        { id: '3P', home: { type: 'loser', matchId: 'SF1' }, away: { type: 'loser', matchId: 'SF2' }, match_date: '2026-08-08', match_time: '06:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' }
       ]
     },
     {
       round: 'Chung kết',
       matches: [
-        { id: 'F1', home: { type: 'winner', matchId: 'SF1' }, away: { type: 'winner', matchId: 'SF2' }, match_date: '2026-08-07', match_time: '15:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' }
+        { id: 'F1', home: { type: 'winner', matchId: 'SF1' }, away: { type: 'winner', matchId: 'SF2' }, match_date: '2026-08-08', match_time: '07:00', venue: 'Sân 1 - Sân bóng Tùng Thiện' }
       ]
     }
   ]
@@ -101,12 +101,12 @@ const allKnockoutMatches = [
   { round: 'Tứ kết 4', match_date: '2026-08-04', match_time: '08:00', venue: 'Sân 2 - Sân bóng Tùng Thiện', team_a_id: 100, team_b_id: 111, notes: 'KO_ID: QF4' },
   
   // Bán kết
-  { round: 'Bán kết 1', match_date: '2026-08-05', match_time: '08:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: SF1' },
-  { round: 'Bán kết 2', match_date: '2026-08-05', match_time: '15:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: SF2' },
+  { round: 'Bán kết 1', match_date: '2026-08-06', match_time: '07:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: SF1' },
+  { round: 'Bán kết 2', match_date: '2026-08-06', match_time: '18:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: SF2' },
 
   // Tranh Hạng 3 & Chung kết
-  { round: 'Tranh Hạng 3', match_date: '2026-08-07', match_time: '08:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: 3P' },
-  { round: 'Chung kết', match_date: '2026-08-07', match_time: '15:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: F1' }
+  { round: 'Tranh Hạng 3', match_date: '2026-08-08', match_time: '06:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: 3P' },
+  { round: 'Chung kết', match_date: '2026-08-08', match_time: '07:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: null, team_b_id: null, notes: 'KO_ID: F1' }
 ];
 
 for (const m of allKnockoutMatches) {
@@ -119,7 +119,7 @@ for (const m of allKnockoutMatches) {
 // 6. Force WAL Checkpoint so SQLite file on disk contains all rows
 db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
 
-console.log('🎉 Successfully created ALL Knockout matches (Tứ kết 1-4, Bán kết 1-2, Tranh Hạng 3, Chung kết) with status SCHEDULED!');
+console.log('🎉 Successfully created ALL Knockout matches with updated dates & times!');
 
 // 7. Upload to BOTH Neon PostgreSQL instances
 const neonUrls = [

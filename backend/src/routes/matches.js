@@ -137,12 +137,20 @@ router.get('/:id', (req, res) => {
   res.json(enrichMatch(match));
 });
 
+function addMinutesToTime(timeStr, mins) {
+  const [h, m] = (timeStr || '07:00').split(':').map(Number);
+  const totalMins = h * 60 + m + mins;
+  const newH = Math.floor(totalMins / 60) % 24;
+  const newM = totalMins % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+}
+
 router.post('/generate-group-schedule', authRequired, (req, res, next) => {
   if (!canManageTournament(req.user.role)) return res.status(403).json({ error: 'Không có quyền' });
   next();
 }, (req, res) => {
   try {
-    const { tournament_id, group_id, start_date, interval_days } = req.body;
+    const { tournament_id, group_id, start_date, interval_days, venue_names, rest_days, start_time, match_duration_minutes } = req.body;
     let tId = tournament_id ? Number(tournament_id) : null;
     if (!tId) {
       const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
@@ -165,22 +173,26 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
       }
 
       const insertMatch = db.prepare(`
-        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, status, published)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', 1)
       `);
 
-      // Parse custom start date or default to today
       let baseStartDate = new Date();
       if (start_date) {
-        // Handle YYYY-MM-DD input cleanly
         const parts = start_date.split('-');
         if (parts.length === 3) {
           baseStartDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
         }
       }
       
-      // Determine spacing days (1 for continuous, 2 for rest 1 day, 7 for weekly)
-      const spacingDays = interval_days ? Number(interval_days) : 7;
+      const restGap = rest_days !== undefined ? Number(rest_days) : (interval_days ? (Number(interval_days) > 1 ? 1 : 0) : 0);
+      const spacingDays = restGap === 1 ? 2 : (interval_days && Number(interval_days) > 1 ? Number(interval_days) : 1);
+
+      const venuesList = Array.isArray(venue_names) && venue_names.length > 0 
+        ? venue_names 
+        : ['Sân 1 - Sân bóng Tùng Thiện', 'Sân 2 - Sân bóng Tùng Thiện'];
+      const baseStartTime = start_time || '07:00';
+      const duration = Number(match_duration_minutes) || 60;
 
       for (const group of groups) {
         const groupTeams = db.prepare(`
@@ -189,7 +201,6 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
 
         if (groupTeams.length < 2) continue;
 
-        // Delete existing scheduled (unfinished, non-live) matches without events for these teams in this tournament
         const placeholders = groupTeams.map(() => '?').join(',');
         db.prepare(`
           DELETE FROM matches 
@@ -199,10 +210,9 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
           AND id NOT IN (SELECT match_id FROM goals UNION SELECT match_id FROM yellow_cards UNION SELECT match_id FROM red_cards)
         `).run(tId, ...groupTeams, ...groupTeams);
 
-        // Berger Round Robin Rotation
         let list = [...groupTeams];
         if (list.length % 2 !== 0) {
-          list.push(null); // bye
+          list.push(null);
         }
         const numTeams = list.length;
         const numRounds = numTeams - 1;
@@ -218,18 +228,16 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
             const teamA = list[i];
             const teamB = list[numTeams - 1 - i];
             if (teamA !== null && teamB !== null) {
-              // Distribute matches during the day
-              let timeStr = '08:00';
-              if (matchIdx === 1) timeStr = '10:00';
-              else if (matchIdx === 2) timeStr = '15:00';
-              else if (matchIdx === 3) timeStr = '17:00';
-              else if (matchIdx > 3) timeStr = '19:00';
+              const venueIndex = matchIdx % venuesList.length;
+              const slotIndex = Math.floor(matchIdx / venuesList.length);
+              const venue = venuesList[venueIndex];
+              const matchTime = addMinutesToTime(baseStartTime, slotIndex * duration);
 
               insertMatch.run(
                 `Vòng bảng - Lượt ${round + 1}`,
                 dateStr,
-                timeStr,
-                'Sân bóng Phường',
+                matchTime,
+                venue,
                 teamA,
                 teamB,
                 tId
@@ -237,7 +245,6 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
               matchIdx++;
             }
           }
-          // Rotate circle list
           list = [list[0], list[numTeams - 1], ...list.slice(1, numTeams - 1)];
         }
       }
@@ -247,8 +254,8 @@ router.post('/generate-group-schedule', authRequired, (req, res, next) => {
         req.user.username,
         'GENERATE_GROUP_SCHEDULE',
         group_id 
-          ? `Tự động tạo lịch thi đấu cho bảng đấu ID: ${group_id} của giải đấu ID: ${tId} (Bắt đầu: ${start_date || 'hôm nay'}, Khoảng cách: ${spacingDays} ngày)`
-          : `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId} (Bắt đầu: ${start_date || 'hôm nay'}, Khoảng cách: ${spacingDays} ngày)`
+          ? `Tự động tạo lịch thi đấu cho bảng đấu ID: ${group_id} của giải đấu ID: ${tId}`
+          : `Tự động khởi tạo lịch thi đấu vòng bảng giải đấu ID: ${tId}`
       );
     } catch (err) {
       db.exec('ROLLBACK');
@@ -265,7 +272,7 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   try {
-    const { config, tournament_id } = req.body;
+    const { config, tournament_id, start_date, venue_names, rest_days, morning_start_time, afternoon_start_time, match_duration_minutes } = req.body;
     if (!config || !config.startingRound) {
       return res.status(400).json({ error: 'Cấu hình knockout không hợp lệ' });
     }
@@ -279,14 +286,11 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
 
     db.exec('BEGIN IMMEDIATE');
     try {
-      // 1. Save config to settings with tournament suffix
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
         .run(`knockout_bracket_config_${tId}`, JSON.stringify(config));
 
-      // 2. Collect all knockout rounds in this configuration
       const koRounds = [config.startingRound, ...(config.nextRounds || []).map(r => r.round)];
 
-      // 3. Delete scheduled (not finished) matches in these rounds for this tournament
       const deleteStmt = db.prepare(`
         DELETE FROM matches 
         WHERE round = ? AND status != 'finished' AND tournament_id = ?
@@ -295,7 +299,6 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
         deleteStmt.run(round, tId);
       }
 
-      // 4. Resolve starting round teams and insert matches using tournament standings
       const standings = computeStandings(tId);
 
       const resolveTeam = (source) => {
@@ -307,15 +310,12 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
           const { groupId, rank } = source;
           const groupStandings = standings.filter(s => s.group_id === Number(groupId));
           const teamInfo = groupStandings[Number(rank) - 1];
-          if (!teamInfo) {
-            // Fallback: try finding team by group index or group teams
-            const groupTeams = standings.filter(s => String(s.group_id) === String(groupId));
-            if (groupTeams[Number(rank) - 1]) return groupTeams[Number(rank) - 1].team_id;
-            const groupTeamsList = db.prepare("SELECT team_id FROM group_teams WHERE group_id = ?").all(groupId);
-            if (groupTeamsList[Number(rank) - 1]) return groupTeamsList[Number(rank) - 1].team_id;
-            throw new Error(`Không tìm thấy đội bóng ở vị trí xếp hạng ${rank} của bảng đấu ID ${groupId}. Hãy hoàn thành vòng bảng hoặc phân bảng đầy đủ.`);
-          }
-          return teamInfo.team_id;
+          if (teamInfo) return teamInfo.team_id;
+          const groupTeams = standings.filter(s => String(s.group_id) === String(groupId));
+          if (groupTeams[Number(rank) - 1]) return groupTeams[Number(rank) - 1].team_id;
+          const groupTeamsList = db.prepare("SELECT team_id FROM group_teams WHERE group_id = ?").all(groupId);
+          if (groupTeamsList[Number(rank) - 1]) return groupTeamsList[Number(rank) - 1].team_id;
+          return null;
         }
         if (source.type === 'best_third') {
           const { rank } = source;
@@ -329,53 +329,106 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
           }
           thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
           const teamInfo = thirdTeams[Number(rank) - 1];
-          if (!teamInfo) {
-            const fallbackThirds = [];
-            for (const g of groupsList) {
-              const groupTeams = standings.filter(s => s.group_id === g.id);
-              if (groupTeams[2]) fallbackThirds.push(groupTeams[2]);
-            }
-            if (fallbackThirds[Number(rank) - 1]) return fallbackThirds[Number(rank) - 1].team_id;
-            throw new Error(`Không tìm thấy đội bóng xếp thứ 3 xuất sắc thứ ${rank}. Hãy hoàn thành vòng bảng.`);
+          if (teamInfo) return teamInfo.team_id;
+          const fallbackThirds = [];
+          for (const g of groupsList) {
+            const groupTeams = standings.filter(s => s.group_id === g.id);
+            if (groupTeams[2]) fallbackThirds.push(groupTeams[2]);
           }
-          return teamInfo.team_id;
+          if (fallbackThirds[Number(rank) - 1]) return fallbackThirds[Number(rank) - 1].team_id;
+          return null;
         }
         return null;
       };
+
+      const venuesList = Array.isArray(venue_names) && venue_names.length > 0 
+        ? venue_names 
+        : ['Sân 1 - Sân bóng Tùng Thiện', 'Sân 2 - Sân bóng Tùng Thiện'];
+      const restGap = rest_days !== undefined ? Number(rest_days) : 1;
+      const spacingDays = restGap === 1 ? 2 : 1;
+      const morningTime = morning_start_time || '07:00';
+      const afternoonTime = afternoon_start_time || '18:00';
+      const duration = Number(match_duration_minutes) || 60;
+
+      let baseStartDate = new Date();
+      if (start_date) {
+        const parts = start_date.split('-');
+        if (parts.length === 3) {
+          baseStartDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        }
+      }
 
       const koMatches = Array.isArray(config.startingMatches) && config.startingMatches.length > 0 
         ? config.startingMatches 
         : (Array.isArray(config.matches) ? config.matches : []);
 
       let insertedCount = 0;
+      let qfIndex = 0;
+
+      const qfDateStr = getVNLocalDateString(baseStartDate);
+
       for (const matchDef of koMatches) {
         const homeSource = matchDef.home || matchDef.teamA;
         const awaySource = matchDef.away || matchDef.teamB;
-        if (!homeSource || !awaySource) continue;
 
         const teamA = resolveTeam(homeSource);
         const teamB = resolveTeam(awaySource);
-        if (!teamA || !teamB) continue;
 
-        const matchDate = matchDef.match_date || matchDef.date || getVNLocalDateString();
-        const matchTime = matchDef.match_time || matchDef.time || '15:00';
-        const venue = matchDef.venue || 'Sân vận động trung tâm';
-        const notes = `KO_ID: ${matchDef.id || 'KO'}`;
+        const venueIndex = qfIndex % venuesList.length;
+        const slotIndex = Math.floor(qfIndex / venuesList.length);
+        const matchVenue = matchDef.venue || venuesList[venueIndex];
+        const matchTime = matchDef.match_time || addMinutesToTime(morningTime, slotIndex * duration);
+        const matchDate = matchDef.match_date || qfDateStr;
+        const notes = `KO_ID: ${matchDef.id || 'QF' + (qfIndex + 1)}`;
+        const roundName = matchDef.round || `Tứ kết ${qfIndex + 1}`;
 
         db.prepare(`
           INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, status, notes, published)
           VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, 1)
         `).run(
-          matchDef.round || config.startingRound,
+          roundName,
           matchDate,
           matchTime,
-          venue,
+          matchVenue,
           teamA,
           teamB,
           tId,
           notes
         );
         insertedCount++;
+        qfIndex++;
+      }
+
+      if (Array.isArray(config.nextRounds)) {
+        let roundOffset = 1;
+        for (const r of config.nextRounds) {
+          const rDate = new Date(baseStartDate);
+          rDate.setDate(rDate.getDate() + roundOffset * spacingDays);
+          const rDateStr = getVNLocalDateString(rDate);
+
+          let mIdx = 0;
+          for (const mDef of r.matches) {
+            const notes = `KO_ID: ${mDef.id}`;
+            const roundName = mDef.round || `${r.round} ${mIdx + 1}`;
+            const venue = mDef.venue || venuesList[0];
+            const time = mDef.match_time || (mIdx === 1 ? afternoonTime : morningTime);
+
+            db.prepare(`
+              INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, status, notes, published)
+              VALUES (?, ?, ?, ?, NULL, NULL, ?, 'scheduled', ?, 1)
+            `).run(
+              roundName,
+              mDef.match_date || rDateStr,
+              time,
+              venue,
+              tId,
+              notes
+            );
+            insertedCount++;
+            mIdx++;
+          }
+          roundOffset++;
+        }
       }
 
       db.exec('COMMIT');

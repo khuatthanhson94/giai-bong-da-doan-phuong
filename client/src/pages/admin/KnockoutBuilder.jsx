@@ -11,6 +11,18 @@ export default function KnockoutBuilder() {
   const [startingMatches, setStartingMatches] = useState([]);
   const [nextRounds, setNextRounds] = useState([]);
 
+  // Schedule options for Knockout stage
+  const [koForm, setKoForm] = useState({
+    start_date: '2026-08-04',
+    pitch_count: '2',
+    venue_1: 'Sân 1 - Sân bóng Tùng Thiện',
+    venue_2: 'Sân 2 - Sân bóng Tùng Thiện',
+    rest_days: '1',
+    morning_start_time: '07:00',
+    afternoon_start_time: '18:00',
+    match_duration_minutes: '60',
+  });
+
   // Load essential data on mount
   useEffect(() => {
     Promise.all([
@@ -377,7 +389,23 @@ export default function KnockoutBuilder() {
         startingMatches,
         nextRounds
       };
-      const res = await api.post('/matches/generate-knockout', { config });
+
+      const pitchNum = Number(koForm.pitch_count) || 2;
+      const venueNames = [];
+      if (pitchNum >= 1) venueNames.push(koForm.venue_1 || 'Sân 1 - Sân bóng Tùng Thiện');
+      if (pitchNum >= 2) venueNames.push(koForm.venue_2 || 'Sân 2 - Sân bóng Tùng Thiện');
+      if (pitchNum >= 3) venueNames.push('Sân 3');
+      if (pitchNum >= 4) venueNames.push('Sân 4');
+
+      const res = await api.post('/matches/generate-knockout', {
+        config,
+        start_date: koForm.start_date,
+        venue_names: venueNames,
+        rest_days: Number(koForm.rest_days),
+        morning_start_time: koForm.morning_start_time,
+        afternoon_start_time: koForm.afternoon_start_time,
+        match_duration_minutes: Number(koForm.match_duration_minutes),
+      });
       alert(res.message || 'Khởi tạo vòng loại trực tiếp thành công!');
     } catch (err) {
       alert(err.message || 'Có lỗi xảy ra khi tạo vòng loại trực tiếp.');
@@ -408,10 +436,10 @@ export default function KnockoutBuilder() {
       <div className="card p-6 border border-gray-100 bg-white">
         <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
-          Bước 1: Cấu hình chung & Quy tắc thăng hạng
+          Bước 1: Cấu hình chung & Lịch tự động Knockout
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 mb-6">
           <div>
             <label className="form-label font-semibold">Vòng đấu bắt đầu</label>
             <div className="grid grid-cols-3 gap-2 mt-1">
@@ -463,6 +491,84 @@ export default function KnockoutBuilder() {
             >
               🔄 Đặt lại Nhánh mặc định
             </button>
+          </div>
+        </div>
+
+        {/* Dynamic Schedule Options Section */}
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+          <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            📅 Tùy chọn xếp lịch tự động Vòng Knockout
+          </h3>
+          <div className="grid md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Ngày bắt đầu Knockout</label>
+              <input
+                type="date"
+                className="input-field text-xs mt-1"
+                value={koForm.start_date}
+                onChange={(e) => setKoForm({ ...koForm, start_date: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Số sân thi đấu</label>
+              <select
+                className="input-field text-xs mt-1"
+                value={koForm.pitch_count}
+                onChange={(e) => setKoForm({ ...koForm, pitch_count: e.target.value })}
+              >
+                <option value="1">1 Sân</option>
+                <option value="2">2 Sân</option>
+                <option value="3">3 Sân</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Thể thức thi đấu (Lịch nghỉ)</label>
+              <select
+                className="input-field text-xs mt-1"
+                value={koForm.rest_days}
+                onChange={(e) => setKoForm({ ...koForm, rest_days: e.target.value })}
+              >
+                <option value="0">Thi đấu liên tục hằng ngày</option>
+                <option value="1">Nghỉ 1 ngày giữa các vòng (Tứ kết - Bán kết - Chung kết)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Thời gian/trận (phút)</label>
+              <input
+                type="number"
+                min="30"
+                max="180"
+                step="5"
+                className="input-field text-xs mt-1"
+                value={koForm.match_duration_minutes}
+                onChange={(e) => setKoForm({ ...koForm, match_duration_minutes: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Giờ bắt đầu Ca sáng</label>
+              <input
+                type="time"
+                className="input-field text-xs mt-1"
+                value={koForm.morning_start_time}
+                onChange={(e) => setKoForm({ ...koForm, morning_start_time: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Giờ bắt đầu Ca chiều/tối</label>
+              <input
+                type="time"
+                className="input-field text-xs mt-1"
+                value={koForm.afternoon_start_time}
+                onChange={(e) => setKoForm({ ...koForm, afternoon_start_time: e.target.value })}
+              />
+            </div>
           </div>
         </div>
       </div>

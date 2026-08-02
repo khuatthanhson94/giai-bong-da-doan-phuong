@@ -16,7 +16,12 @@ export default function AdminGroupSchedule() {
   const [showAutoModal, setShowAutoModal] = useState(false);
   const [autoForm, setAutoForm] = useState({
     start_date: new Date().toISOString().split('T')[0],
-    interval_days: '7',
+    rest_days: '0',
+    pitch_count: '2',
+    venue_1: 'Sân 1 - Sân bóng Tùng Thiện',
+    venue_2: 'Sân 2 - Sân bóng Tùng Thiện',
+    start_time: '07:00',
+    match_duration_minutes: '60',
   });
 
   // Load groups on mount
@@ -52,7 +57,12 @@ export default function AdminGroupSchedule() {
     }
     setAutoForm({
       start_date: new Date().toISOString().split('T')[0],
-      interval_days: '7',
+      rest_days: '0',
+      pitch_count: '2',
+      venue_1: 'Sân 1 - Sân bóng Tùng Thiện',
+      venue_2: 'Sân 2 - Sân bóng Tùng Thiện',
+      start_time: '07:00',
+      match_duration_minutes: '60',
     });
     setShowAutoModal(true);
   };
@@ -60,10 +70,20 @@ export default function AdminGroupSchedule() {
   const handleAutoGenerateSubmit = async (e) => {
     e.preventDefault();
     try {
+      const pitchNum = Number(autoForm.pitch_count) || 1;
+      const venueNames = [];
+      if (pitchNum >= 1) venueNames.push(autoForm.venue_1 || 'Sân 1');
+      if (pitchNum >= 2) venueNames.push(autoForm.venue_2 || 'Sân 2');
+      if (pitchNum >= 3) venueNames.push('Sân 3');
+      if (pitchNum >= 4) venueNames.push('Sân 4');
+
       await api.post('/matches/generate-group-schedule', {
         group_id: Number(selectedGroupId),
         start_date: autoForm.start_date,
-        interval_days: Number(autoForm.interval_days),
+        rest_days: Number(autoForm.rest_days),
+        venue_names: venueNames,
+        start_time: autoForm.start_time,
+        match_duration_minutes: Number(autoForm.match_duration_minutes),
       });
       setShowAutoModal(false);
       loadMatches(selectedGroupId);
@@ -143,10 +163,13 @@ export default function AdminGroupSchedule() {
       </div>
 
       {showAutoModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in text-left">
-          <form onSubmit={handleAutoGenerateSubmit} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-up">
-            <h3 className="font-extrabold text-gray-800 text-lg mb-4">
-              📅 Tự động tạo lịch vòng bảng
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleAutoGenerateSubmit}
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-scale-in max-h-[90vh] overflow-y-auto"
+          >
+            <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">
+              Tùy chọn tạo lịch thi đấu Vòng bảng
             </h3>
             
             <div className="flex flex-col gap-4">
@@ -157,33 +180,76 @@ export default function AdminGroupSchedule() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600">Ngày bắt đầu giải đấu</label>
-                <input
-                  type="date"
-                  className="input-field"
-                  value={autoForm.start_date}
-                  onChange={(e) => setAutoForm({ ...autoForm, start_date: e.target.value })}
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-600">Ngày bắt đầu</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={autoForm.start_date}
+                    onChange={(e) => setAutoForm({ ...autoForm, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-600">Số sân thi đấu</label>
+                  <select
+                    className="input-field cursor-pointer"
+                    value={autoForm.pitch_count}
+                    onChange={(e) => setAutoForm({ ...autoForm, pitch_count: e.target.value })}
+                  >
+                    <option value="1">1 Sân</option>
+                    <option value="2">2 Sân</option>
+                    <option value="3">3 Sân</option>
+                    <option value="4">4 Sân</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600">Tần suất thi đấu</label>
+                <label className="text-xs font-semibold text-gray-600">Thể thức lịch (Số ngày nghỉ)</label>
                 <select
                   className="input-field cursor-pointer"
-                  value={autoForm.interval_days}
-                  onChange={(e) => setAutoForm({ ...autoForm, interval_days: e.target.value })}
+                  value={autoForm.rest_days}
+                  onChange={(e) => setAutoForm({ ...autoForm, rest_days: e.target.value })}
                   required
                 >
-                  <option value="1">Thi đấu liên tục (Hằng ngày)</option>
-                  <option value="2">Nghỉ 1 ngày (Cách 1 ngày)</option>
+                  <option value="0">Thi đấu liên tục hằng ngày (Nghỉ 0 ngày)</option>
+                  <option value="1">Cách ngày (Nghỉ 1 ngày giữa các ngày thi đấu)</option>
                   <option value="7">Thi đấu hàng tuần (Cách 7 ngày)</option>
                 </select>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-600">Giờ bắt đầu thi đấu</label>
+                  <input
+                    type="time"
+                    className="input-field"
+                    value={autoForm.start_time}
+                    onChange={(e) => setAutoForm({ ...autoForm, start_time: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-gray-600">Thời gian/trận (phút)</label>
+                  <input
+                    type="number"
+                    min="30"
+                    max="180"
+                    step="5"
+                    className="input-field"
+                    value={autoForm.match_duration_minutes}
+                    onChange={(e) => setAutoForm({ ...autoForm, match_duration_minutes: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
               <p className="text-[11px] text-red-500 leading-relaxed bg-red-50 p-3 rounded-lg border border-red-100 font-medium">
-                ⚠️ Cảnh báo: Thao tác này sẽ tự động xóa tất cả các trận đấu CHƯA KẾT THÚC của bảng đấu được chọn để xếp lịch mới. Các trận đã có kết quả sẽ được giữ nguyên.
+                ⚠️ Cảnh báo: Thao tác này sẽ tự động xóa tất cả các trận đấu CHƯA KẾT THÚC của bảng đấu được chọn để xếp lịch mới.
               </p>
             </div>
 
