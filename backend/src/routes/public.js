@@ -61,7 +61,7 @@ router.get('/home', (req, res) => {
     allMatchesSql += ' AND m.tournament_id = ?';
     allMatchesParams.push(tId);
   }
-  allMatchesSql += ' ORDER BY m.match_date, m.match_time';
+  allMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time';
   const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
     const goals = db.prepare(`
       SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id, t.name as team_name
@@ -116,7 +116,7 @@ router.get('/home', (req, res) => {
     upcomingMatchesSql += ' AND m.tournament_id = ?';
     upcomingMatchesParams.push(tId);
   }
-  upcomingMatchesSql += ' ORDER BY m.match_date, m.match_time LIMIT 12';
+  upcomingMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time LIMIT 12';
   const upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingMatchesParams);
 
   let newsSql = 'SELECT * FROM news WHERE published = 1 AND deleted_at IS NULL';
