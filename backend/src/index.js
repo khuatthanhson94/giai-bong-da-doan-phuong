@@ -297,6 +297,11 @@ app.get('/api/debug/raw-db-url', (req, res) => {
   res.json({ url: url ? url.substring(0, 15) + '...' : 'not set' });
 });
 
+app.use((err, req, res, next) => {
+  console.error('[Global Express Error Handler]', err.stack || err.message || err);
+  res.status(500).json({ error: err.message || 'Internal Server Error', stack: err.stack });
+});
+
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
