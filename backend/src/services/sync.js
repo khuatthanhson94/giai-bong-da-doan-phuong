@@ -150,22 +150,6 @@ export async function restoreDatabase(dbPath) {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    // Check if local database exists, is valid, and has newer modifications than cloud backup
-    if (fs.existsSync(dbPath) && validateRestoredDatabase(dbPath)) {
-      try {
-        const localMtime = fs.statSync(dbPath).mtimeMs;
-        if (localMtime > latestTime) {
-          console.log(`[Sync] Local database is NEWER than cloud backup (local mtime: ${new Date(localMtime).toISOString()}, cloud backup: ${new Date(latestTime).toISOString()}). Retaining local database and scheduling sync to cloud.`);
-          lastSyncStatus.lastRestoreSuccess = `${new Date().toISOString()} (Retained local, newer than cloud)`;
-          isReadyToBackup = true;
-          scheduleSync(dbPath);
-          return true;
-        }
-      } catch (err) {
-        console.warn('[Sync] Could not check local DB mtime:', err.message);
-      }
-    }
-
     fs.writeFileSync(dbPath, latestData);
     console.log(`[Sync] Wrote restored database (${latestData.length} bytes) from ${latestSource}`);
 
