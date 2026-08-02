@@ -109,8 +109,18 @@ router.get('/home', (req, res) => {
       console.error('[API /home] Error fetching matches:', e.message);
     }
 
+    const now = new Date();
     const latestMatch = allMatches.filter((m) => m.status === 'finished').pop() || null;
-    const liveMatches = allMatches.filter((m) => m.status === 'live');
+    const liveMatches = allMatches.filter((m) => {
+      if (m.status !== 'live') return false;
+      if (!m.match_date || !m.match_time) return true;
+      const timeStr = m.match_time.substring(0, 5);
+      const matchStart = new Date(`${m.match_date}T${timeStr}:00+07:00`);
+      if (now < matchStart && (m.score_a === null || m.score_a === undefined) && (m.score_b === null || m.score_b === undefined)) {
+        return false;
+      }
+      return true;
+    });
 
     let upcomingMatches = [];
     try {
@@ -272,13 +282,19 @@ router.get('/livescore', (req, res) => {
   todayMatchesSql += ' ORDER BY m.match_time';
   const todayMatches = db.prepare(todayMatchesSql).all(...todayParams);
 
-  const settings = {};
-  db.prepare('SELECT key, value FROM settings').all().forEach((s) => {
-    settings[s.key] = s.value;
+  const now = new Date();
+  const validLiveMatches = liveMatches.filter((m) => {
+    if (!m.match_date || !m.match_time) return true;
+    const timeStr = m.match_time.substring(0, 5);
+    const matchStart = new Date(`${m.match_date}T${timeStr}:00+07:00`);
+    if (now < matchStart && (m.score_a === null || m.score_a === undefined) && (m.score_b === null || m.score_b === undefined)) {
+      return false;
+    }
+    return true;
   });
 
   res.json({
-    liveMatches,
+    liveMatches: validLiveMatches,
     upcomingMatches,
     todayMatches,
     settings
