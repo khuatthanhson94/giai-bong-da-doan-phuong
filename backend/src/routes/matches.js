@@ -7,41 +7,64 @@ import { getVNLocalDateString } from '../utils/date.js';
 const router = Router();
 
 function enrichMatch(match) {
-  const teamA = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_a_id);
-  const teamB = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_b_id);
+  let teamA = null, teamB = null, group = null, goals = [], yellows = [], reds = [], motm = null;
+  try {
+    teamA = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_a_id) || null;
+  } catch (e) {}
+  try {
+    teamB = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_b_id) || null;
+  } catch (e) {}
   
   const isKnockout = !/bảng|lượt|group/i.test(match.round);
-  const group = isKnockout ? null : (db.prepare(`
-    SELECT g.id, g.name
-    FROM group_teams gt
-    JOIN groups g ON gt.group_id = g.id
-    WHERE gt.team_id = ? AND g.deleted_at IS NULL
-  `).get(match.team_a_id) || null);
+  if (!isKnockout) {
+    try {
+      group = db.prepare(`
+        SELECT g.id, g.name
+        FROM group_teams gt
+        JOIN groups g ON gt.group_id = g.id
+        WHERE gt.team_id = ? AND g.deleted_at IS NULL
+      `).get(match.team_a_id) || null;
+    } catch (e) {}
+  }
 
-  const goals = db.prepare(`
-    SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, t.name as team_name
-    FROM goals g 
-    LEFT JOIN players p ON g.player_id = p.id 
-    LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
-    WHERE g.match_id = ? ORDER BY g.minute
-  `).all(match.id);
-  const yellows = db.prepare(`
-    SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, t.name as team_name
-    FROM yellow_cards y 
-    LEFT JOIN players p ON y.player_id = p.id 
-    LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
-    WHERE y.match_id = ? ORDER BY y.minute
-  `).all(match.id);
-  const reds = db.prepare(`
-    SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, t.name as team_name
-    FROM red_cards r 
-    LEFT JOIN players p ON r.player_id = p.id 
-    LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
-    WHERE r.match_id = ? ORDER BY r.minute
-  `).all(match.id);
-  const motm = match.motm_player_id
-    ? db.prepare('SELECT id, name, jersey_number, photo FROM players WHERE id = ?').get(match.motm_player_id)
-    : (match.motm_player_name ? { name: match.motm_player_name } : null);
+  try {
+    goals = db.prepare(`
+      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, t.name as team_name
+      FROM goals g 
+      LEFT JOIN players p ON g.player_id = p.id 
+      LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
+      WHERE g.match_id = ? ORDER BY g.minute
+    `).all(match.id);
+  } catch (e) {}
+
+  try {
+    yellows = db.prepare(`
+      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, t.name as team_name
+      FROM yellow_cards y 
+      LEFT JOIN players p ON y.player_id = p.id 
+      LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
+      WHERE y.match_id = ? ORDER BY y.minute
+    `).all(match.id);
+  } catch (e) {}
+
+  try {
+    reds = db.prepare(`
+      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, t.name as team_name
+      FROM red_cards r 
+      LEFT JOIN players p ON r.player_id = p.id 
+      LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
+      WHERE r.match_id = ? ORDER BY r.minute
+    `).all(match.id);
+  } catch (e) {}
+
+  if (match.motm_player_id) {
+    try {
+      motm = db.prepare('SELECT id, name, jersey_number, photo FROM players WHERE id = ?').get(match.motm_player_id) || null;
+    } catch (e) {}
+  } else if (match.motm_player_name) {
+    motm = { name: match.motm_player_name };
+  }
+
   return { ...match, team_a: teamA, team_b: teamB, goals, yellow_cards: yellows, red_cards: reds, motm, group };
 }
 
