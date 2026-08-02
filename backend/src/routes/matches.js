@@ -236,7 +236,7 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
 }, (req, res) => {
   try {
     const { config, tournament_id } = req.body;
-    if (!config || !config.startingRound || !Array.isArray(config.startingMatches)) {
+    if (!config || !config.startingRound) {
       return res.status(400).json({ error: 'Cấu hình knockout không hợp lệ' });
     }
 
@@ -269,6 +269,7 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
       const standings = computeStandings(tId);
 
       const resolveTeam = (source) => {
+        if (!source) return null;
         if (source.type === 'team') {
           return Number(source.teamId);
         }
@@ -277,6 +278,11 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
           const groupStandings = standings.filter(s => s.group_id === Number(groupId));
           const teamInfo = groupStandings[Number(rank) - 1];
           if (!teamInfo) {
+            // Fallback: try finding team by group index or group teams
+            const groupTeams = standings.filter(s => String(s.group_id) === String(groupId));
+            if (groupTeams[Number(rank) - 1]) return groupTeams[Number(rank) - 1].team_id;
+            const groupTeamsList = db.prepare("SELECT team_id FROM group_teams WHERE group_id = ?").all(groupId);
+            if (groupTeamsList[Number(rank) - 1]) return groupTeamsList[Number(rank) - 1].team_id;
             throw new Error(`Không tìm thấy đội bóng ở vị trí xếp hạng ${rank} của bảng đấu ID ${groupId}. Hãy hoàn thành vòng bảng hoặc phân bảng đầy đủ.`);
           }
           return teamInfo.team_id;
@@ -294,34 +300,56 @@ router.post('/generate-knockout', authRequired, (req, res, next) => {
           thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
           const teamInfo = thirdTeams[Number(rank) - 1];
           if (!teamInfo) {
+            const fallbackThirds = [];
+            for (const g of groupsList) {
+              const groupTeams = standings.filter(s => s.group_id === g.id);
+              if (groupTeams[2]) fallbackThirds.push(groupTeams[2]);
+            }
+            if (fallbackThirds[Number(rank) - 1]) return fallbackThirds[Number(rank) - 1].team_id;
             throw new Error(`Không tìm thấy đội bóng xếp thứ 3 xuất sắc thứ ${rank}. Hãy hoàn thành vòng bảng.`);
           }
           return teamInfo.team_id;
         }
-        throw new Error(`Kiểu nguồn đội không hợp lệ: ${source.type}`);
+        return null;
       };
 
-      for (const matchDef of config.matches || []) {
-        const teamA = resolveTeam(matchDef.teamA);
-        const teamB = resolveTeam(matchDef.teamB);
+      const koMatches = Array.isArray(config.startingMatches) && config.startingMatches.length > 0 
+        ? config.startingMatches 
+        : (Array.isArray(config.matches) ? config.matches : []);
+
+      let insertedCount = 0;
+      for (const matchDef of koMatches) {
+        const homeSource = matchDef.home || matchDef.teamA;
+        const awaySource = matchDef.away || matchDef.teamB;
+        if (!homeSource || !awaySource) continue;
+
+        const teamA = resolveTeam(homeSource);
+        const teamB = resolveTeam(awaySource);
         if (!teamA || !teamB) continue;
 
+        const matchDate = matchDef.match_date || matchDef.date || getVNLocalDateString();
+        const matchTime = matchDef.match_time || matchDef.time || '15:00';
+        const venue = matchDef.venue || 'Sân vận động trung tâm';
+        const notes = `KO_ID: ${matchDef.id || 'KO'}`;
+
         db.prepare(`
-          INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')
+          INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, tournament_id, status, notes, published)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled', ?, 1)
         `).run(
           matchDef.round || config.startingRound,
-          matchDef.date || getVNLocalDateString(new Date()),
-          matchDef.time || '15:00',
-          matchDef.venue || 'Sân vận động trung tâm',
+          matchDate,
+          matchTime,
+          venue,
           teamA,
           teamB,
-          tId
+          tId,
+          notes
         );
+        insertedCount++;
       }
 
       db.exec('COMMIT');
-      logAction(req.user.username, 'GENERATE_KNOCKOUT_SCHEDULE', `Khởi tạo vòng loại trực tiếp cho giải đấu ID: ${tId}`);
+      logAction(req.user.username, 'GENERATE_KNOCKOUT_SCHEDULE', `Khởi tạo ${insertedCount} trận đấu vòng loại trực tiếp cho giải đấu ID: ${tId}`);
     } catch (err) {
       db.exec('ROLLBACK');
       throw err;
