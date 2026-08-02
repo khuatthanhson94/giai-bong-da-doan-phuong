@@ -992,30 +992,30 @@ export function autoStartMatches() {
     const todayStr = getVNLocalDateString();
     const now = new Date();
 
-    // Reset any unscored match back to 'scheduled' if it has no scores entered
-    db.prepare(`
-      UPDATE matches 
-      SET status = 'scheduled' 
-      WHERE status = 'live' 
-        AND (score_a IS NULL OR score_a = '') 
-        AND (score_b IS NULL OR score_b = '') 
-        AND deleted_at IS NULL
-    `).run();
+    // 1. Reset any match marked as 'live' back to 'scheduled' if its match time has NOT arrived yet
+    const liveMatches = db.prepare("SELECT * FROM matches WHERE status = 'live' AND deleted_at IS NULL").all();
+    for (const match of liveMatches) {
+      if (!match.match_date || !match.match_time) continue;
+      const timeStr = match.match_time.substring(0, 5);
+      const matchStart = new Date(`${match.match_date}T${timeStr}:00+07:00`);
 
-    // Auto-start ONLY group stage matches whose scheduled time has arrived today
-    const scheduled = db.prepare(`
-      SELECT * FROM matches 
-      WHERE status = 'scheduled' 
-        AND deleted_at IS NULL 
-        AND (round LIKE '%bảng%' OR round LIKE '%lượt%' OR round LIKE '%group%')
-    `).all();
+      if (now < matchStart && (match.score_a === null || match.score_a === undefined) && (match.score_b === null || match.score_b === undefined)) {
+        db.prepare("UPDATE matches SET status = 'scheduled' WHERE id = ?").run(match.id);
+        console.log(`[Auto-Start] Match ${match.id} start time has not arrived yet. Status reset to scheduled.`);
+      }
+    }
+
+    // 2. Auto-start any match (Group stage or Knockout) scheduled for TODAY whose match time has arrived
+    const scheduled = db.prepare("SELECT * FROM matches WHERE status = 'scheduled' AND deleted_at IS NULL").all();
 
     for (const match of scheduled) {
       if (!match.match_date || match.match_date !== todayStr) continue;
 
       const timeStr = match.match_time ? match.match_time.substring(0, 5) : '00:00';
       const matchStart = new Date(`${match.match_date}T${timeStr}:00+07:00`);
-      if (now >= matchStart) {
+      const matchEnd = new Date(matchStart.getTime() + 3 * 60 * 60 * 1000);
+
+      if (now >= matchStart && now <= matchEnd) {
         db.prepare(`
           UPDATE matches 
           SET status = 'live', published = 1 

@@ -4,11 +4,7 @@ import { useSettings } from '../context/SettingsContext';
 export default function MatchCard({ match, showScore = false }) {
   const teamA = match.team_a || { name: match.team_a_name, logo: match.team_a_logo };
   const teamB = match.team_b || { name: match.team_b_name, logo: match.team_b_logo };
-
-  const isKnockout = !/bảng|lượt|group/i.test(match.round);
-  const isUnscored = (match.score_a === null || match.score_a === undefined || match.score_a === '') && 
-                    (match.score_b === null || match.score_b === undefined || match.score_b === '');
-  const status = (isKnockout && isUnscored) ? 'scheduled' : match.status;
+  const status = match.status;
 
   return (
     <div className="card p-4 animate-slide-up">
