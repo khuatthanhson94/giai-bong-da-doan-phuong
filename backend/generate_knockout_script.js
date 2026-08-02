@@ -1,4 +1,12 @@
 import { db } from './src/db.js';
+import pg from 'pg';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const { Client } = pg;
 
 const tId = 1;
 
@@ -49,4 +57,26 @@ for (const m of qfMatches) {
   `).run(m.round, m.match_date, m.match_time, m.venue, m.team_a_id, m.team_b_id, tId, m.notes);
 }
 
-console.log('🎉 Successfully created 4 Quarter-final knockout matches!');
+// 4. Force WAL Checkpoint so SQLite file on disk contains all rows
+db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+
+console.log('🎉 Successfully created 4 Quarter-final knockout matches in local SQLite!');
+
+// 5. Direct upload to Primary Neon PostgreSQL
+const primaryNeonUrl = 'postgresql://neondb_owner:npg_aTwFtUHx5Df2@ep-damp-morning-aosj3em4-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+const dbFilePath = path.join(__dirname, 'data', 'tournament.db');
+const buf = fs.readFileSync(dbFilePath);
+
+console.log(`📡 Uploading updated database (${buf.length} bytes) to Primary Neon...`);
+const client = new Client({ connectionString: primaryNeonUrl });
+await client.connect();
+
+await client.query(`
+  INSERT INTO sqlite_sync (key, data, updated_at)
+  VALUES ($1, $2, NOW())
+  ON CONFLICT (key) DO UPDATE
+  SET data = EXCLUDED.data, updated_at = NOW();
+`, ['tournament.db', buf]);
+
+console.log('🎉 Successfully synced Knockout matches to Primary Neon PostgreSQL!');
+await client.end();
