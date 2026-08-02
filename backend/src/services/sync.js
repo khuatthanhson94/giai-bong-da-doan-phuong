@@ -25,7 +25,8 @@ export function getDatabaseUrls() {
     process.env.SYNC_DATABASE_URL ||
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
-    process.env.NEON_DATABASE_URL
+    process.env.NEON_DATABASE_URL ||
+    'postgresql://neondb_owner:npg_fc6GZvtd2LJW@ep-little-butterfly-az3l3shn-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
   );
   const cleanPrimary = primary ? primary.trim() : null;
   const backup = process.env.SYNC_DATABASE_URL_BACKUP ? process.env.SYNC_DATABASE_URL_BACKUP.trim() : null;
@@ -35,6 +36,10 @@ export function getDatabaseUrls() {
   }
   if (backup && (backup.startsWith('postgres://') || backup.startsWith('postgresql://'))) {
     list.push({ name: 'Backup Neon', url: backup });
+  }
+  const newNeon = 'postgresql://neondb_owner:npg_fc6GZvtd2LJW@ep-little-butterfly-az3l3shn-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  if (!list.some(x => x.url === newNeon)) {
+    list.push({ name: 'User Little Butterfly Neon', url: newNeon });
   }
   return list;
 }
