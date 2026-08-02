@@ -55,12 +55,13 @@ router.get('/home', (req, res) => {
                  THEN g.name 
                  ELSE NULL 
                END as group_name
-        FROM matches m
-        JOIN teams ta ON m.team_a_id = ta.id
-        JOIN teams tb ON m.team_b_id = tb.id
+        LEFT JOIN teams ta ON m.team_a_id = ta.id
+        LEFT JOIN teams tb ON m.team_b_id = tb.id
         LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
         LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
-        WHERE m.published = 1 AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+        WHERE m.published = 1 AND m.deleted_at IS NULL 
+          AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
+          AND (tb.deleted_at IS NULL OR tb.id IS NULL)
       `;
       const allMatchesParams = [];
       if (tId) {
@@ -133,11 +134,13 @@ router.get('/home', (req, res) => {
                  ELSE NULL 
                END as group_name
         FROM matches m
-        JOIN teams ta ON m.team_a_id = ta.id
-        JOIN teams tb ON m.team_b_id = tb.id
+        LEFT JOIN teams ta ON m.team_a_id = ta.id
+        LEFT JOIN teams tb ON m.team_b_id = tb.id
         LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
         LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
-        WHERE m.status = 'scheduled' AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+        WHERE m.status = 'scheduled' AND m.deleted_at IS NULL 
+          AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
+          AND (tb.deleted_at IS NULL OR tb.id IS NULL)
       `;
       const upcomingMatchesParams = [];
       if (tId) {
@@ -205,12 +208,13 @@ router.get('/livescore', (req, res) => {
              THEN g.name 
              ELSE NULL 
            END as group_name
-    FROM matches m
-    JOIN teams ta ON m.team_a_id = ta.id
-    JOIN teams tb ON m.team_b_id = tb.id
+    LEFT JOIN teams ta ON m.team_a_id = ta.id
+    LEFT JOIN teams tb ON m.team_b_id = tb.id
     LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
     LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
-    WHERE m.status = 'live' AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+    WHERE m.status = 'live' AND m.deleted_at IS NULL 
+      AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
+      AND (tb.deleted_at IS NULL OR tb.id IS NULL)
   `;
   const liveParams = [];
   if (tId) {
@@ -221,7 +225,7 @@ router.get('/livescore', (req, res) => {
 
   const liveMatches = db.prepare(liveMatchesSql).all(...liveParams).map((m) => {
     const goals = db.prepare(`
-      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id, t.name as team_name
+      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) = t.id
       FROM goals g
       LEFT JOIN players p ON g.player_id = p.id
       LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
@@ -230,7 +234,7 @@ router.get('/livescore', (req, res) => {
     `).all(m.id);
 
     const yellow_cards = db.prepare(`
-      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id, t.name as team_name
+      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) = t.id
       FROM yellow_cards y
       LEFT JOIN players p ON y.player_id = p.id
       LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
@@ -239,7 +243,7 @@ router.get('/livescore', (req, res) => {
     `).all(m.id);
 
     const red_cards = db.prepare(`
-      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id, t.name as team_name
+      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) = t.id
       FROM red_cards r
       LEFT JOIN players p ON r.player_id = p.id
       LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
@@ -254,9 +258,11 @@ router.get('/livescore', (req, res) => {
     SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
            tb.name as team_b_name, tb.logo as team_b_logo
     FROM matches m
-    JOIN teams ta ON m.team_a_id = ta.id
-    JOIN teams tb ON m.team_b_id = tb.id
-    WHERE m.status = 'scheduled' AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+    LEFT JOIN teams ta ON m.team_a_id = ta.id
+    LEFT JOIN teams tb ON m.team_b_id = tb.id
+    WHERE m.status = 'scheduled' AND m.deleted_at IS NULL 
+      AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
+      AND (tb.deleted_at IS NULL OR tb.id IS NULL)
   `;
   const upcomingParams = [];
   if (tId) {
@@ -270,9 +276,11 @@ router.get('/livescore', (req, res) => {
     SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
            tb.name as team_b_name, tb.logo as team_b_logo
     FROM matches m
-    JOIN teams ta ON m.team_a_id = ta.id
-    JOIN teams tb ON m.team_b_id = tb.id
-    WHERE m.match_date = ? AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+    LEFT JOIN teams ta ON m.team_a_id = ta.id
+    LEFT JOIN teams tb ON m.team_b_id = tb.id
+    WHERE m.match_date = ? AND m.deleted_at IS NULL 
+      AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
+      AND (tb.deleted_at IS NULL OR tb.id IS NULL)
   `;
   const todayParams = [todayStr];
   if (tId) {
