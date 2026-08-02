@@ -111,6 +111,26 @@ export function checkpointDatabase() {
   }
 }
 
+export function healDatabase() {
+  try {
+    if (activeDb) {
+      try { activeDb.close(); } catch (e) {}
+    }
+    if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+    if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
+    if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
+
+    const templateDbPath = path.join(__dirname, '..', 'data', 'tournament.db');
+    if (fs.existsSync(templateDbPath)) {
+      fs.copyFileSync(templateDbPath, dbPath);
+    }
+    activeDb = new DatabaseSync(dbPath);
+    console.log('[Database] Auto-healed database from clean template file!');
+  } catch (err) {
+    console.error('[Database] Healing failed:', err.message);
+  }
+}
+
 // Helper to check if a query modifies data
 function triggerSyncIfWrite(sql) {
   const isWrite = /insert|update|delete|replace|create|drop|alter/i.test(sql);
@@ -173,19 +193,46 @@ export const db = new Proxy({}, {
         const rawAll = stmt.all;
 
         stmt.run = function (...args) {
-          const result = rawRun.apply(stmt, args);
-          triggerSyncIfWrite(sql);
-          return result;
+          try {
+            const result = rawRun.apply(stmt, args);
+            triggerSyncIfWrite(sql);
+            return result;
+          } catch (err) {
+            if (/malformed/i.test(err.message)) {
+              console.error('[Database Proxy] Malformed DB in run, healing...', err.message);
+              healDatabase();
+              return activeDb.prepare(sql).run(...args);
+            }
+            throw err;
+          }
         };
         stmt.get = function (...args) {
-          const result = rawGet.apply(stmt, args);
-          triggerSyncIfWrite(sql);
-          return result;
+          try {
+            const result = rawGet.apply(stmt, args);
+            triggerSyncIfWrite(sql);
+            return result;
+          } catch (err) {
+            if (/malformed/i.test(err.message)) {
+              console.error('[Database Proxy] Malformed DB in get, healing...', err.message);
+              healDatabase();
+              return activeDb.prepare(sql).get(...args);
+            }
+            throw err;
+          }
         };
         stmt.all = function (...args) {
-          const result = rawAll.apply(stmt, args);
-          triggerSyncIfWrite(sql);
-          return result;
+          try {
+            const result = rawAll.apply(stmt, args);
+            triggerSyncIfWrite(sql);
+            return result;
+          } catch (err) {
+            if (/malformed/i.test(err.message)) {
+              console.error('[Database Proxy] Malformed DB in all, healing...', err.message);
+              healDatabase();
+              return activeDb.prepare(sql).all(...args);
+            }
+            throw err;
+          }
         };
 
         return stmt;
