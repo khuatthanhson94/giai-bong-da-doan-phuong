@@ -39,10 +39,11 @@ const config = {
 // 1. Save config to settings table
 db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(`knockout_bracket_config_${tId}`, JSON.stringify(config));
 
-// 2. Delete ALL existing non-finished knockout matches
-db.prepare("DELETE FROM matches WHERE (round LIKE '%Tứ%' OR round LIKE '%Bán%' OR round LIKE '%Chung%' OR round LIKE '%Quarter%' OR round LIKE '%Semi%' OR round LIKE '%Final%') AND status != 'finished' AND tournament_id = ?").run(tId);
+// 2. Delete ALL existing knockout matches explicitly
+db.prepare("DELETE FROM matches WHERE id >= 450").run();
+db.prepare("DELETE FROM matches WHERE notes LIKE '%KO_ID%'").run();
 
-// 3. Insert the 4 Quarter-final matches with status = 'scheduled'
+// 3. Insert the 4 Quarter-final matches with status = 'scheduled' and round = 'Tứ kết'
 const qfMatches = [
   { round: 'Tứ kết', match_date: '2026-08-04', match_time: '07:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: 103, team_b_id: 107, notes: 'KO_ID: QF1' },
   { round: 'Tứ kết', match_date: '2026-08-04', match_time: '07:00', venue: 'Sân 2 - Sân bóng Tùng Thiện', team_a_id: 100, team_b_id: 111, notes: 'KO_ID: QF2' },
@@ -60,7 +61,7 @@ for (const m of qfMatches) {
 // 4. Force WAL Checkpoint so SQLite file on disk contains all rows
 db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
 
-console.log('🎉 Successfully created 4 Quarter-final knockout matches with status SCHEDULED in local SQLite!');
+console.log('🎉 Successfully purged old KO matches and created 4 Quarter-final matches with status SCHEDULED!');
 
 // 5. Direct upload to Primary Neon PostgreSQL
 const primaryNeonUrl = 'postgresql://neondb_owner:npg_aTwFtUHx5Df2@ep-damp-morning-aosj3em4-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
