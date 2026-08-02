@@ -1,7 +1,15 @@
 import pg from 'pg';
 import fs from 'fs';
-import { DatabaseSync } from 'node:sqlite';
 const { Client } = pg;
+
+let DatabaseSync;
+try {
+  const sqlite = await import('node:sqlite');
+  DatabaseSync = sqlite.DatabaseSync;
+} catch (e) {
+  const betterSqlite = await import('better-sqlite3');
+  DatabaseSync = betterSqlite.default;
+}
 
 const restoredBranchUrl = 'postgresql://neondb_owner:npg_dGHkgn7J3TRv@ep-lively-frost-az252nx4-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
 

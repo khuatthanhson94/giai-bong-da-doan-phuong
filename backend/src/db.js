@@ -1,11 +1,23 @@
 process.env.TZ = 'Asia/Ho_Chi_Minh';
-import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { getVNLocalDateTimeString } from './utils/date.js';
 import { requestStorage } from './utils/context.js';
+
+let DatabaseSync;
+try {
+  const sqlite = await import('node:sqlite');
+  DatabaseSync = sqlite.DatabaseSync;
+} catch (e) {
+  try {
+    const betterSqlite = await import('better-sqlite3');
+    DatabaseSync = betterSqlite.default;
+  } catch (err) {
+    console.error('[Database] SQLite module load error:', err.message);
+  }
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let dataDir;
