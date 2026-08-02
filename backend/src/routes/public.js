@@ -356,7 +356,8 @@ router.post('/track-visit', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.warn('[VisitTracker] Non-fatal tracking error:', err.message);
+    res.json({ success: true, warning: err.message });
   }
 });
 

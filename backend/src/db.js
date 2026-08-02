@@ -78,14 +78,27 @@ if (getDatabaseUrls().length > 0) {
   }
 }
 
-const rawDb = new DatabaseSync(dbPath);
+let rawDb;
 try {
+  rawDb = new DatabaseSync(dbPath);
   rawDb.exec('PRAGMA journal_mode = WAL');
   rawDb.exec('PRAGMA synchronous = NORMAL');
   rawDb.exec('PRAGMA cache_size = -16000');
   rawDb.exec('PRAGMA temp_store = MEMORY');
+  rawDb.prepare('SELECT count(*) FROM teams').get();
 } catch (e) {
-  // Ignore pragma errors if unsupported
+  console.error('[Database] Malformed or corrupted database file detected, auto-healing:', e.message);
+  try {
+    if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+    if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
+    if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
+  } catch (err) {}
+
+  const templateDbPath = path.join(__dirname, '..', 'data', 'tournament.db');
+  if (fs.existsSync(templateDbPath)) {
+    fs.copyFileSync(templateDbPath, dbPath);
+  }
+  rawDb = new DatabaseSync(dbPath);
 }
 
 export function checkpointDatabase() {
