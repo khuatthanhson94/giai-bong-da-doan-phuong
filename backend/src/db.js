@@ -732,8 +732,8 @@ export function initDatabase() {
       }
     }
     
-    // Automatically merge any duplicate teams in the same tournament
-    mergeDuplicateTeams();
+    // Do NOT merge duplicate teams across groups
+    // mergeDuplicateTeams();
   } catch (err) {
     console.error('Error during V3.0 season/tournament database migration:', err);
   }
