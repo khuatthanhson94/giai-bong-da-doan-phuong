@@ -110,65 +110,72 @@ export function getTopScorers(limit = 10, tournamentId) {
 }
 
 export function getStatistics(tournamentId) {
-  let tId = tournamentId ? Number(tournamentId) : null;
-  if (!tId) {
-    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
-    if (activeTournament) tId = activeTournament.id;
+  try {
+    let tId = tournamentId ? Number(tournamentId) : null;
+    if (!tId) {
+      try {
+        const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+        if (activeTournament) tId = activeTournament.id;
+      } catch (e) {}
+    }
+
+    let baseWhere = 'WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL';
+    const params = [];
+    if (tId) {
+      baseWhere += ' AND t.tournament_id = ?';
+      params.push(tId);
+    }
+
+    const topScorers = db.prepare(`
+      SELECT p.id, p.name, p.goals, p.photo, t.name as team_name
+      FROM players p JOIN teams t ON p.team_id = t.id
+      ${baseWhere}
+      ORDER BY p.goals DESC LIMIT 10
+    `).all(...params);
+
+    const topAssists = db.prepare(`
+      SELECT p.id, p.name, p.assists, p.photo, t.name as team_name
+      FROM players p JOIN teams t ON p.team_id = t.id
+      ${baseWhere}
+      ORDER BY p.assists DESC LIMIT 10
+    `).all(...params);
+
+    const topYellow = db.prepare(`
+      SELECT p.id, p.name, p.yellow_cards, p.photo, t.name as team_name
+      FROM players p JOIN teams t ON p.team_id = t.id
+      ${baseWhere}
+      ORDER BY p.yellow_cards DESC LIMIT 10
+    `).all(...params);
+
+    const topRed = db.prepare(`
+      SELECT p.id, p.name, p.red_cards, p.photo, t.name as team_name
+      FROM players p JOIN teams t ON p.team_id = t.id
+      ${baseWhere}
+      ORDER BY p.red_cards DESC LIMIT 10
+    `).all(...params);
+
+    let teamGoalsSql = `
+      SELECT t.id, t.name, t.logo, COALESCE(SUM(p.goals), 0) as total_goals
+      FROM teams t
+      LEFT JOIN players p ON p.team_id = t.id AND p.deleted_at IS NULL
+      WHERE t.deleted_at IS NULL
+    `;
+    const teamGoalsParams = [];
+    if (tId) {
+      teamGoalsSql += ' AND t.tournament_id = ?';
+      teamGoalsParams.push(tId);
+    }
+    teamGoalsSql += ' GROUP BY t.id ORDER BY total_goals DESC';
+    const teamGoals = db.prepare(teamGoalsSql).all(...teamGoalsParams);
+
+    const standings = computeStandings(tId) || [];
+    const bestDefense = [...standings].sort((a, b) => a.goals_against - b.goals_against);
+
+    return { topScorers, topAssists, topYellow, topRed, teamGoals, bestDefense };
+  } catch (err) {
+    console.error('[getStatistics Error]', err.message);
+    return { topScorers: [], topAssists: [], topYellow: [], topRed: [], teamGoals: [], bestDefense: [] };
   }
-
-  let baseWhere = 'WHERE p.deleted_at IS NULL AND t.deleted_at IS NULL';
-  const params = [];
-  if (tId) {
-    baseWhere += ' AND t.tournament_id = ?';
-    params.push(tId);
-  }
-
-  const topScorers = db.prepare(`
-    SELECT p.id, p.name, p.goals, p.photo, t.name as team_name
-    FROM players p JOIN teams t ON p.team_id = t.id
-    ${baseWhere}
-    ORDER BY p.goals DESC LIMIT 10
-  `).all(...params);
-
-  const topAssists = db.prepare(`
-    SELECT p.id, p.name, p.assists, p.photo, t.name as team_name
-    FROM players p JOIN teams t ON p.team_id = t.id
-    ${baseWhere}
-    ORDER BY p.assists DESC LIMIT 10
-  `).all(...params);
-
-  const topYellow = db.prepare(`
-    SELECT p.id, p.name, p.yellow_cards, p.photo, t.name as team_name
-    FROM players p JOIN teams t ON p.team_id = t.id
-    ${baseWhere}
-    ORDER BY p.yellow_cards DESC LIMIT 10
-  `).all(...params);
-
-  const topRed = db.prepare(`
-    SELECT p.id, p.name, p.red_cards, p.photo, t.name as team_name
-    FROM players p JOIN teams t ON p.team_id = t.id
-    ${baseWhere}
-    ORDER BY p.red_cards DESC LIMIT 10
-  `).all(...params);
-
-  let teamGoalsSql = `
-    SELECT t.id, t.name, t.logo, COALESCE(SUM(p.goals), 0) as total_goals
-    FROM teams t
-    LEFT JOIN players p ON p.team_id = t.id AND p.deleted_at IS NULL
-    WHERE t.deleted_at IS NULL
-  `;
-  const teamGoalsParams = [];
-  if (tournamentId) {
-    teamGoalsSql += ' AND t.tournament_id = ?';
-    teamGoalsParams.push(Number(tournamentId));
-  }
-  teamGoalsSql += ' GROUP BY t.id ORDER BY total_goals DESC';
-  const teamGoals = db.prepare(teamGoalsSql).all(...teamGoalsParams);
-
-  const standings = computeStandings(tournamentId);
-  const bestDefense = [...standings].sort((a, b) => a.goals_against - b.goals_against);
-
-  return { topScorers, topAssists, topYellow, topRed, teamGoals, bestDefense };
 }
 
 export function publishMatchResult(matchId, userId) {
