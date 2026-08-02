@@ -992,14 +992,13 @@ export function autoStartMatches() {
     const todayStr = getVNLocalDateString();
     const now = new Date();
 
-    // Reset any non-finished knockout match back to 'scheduled' if it was mistakenly auto-started
+    // Reset any unscored match back to 'scheduled' if it has no scores entered
     db.prepare(`
       UPDATE matches 
       SET status = 'scheduled' 
       WHERE status = 'live' 
-        AND score_a IS NULL 
-        AND score_b IS NULL 
-        AND (round LIKE '%Tứ%' OR round LIKE '%Bán%' OR round LIKE '%Chung%' OR round LIKE '%Quarter%' OR round LIKE '%Semi%' OR round LIKE '%Final%')
+        AND (score_a IS NULL OR score_a = '') 
+        AND (score_b IS NULL OR score_b = '') 
         AND deleted_at IS NULL
     `).run();
 
