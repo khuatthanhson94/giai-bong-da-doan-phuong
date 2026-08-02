@@ -1,8 +1,5 @@
 {
   "outputDirectory": "client/dist",
-  "env": {
-    "VITE_API_URL": "https://giai-bong-da-api-v4.onrender.com"
-  },
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -15,6 +12,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
