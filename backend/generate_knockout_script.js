@@ -39,12 +39,15 @@ const config = {
 // 1. Save config to settings table
 db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(`knockout_bracket_config_${tId}`, JSON.stringify(config));
 
-// 2. Delete ALL existing knockout matches explicitly
+// 2. Reset ANY live match with empty scores to 'scheduled'
+db.prepare("UPDATE matches SET status = 'scheduled' WHERE status = 'live' AND (score_a IS NULL OR score_a = '') AND (score_b IS NULL OR score_b = '')").run();
+
+// 3. Delete ALL existing knockout matches explicitly
 db.prepare("DELETE FROM matches WHERE id >= 450").run();
 db.prepare("DELETE FROM matches WHERE notes LIKE '%KO_ID%'").run();
 db.prepare("DELETE FROM matches WHERE round LIKE '%Tứ%' OR round LIKE '%Quarter%'").run();
 
-// 3. Insert the 4 Quarter-final matches with status = 'scheduled' and round = 'Tứ kết'
+// 4. Insert the 4 Quarter-final matches with status = 'scheduled' and round = 'Tứ kết'
 const qfMatches = [
   { round: 'Tứ kết', match_date: '2026-08-04', match_time: '07:00', venue: 'Sân 1 - Sân bóng Tùng Thiện', team_a_id: 103, team_b_id: 107, notes: 'KO_ID: QF1' },
   { round: 'Tứ kết', match_date: '2026-08-04', match_time: '07:00', venue: 'Sân 2 - Sân bóng Tùng Thiện', team_a_id: 101, team_b_id: 108, notes: 'KO_ID: QF2' },
@@ -59,12 +62,12 @@ for (const m of qfMatches) {
   `).run(m.round, m.match_date, m.match_time, m.venue, m.team_a_id, m.team_b_id, tId, m.notes);
 }
 
-// 4. Force WAL Checkpoint so SQLite file on disk contains all rows
+// 5. Force WAL Checkpoint so SQLite file on disk contains all rows
 db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
 
 console.log('🎉 Successfully created 4 Quarter-final knockout matches with status SCHEDULED!');
 
-// 5. Upload to BOTH Neon PostgreSQL instances
+// 6. Upload to BOTH Neon PostgreSQL instances
 const neonUrls = [
   'postgresql://neondb_owner:npg_aTwFtUHx5Df2@ep-damp-morning-aosj3em4-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
   'postgresql://neondb_owner:npg_dGHkgn7J3TRv@ep-lively-frost-az252nx4-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require'
