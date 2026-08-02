@@ -23,139 +23,157 @@ function setCache(key, data) {
 }
 
 router.get('/home', (req, res) => {
-  autoStartMatches();
-  const { tournament_id } = req.query;
-  let tId = tournament_id ? Number(tournament_id) : null;
-  if (!tId) {
-    const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
-    if (activeTournament) tId = activeTournament.id;
-  }
-
-  const cacheKey = `home:${tId || 'active'}`;
-  const cached = getCached(cacheKey);
-  if (cached) return res.json(cached);
-
-  const settings = {};
-  db.prepare('SELECT key, value FROM settings').all().forEach((s) => {
-    settings[s.key] = s.value;
-  });
-
-  const now = getVNLocalDateString();
-  let allMatchesSql = `
-    SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
-           tb.name as team_b_name, tb.logo as team_b_logo,
-           CASE 
-             WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
-             THEN g.name 
-             ELSE NULL 
-           END as group_name
-    FROM matches m
-    JOIN teams ta ON m.team_a_id = ta.id
-    JOIN teams tb ON m.team_b_id = tb.id
-    LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-    LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
-    WHERE m.published = 1 AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
-  `;
-  const allMatchesParams = [];
-  if (tId) {
-    allMatchesSql += ' AND m.tournament_id = ?';
-    allMatchesParams.push(tId);
-  }
-  allMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time';
-  const allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
-    const goals = db.prepare(`
-      SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id, t.name as team_name
-      FROM goals g
-      LEFT JOIN players p ON g.player_id = p.id
-      LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
-      WHERE g.match_id = ?
-      ORDER BY g.minute ASC
-    `).all(m.id);
-
-    const yellow_cards = db.prepare(`
-      SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id, t.name as team_name
-      FROM yellow_cards y
-      LEFT JOIN players p ON y.player_id = p.id
-      LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
-      WHERE y.match_id = ?
-      ORDER BY y.minute ASC
-    `).all(m.id);
-
-    const red_cards = db.prepare(`
-      SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id, t.name as team_name
-      FROM red_cards r
-      LEFT JOIN players p ON r.player_id = p.id
-      LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
-      WHERE r.match_id = ?
-      ORDER BY r.minute ASC
-    `).all(m.id);
-
-    return { ...m, goals, yellow_cards, red_cards };
-  });
-
-  const latestMatch = allMatches.filter((m) => m.status === 'finished').pop();
-  const liveMatches = allMatches.filter((m) => m.status === 'live');
-
-  let upcomingMatchesSql = `
-    SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
-           tb.name as team_b_name, tb.logo as team_b_logo,
-           CASE 
-             WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
-             THEN g.name 
-             ELSE NULL 
-           END as group_name
-    FROM matches m
-    JOIN teams ta ON m.team_a_id = ta.id
-    JOIN teams tb ON m.team_b_id = tb.id
-    LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-    LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
-    WHERE m.status = 'scheduled' AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
-  `;
-  const upcomingMatchesParams = [];
-  if (tId) {
-    upcomingMatchesSql += ' AND m.tournament_id = ?';
-    upcomingMatchesParams.push(tId);
-  }
-  upcomingMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time LIMIT 12';
-  const upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingMatchesParams);
-
-  let newsSql = 'SELECT * FROM news WHERE published = 1 AND deleted_at IS NULL';
-  const newsParams = [];
-  if (tId) {
-    newsSql += ' AND tournament_id = ?';
-    newsParams.push(tId);
-  }
-  newsSql += ' ORDER BY created_at DESC LIMIT 4';
-  const news = db.prepare(newsSql).all(...newsParams);
-
-  const standings = computeStandings(tId);
-  const topScorers = getTopScorers(5, tId);
-
-  let visits = {
-    total_visits: 0,
-    total_unique_visitors: 0,
-    today_visits: 0,
-    today_unique_visitors: 0
-  };
   try {
-    const todayStr = getVNLocalDateString();
-    const totalVisits = db.prepare('SELECT COUNT(*) as c FROM visit_logs').get()?.c || 0;
-    const totalUnique = db.prepare('SELECT COUNT(DISTINCT ip_address) as c FROM visit_logs').get()?.c || 0;
-    const todayVisits = db.prepare('SELECT COUNT(*) as c FROM visit_logs WHERE visit_date = ?').get(todayStr)?.c || 0;
-    const todayUnique = db.prepare('SELECT COUNT(DISTINCT ip_address) as c FROM visit_logs WHERE visit_date = ?').get(todayStr)?.c || 0;
-    visits = {
-      total_visits: totalVisits,
-      total_unique_visitors: totalUnique,
-      today_visits: todayVisits,
-      today_unique_visitors: todayUnique
-    };
-  } catch (err) {
-    // Ignore
-  }
+    autoStartMatches();
+    const { tournament_id } = req.query;
+    let tId = tournament_id ? Number(tournament_id) : null;
+    if (!tId) {
+      try {
+        const activeTournament = db.prepare("SELECT id FROM tournaments WHERE status = 'active' AND deleted_at IS NULL LIMIT 1").get();
+        if (activeTournament) tId = activeTournament.id;
+      } catch (e) {}
+    }
 
-  const result = { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, visits };
-  setCache(cacheKey, result);
-  res.json(result);
+    const cacheKey = `home:${tId || 'active'}`;
+    const cached = getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    const settings = {};
+    try {
+      db.prepare('SELECT key, value FROM settings').all().forEach((s) => {
+        settings[s.key] = s.value;
+      });
+    } catch (e) {}
+
+    let allMatches = [];
+    try {
+      let allMatchesSql = `
+        SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
+               tb.name as team_b_name, tb.logo as team_b_logo,
+               CASE 
+                 WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
+                 THEN g.name 
+                 ELSE NULL 
+               END as group_name
+        FROM matches m
+        JOIN teams ta ON m.team_a_id = ta.id
+        JOIN teams tb ON m.team_b_id = tb.id
+        LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
+        LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
+        WHERE m.published = 1 AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+      `;
+      const allMatchesParams = [];
+      if (tId) {
+        allMatchesSql += ' AND m.tournament_id = ?';
+        allMatchesParams.push(tId);
+      }
+      allMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time';
+      allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
+        let goals = [], yellow_cards = [], red_cards = [];
+        try {
+          goals = db.prepare(`
+            SELECT g.*, COALESCE(p.name, g.player_name) as player_name, p.jersey_number, COALESCE(g.team_id, p.team_id) as team_id, t.name as team_name
+            FROM goals g
+            LEFT JOIN players p ON g.player_id = p.id
+            LEFT JOIN teams t ON COALESCE(g.team_id, p.team_id) = t.id
+            WHERE g.match_id = ?
+            ORDER BY g.minute ASC
+          `).all(m.id);
+        } catch (e) {}
+
+        try {
+          yellow_cards = db.prepare(`
+            SELECT y.*, COALESCE(p.name, y.player_name) as player_name, p.jersey_number, COALESCE(y.team_id, p.team_id) as team_id, t.name as team_name
+            FROM yellow_cards y
+            LEFT JOIN players p ON y.player_id = p.id
+            LEFT JOIN teams t ON COALESCE(y.team_id, p.team_id) = t.id
+            WHERE y.match_id = ?
+            ORDER BY y.minute ASC
+          `).all(m.id);
+        } catch (e) {}
+
+        try {
+          red_cards = db.prepare(`
+            SELECT r.*, COALESCE(p.name, r.player_name) as player_name, p.jersey_number, COALESCE(r.team_id, p.team_id) as team_id, t.name as team_name
+            FROM red_cards r
+            LEFT JOIN players p ON r.player_id = p.id
+            LEFT JOIN teams t ON COALESCE(r.team_id, p.team_id) = t.id
+            WHERE r.match_id = ?
+            ORDER BY r.minute ASC
+          `).all(m.id);
+        } catch (e) {}
+
+        return { ...m, goals, yellow_cards, red_cards };
+      });
+    } catch (e) {
+      console.error('[API /home] Error fetching matches:', e.message);
+    }
+
+    const latestMatch = allMatches.filter((m) => m.status === 'finished').pop() || null;
+    const liveMatches = allMatches.filter((m) => m.status === 'live');
+
+    let upcomingMatches = [];
+    try {
+      let upcomingMatchesSql = `
+        SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
+               tb.name as team_b_name, tb.logo as team_b_logo,
+               CASE 
+                 WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
+                 THEN g.name 
+                 ELSE NULL 
+               END as group_name
+        FROM matches m
+        JOIN teams ta ON m.team_a_id = ta.id
+        JOIN teams tb ON m.team_b_id = tb.id
+        LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
+        LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
+        WHERE m.status = 'scheduled' AND m.deleted_at IS NULL AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+      `;
+      const upcomingMatchesParams = [];
+      if (tId) {
+        upcomingMatchesSql += ' AND m.tournament_id = ?';
+        upcomingMatchesParams.push(tId);
+      }
+      upcomingMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time LIMIT 12';
+      upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingMatchesParams);
+    } catch (e) {}
+
+    let news = [];
+    try {
+      let newsSql = 'SELECT * FROM news WHERE published = 1 AND deleted_at IS NULL';
+      const newsParams = [];
+      if (tId) {
+        newsSql += ' AND tournament_id = ?';
+        newsParams.push(tId);
+      }
+      newsSql += ' ORDER BY created_at DESC LIMIT 4';
+      news = db.prepare(newsSql).all(...newsParams);
+    } catch (e) {}
+
+    let standings = [];
+    try {
+      standings = computeStandings(tId);
+    } catch (e) {}
+
+    let topScorers = [];
+    try {
+      topScorers = getTopScorers(5, tId);
+    } catch (e) {}
+
+    let visits = {
+      total_visits: 0,
+      total_unique_visitors: 0,
+      today_visits: 0,
+      today_unique_visitors: 0
+    };
+
+    const result = { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, visits };
+    setCache(cacheKey, result);
+    res.json(result);
+  } catch (err) {
+    console.error('[API /home Fatal Error]', err.message);
+    res.json({ settings: {}, latestMatch: null, liveMatches: [], upcomingMatches: [], news: [], standings: [], topScorers: [], visits: {} });
+  }
 });
 
 router.get('/livescore', (req, res) => {
