@@ -6,6 +6,8 @@ import { dbPath, reopenDatabase, logAction } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
 import { getVNLocalDateTimeString } from '../utils/date.js';
 
+import { restoreDatabase } from '../services/sync.js';
+
 const router = Router();
 const upload = multer({ dest: 'uploads/temp/' });
 const adminOnly = [authRequired, requireRole(ROLES.ADMIN, ROLES.SUPER_ADMIN)];
@@ -14,6 +16,17 @@ const backupsDir = path.join(path.dirname(dbPath), 'backups');
 if (!fs.existsSync(backupsDir)) {
   fs.mkdirSync(backupsDir, { recursive: true });
 }
+
+// GET: pull latest database from cloud Neon
+router.get('/pull-cloud', async (req, res) => {
+  try {
+    const success = await restoreDatabase(dbPath);
+    if (success) reopenDatabase();
+    res.json({ success, message: 'Restored database from cloud successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Helper to run auto-backup rotation
 export function performAutoBackup() {
