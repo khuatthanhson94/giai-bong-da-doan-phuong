@@ -65,7 +65,13 @@ function enrichMatch(match) {
     motm = { name: match.motm_player_name };
   }
 
-  return { ...match, team_a: teamA, team_b: teamB, goals, yellow_cards: yellows, red_cards: reds, motm, group };
+  const isKnockoutMatch = !/bảng|lượt|group/i.test(match.round);
+  let effectiveStatus = match.status;
+  if (isKnockoutMatch && match.score_a === null && match.score_b === null && effectiveStatus === 'live') {
+    effectiveStatus = 'scheduled';
+  }
+
+  return { ...match, status: effectiveStatus, team_a: teamA, team_b: teamB, goals, yellow_cards: yellows, red_cards: reds, motm, group };
 }
 
 router.get('/', (req, res) => {
