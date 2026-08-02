@@ -991,6 +991,18 @@ export function autoStartMatches() {
   try {
     const todayStr = getVNLocalDateString();
     const now = new Date();
+
+    // Auto-correct any future match with empty scores incorrectly marked as 'live'
+    db.prepare(`
+      UPDATE matches 
+      SET status = 'scheduled' 
+      WHERE status = 'live' 
+        AND score_a IS NULL 
+        AND score_b IS NULL 
+        AND match_date > ? 
+        AND deleted_at IS NULL
+    `).run(todayStr);
+
     const scheduled = db.prepare("SELECT * FROM matches WHERE status = 'scheduled' AND deleted_at IS NULL").all();
     for (const match of scheduled) {
       if (!match.match_date || match.match_date !== todayStr) continue;
