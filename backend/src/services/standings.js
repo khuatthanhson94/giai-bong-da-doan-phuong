@@ -211,118 +211,44 @@ export function publishMatchResult(matchId, userId) {
           const scoreA = updatedMatch.score_a ?? 0;
           const scoreB = updatedMatch.score_b ?? 0;
           let winnerTeamId = null;
+          let loserTeamId = null;
           if (scoreA > scoreB) {
             winnerTeamId = updatedMatch.team_a_id;
+            loserTeamId = updatedMatch.team_b_id;
           } else if (scoreB > scoreA) {
             winnerTeamId = updatedMatch.team_b_id;
+            loserTeamId = updatedMatch.team_a_id;
           } else {
-            // Tie breaker fallback: if equal, default to Team A
             winnerTeamId = updatedMatch.team_a_id;
+            loserTeamId = updatedMatch.team_b_id;
           }
 
-          const getWinnerOfBracketMatch = (bracketId) => {
-            const matchRow = db.prepare(`
-              SELECT * FROM matches 
-              WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL AND notes LIKE ?
-            `).get(`%KO_ID: ${bracketId}%`);
-            if (!matchRow) return null;
-            
-            const sA = matchRow.score_a ?? 0;
-            const sB = matchRow.score_b ?? 0;
-            if (sA > sB) return matchRow.team_a_id;
-            if (sB > sA) return matchRow.team_b_id;
-            return matchRow.team_a_id;
-          };
- 
-          const resolveTeamInPublish = (source) => {
-            if (source.type === 'team') {
-              return Number(source.teamId);
-            }
-            if (source.type === 'rank') {
-              const { groupId, rank } = source;
-              const standings = computeStandings(updatedMatch.tournament_id);
-              const groupStandings = standings.filter(s => s.group_id === Number(groupId));
-              const teamInfo = groupStandings[Number(rank) - 1];
-              return teamInfo ? teamInfo.team_id : null;
-            }
-            if (source.type === 'best_third') {
-              const { rank } = source;
-              const tId = updatedMatch.tournament_id;
-              const standings = computeStandings(tId);
-              const groupsList = db.prepare("SELECT id FROM groups WHERE tournament_id = ?").all(tId);
-              const thirdTeams = [];
-              for (const g of groupsList) {
-                const groupStandings = standings.filter(s => s.group_id === g.id);
-                if (groupStandings.length >= 3 && groupStandings[2]) {
-                  thirdTeams.push(groupStandings[2]);
-                }
-              }
-              thirdTeams.sort((x, y) => y.points - x.points || y.goal_diff - x.goal_diff || y.goals_for - x.goals_for);
-              const teamInfo = thirdTeams[Number(rank) - 1];
-              return teamInfo ? teamInfo.team_id : null;
-            }
-            return null;
-          };
- 
           const nextRounds = config.nextRounds || [];
           for (const r of nextRounds) {
             for (const m of r.matches) {
-              const isHomeDep = m.home.type === 'winner' && m.home.matchId === bracketMatchId;
-              const isAwayDep = m.away.type === 'winner' && m.away.matchId === bracketMatchId;
-              
-              if (isHomeDep || isAwayDep) {
-                // Find if the next match already exists
+              const isHomeWinnerDep = m.home.type === 'winner' && m.home.matchId === bracketMatchId;
+              const isAwayWinnerDep = m.away.type === 'winner' && m.away.matchId === bracketMatchId;
+              const isHomeLoserDep = m.home.type === 'loser' && m.home.matchId === bracketMatchId;
+              const isAwayLoserDep = m.away.type === 'loser' && m.away.matchId === bracketMatchId;
+
+              if (isHomeWinnerDep || isAwayWinnerDep || isHomeLoserDep || isAwayLoserDep) {
                 const existingNextMatch = db.prepare(`
                   SELECT * FROM matches 
-                  WHERE round = ? AND deleted_at IS NULL AND notes LIKE ?
-                `).get(r.round, `%KO_ID: ${m.id}%`);
+                  WHERE deleted_at IS NULL AND notes LIKE ?
+                `).get(`%KO_ID: ${m.id}%`);
 
                 if (existingNextMatch) {
-                  if (isHomeDep) {
+                  if (isHomeWinnerDep && winnerTeamId) {
                     db.prepare('UPDATE matches SET team_a_id = ? WHERE id = ?').run(winnerTeamId, existingNextMatch.id);
-                  } else {
+                  }
+                  if (isAwayWinnerDep && winnerTeamId) {
                     db.prepare('UPDATE matches SET team_b_id = ? WHERE id = ?').run(winnerTeamId, existingNextMatch.id);
                   }
-                } else {
-                  // Resolve both team IDs
-                  let teamAId = null;
-                  let teamBId = null;
-
-                  if (m.home.type === 'winner') {
-                    if (m.home.matchId === bracketMatchId) {
-                      teamAId = winnerTeamId;
-                    } else {
-                      teamAId = getWinnerOfBracketMatch(m.home.matchId);
-                    }
-                  } else {
-                    teamAId = resolveTeamInPublish(m.home);
+                  if (isHomeLoserDep && loserTeamId) {
+                    db.prepare('UPDATE matches SET team_a_id = ? WHERE id = ?').run(loserTeamId, existingNextMatch.id);
                   }
-
-                  if (m.away.type === 'winner') {
-                    if (m.away.matchId === bracketMatchId) {
-                      teamBId = winnerTeamId;
-                    } else {
-                      teamBId = getWinnerOfBracketMatch(m.away.matchId);
-                    }
-                  } else {
-                    teamBId = resolveTeamInPublish(m.away);
-                  }
-
-                  if (teamAId !== null && teamBId !== null) {
-                    const nextNotes = `KO_ID: ${m.id}${m.notes ? ' | ' + m.notes : ''}`;
-                    db.prepare(`
-                      INSERT INTO matches (round, match_date, match_time, venue, team_a_id, team_b_id, status, notes, tournament_id)
-                      VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?)
-                    `).run(
-                      r.round,
-                      m.match_date || '',
-                      m.match_time || '08:00',
-                      m.venue || 'Sân bóng Phường',
-                      teamAId,
-                      teamBId,
-                      nextNotes,
-                      updatedMatch.tournament_id
-                    );
+                  if (isAwayLoserDep && loserTeamId) {
+                    db.prepare('UPDATE matches SET team_b_id = ? WHERE id = ?').run(loserTeamId, existingNextMatch.id);
                   }
                 }
               }

@@ -2,9 +2,27 @@ import { getFullUrl } from '../utils/url';
 import { useSettings } from '../context/SettingsContext';
 
 export default function MatchCard({ match, showScore = false }) {
-  const teamA = match.team_a || { name: match.team_a_name, logo: match.team_a_logo };
-  const teamB = match.team_b || { name: match.team_b_name, logo: match.team_b_logo };
+  const teamA = match.team_a || { name: match.team_a_name || 'Đội A', logo: match.team_a_logo };
+  const teamB = match.team_b || { name: match.team_b_name || 'Đội B', logo: match.team_b_logo };
   const status = match.status;
+
+  const getRoundDisplay = (m) => {
+    if (m.is_friendly) return `Giao hữu - ${m.round}`;
+    if (m.group?.name || m.group_name) return `${m.group?.name || m.group_name} - ${m.round}`;
+    
+    const notes = m.notes || '';
+    const koMatch = notes.match(/KO_ID:\s*(\w+)/);
+    const koId = koMatch ? koMatch[1] : null;
+    if (koId === 'QF1') return 'Tứ kết 1';
+    if (koId === 'QF2') return 'Tứ kết 2';
+    if (koId === 'QF3') return 'Tứ kết 3';
+    if (koId === 'QF4') return 'Tứ kết 4';
+    if (koId === 'SF1') return 'Bán kết 1';
+    if (koId === 'SF2') return 'Bán kết 2';
+    if (koId === 'F1') return 'Chung kết';
+    if (koId === '3P') return 'Tranh Hạng 3';
+    return m.round;
+  };
 
   return (
     <div className="card p-4 animate-slide-up">
@@ -14,9 +32,7 @@ export default function MatchCard({ match, showScore = false }) {
             ? 'text-purple-700 bg-purple-50' 
             : 'text-youth bg-green-50'
         }`}>
-          {match.is_friendly 
-            ? `Giao hữu - ${match.round}` 
-            : (match.group?.name || match.group_name ? `${match.group?.name || match.group_name} - ${match.round}` : match.round)}
+          {getRoundDisplay(match)}
         </span>
         <span className={`text-xs px-2 py-1 rounded font-medium ${
           status === 'finished' ? 'bg-gray-100 text-gray-600' :

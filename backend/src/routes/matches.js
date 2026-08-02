@@ -6,17 +6,47 @@ import { getVNLocalDateString } from '../utils/date.js';
 
 const router = Router();
 
+export function getKnockoutPlaceholder(match, side) {
+  const notes = match.notes || '';
+  const koMatch = notes.match(/KO_ID:\s*(\w+)/);
+  const koId = koMatch ? koMatch[1] : null;
+
+  if (koId === 'SF1') return side === 'home' ? 'Thắng Tứ kết 1' : 'Thắng Tứ kết 2';
+  if (koId === 'SF2') return side === 'home' ? 'Thắng Tứ kết 3' : 'Thắng Tứ kết 4';
+  if (koId === 'F1') return side === 'home' ? 'Thắng Bán kết 1' : 'Thắng Bán kết 2';
+  if (koId === '3P') return side === 'home' ? 'Thua Bán kết 1' : 'Thua Bán kết 2';
+
+  if (/Bán kết 1/i.test(match.round)) return side === 'home' ? 'Thắng Tứ kết 1' : 'Thắng Tứ kết 2';
+  if (/Bán kết 2/i.test(match.round)) return side === 'home' ? 'Thắng Tứ kết 3' : 'Thắng Tứ kết 4';
+  if (/Bán kết/i.test(match.round)) return side === 'home' ? 'Thắng Tứ kết' : 'Thắng Tứ kết';
+  if (/Tranh Hạng 3/i.test(match.round)) return side === 'home' ? 'Thua Bán kết 1' : 'Thua Bán kết 2';
+  if (/Chung kết/i.test(match.round)) return side === 'home' ? 'Thắng Bán kết 1' : 'Thắng Bán kết 2';
+
+  return side === 'home' ? 'Đội A' : 'Đội B';
+}
+
 function enrichMatch(match) {
   let teamA = null, teamB = null, group = null, goals = [], yellows = [], reds = [], motm = null;
   try {
-    teamA = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_a_id) || null;
+    if (match.team_a_id) {
+      teamA = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_a_id) || null;
+    }
   } catch (e) {}
   try {
-    teamB = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_b_id) || null;
+    if (match.team_b_id) {
+      teamB = db.prepare('SELECT id, name, logo, jersey_color FROM teams WHERE id = ?').get(match.team_b_id) || null;
+    }
   } catch (e) {}
+
+  if (!teamA) {
+    teamA = { id: null, name: getKnockoutPlaceholder(match, 'home'), logo: null, jersey_color: '#4f46e5' };
+  }
+  if (!teamB) {
+    teamB = { id: null, name: getKnockoutPlaceholder(match, 'away'), logo: null, jersey_color: '#4f46e5' };
+  }
   
   const isKnockout = !/bảng|lượt|group/i.test(match.round);
-  if (!isKnockout) {
+  if (!isKnockout && match.team_a_id) {
     try {
       group = db.prepare(`
         SELECT g.id, g.name
