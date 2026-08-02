@@ -5,6 +5,11 @@ export default function MatchCard({ match, showScore = false }) {
   const teamA = match.team_a || { name: match.team_a_name, logo: match.team_a_logo };
   const teamB = match.team_b || { name: match.team_b_name, logo: match.team_b_logo };
 
+  const isKnockout = !/bảng|lượt|group/i.test(match.round);
+  const isUnscored = (match.score_a === null || match.score_a === undefined || match.score_a === '') && 
+                    (match.score_b === null || match.score_b === undefined || match.score_b === '');
+  const status = (isKnockout && isUnscored) ? 'scheduled' : match.status;
+
   return (
     <div className="card p-4 animate-slide-up">
       <div className="flex items-center justify-between mb-3">
@@ -18,11 +23,11 @@ export default function MatchCard({ match, showScore = false }) {
             : (match.group?.name || match.group_name ? `${match.group?.name || match.group_name} - ${match.round}` : match.round)}
         </span>
         <span className={`text-xs px-2 py-1 rounded font-medium ${
-          match.status === 'finished' ? 'bg-gray-100 text-gray-600' :
-          match.status === 'live' ? 'bg-red-100 text-red-600 animate-pulse' :
+          status === 'finished' ? 'bg-gray-100 text-gray-600' :
+          status === 'live' ? 'bg-red-100 text-red-600 animate-pulse' :
           'bg-blue-100 text-primary'
         }`}>
-          {match.status === 'finished' ? 'Đã kết thúc' : match.status === 'live' ? 'Đang đá' : 'Sắp diễn ra'}
+          {status === 'finished' ? 'Đã kết thúc' : status === 'live' ? 'Đang đá' : 'Sắp diễn ra'}
         </span>
       </div>
       <div className="flex items-center justify-between gap-4">
