@@ -37,6 +37,10 @@ export function getDatabaseUrls() {
   if (backup && (backup.startsWith('postgres://') || backup.startsWith('postgresql://'))) {
     list.push({ name: 'Backup Neon', url: backup });
   }
+  const rapidRice = 'postgresql://neondb_owner:npg_BoQrt5haT7Fe@ep-rapid-rice-az2ir2s8-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  if (!list.some(x => x.url === rapidRice)) {
+    list.push({ name: 'Rapid Rice Neon', url: rapidRice });
+  }
   const softCredit = 'postgresql://neondb_owner:npg_E5KjxWXNAo2M@ep-soft-credit-azu5s02r-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
   if (!list.some(x => x.url === softCredit)) {
     list.push({ name: 'Soft Credit Neon', url: softCredit });
