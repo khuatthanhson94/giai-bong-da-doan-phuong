@@ -37,6 +37,10 @@ export function getDatabaseUrls() {
   if (backup && (backup.startsWith('postgres://') || backup.startsWith('postgresql://'))) {
     list.push({ name: 'Backup Neon', url: backup });
   }
+  const royalPaper = 'postgresql://neondb_owner:npg_TbyH5NQw9ScA@ep-royal-paper-azh7uc1w-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  if (!list.some(x => x.url === royalPaper)) {
+    list.push({ name: 'Royal Paper Neon', url: royalPaper });
+  }
   const autumnMath = 'postgresql://neondb_owner:npg_dGHkgn7J3TRv@ep-autumn-math-azd9xhwd-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
   if (!list.some(x => x.url === autumnMath)) {
     list.push({ name: 'Autumn Math Neon', url: autumnMath });
