@@ -534,6 +534,56 @@ export function initDatabase() {
   try { db.exec('ALTER TABLE groups ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
   try { db.exec('ALTER TABLE groups ADD COLUMN deleted_at TEXT'); } catch (e) {}
 
+  // Migration: Ensure matches.team_a_id and team_b_id are NULLABLE for knockout matches
+  try {
+    const matchesSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='matches'").get();
+    if (matchesSql && matchesSql.sql && (matchesSql.sql.includes('team_a_id INTEGER NOT NULL') || matchesSql.sql.includes('team_b_id INTEGER NOT NULL'))) {
+      console.log('[Migration] Making matches.team_a_id and team_b_id NULLABLE for Knockout matches...');
+      db.exec('PRAGMA foreign_keys=OFF');
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS matches_nullable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            round TEXT NOT NULL,
+            match_date TEXT NOT NULL,
+            match_time TEXT NOT NULL,
+            venue TEXT NOT NULL,
+            team_a_id INTEGER,
+            team_b_id INTEGER,
+            score_a INTEGER,
+            score_b INTEGER,
+            status TEXT DEFAULT 'scheduled',
+            motm_player_id INTEGER,
+            motm_player_name TEXT,
+            notes TEXT,
+            published INTEGER DEFAULT 0,
+            is_friendly INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+            tournament_id INTEGER,
+            deleted_at TEXT,
+            FOREIGN KEY (team_a_id) REFERENCES teams(id),
+            FOREIGN KEY (team_b_id) REFERENCES teams(id),
+            FOREIGN KEY (motm_player_id) REFERENCES players(id)
+          );
+          INSERT INTO matches_nullable (id, round, match_date, match_time, venue, team_a_id, team_b_id, score_a, score_b, status, motm_player_id, motm_player_name, notes, published, is_friendly, created_at, tournament_id, deleted_at)
+          SELECT id, round, match_date, match_time, venue, team_a_id, team_b_id, score_a, score_b, status, motm_player_id, motm_player_name, notes, published, is_friendly, created_at, tournament_id, deleted_at FROM matches;
+          DROP TABLE matches;
+          ALTER TABLE matches_nullable RENAME TO matches;
+        `);
+        db.exec('COMMIT');
+        console.log('✅ Successfully migrated matches table to allow NULL team_a_id and team_b_id!');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        console.error('[Migration Error] matches table nullable:', err);
+      } finally {
+        db.exec('PRAGMA foreign_keys=ON');
+      }
+    }
+  } catch (e) {
+    console.error('[Migration Exception] matches table nullable:', e);
+  }
+
   // Migration: Remove UNIQUE constraint on groups.name (was blocking groups with same name across tournaments)
   try {
     const groupsInfo = db.prepare("PRAGMA table_info(groups)").all();
