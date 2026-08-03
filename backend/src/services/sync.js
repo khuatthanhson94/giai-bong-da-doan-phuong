@@ -37,6 +37,10 @@ export function getDatabaseUrls() {
   if (backup && (backup.startsWith('postgres://') || backup.startsWith('postgresql://'))) {
     list.push({ name: 'Backup Neon', url: backup });
   }
+  const softCredit = 'postgresql://neondb_owner:npg_E5KjxWXNAo2M@ep-soft-credit-azu5s02r-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+  if (!list.some(x => x.url === softCredit)) {
+    list.push({ name: 'Soft Credit Neon', url: softCredit });
+  }
   const wispyBreeze = 'postgresql://neondb_owner:npg_dGHkgn7J3TRv@ep-wispy-breeze-azkn20cn-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
   if (!list.some(x => x.url === wispyBreeze)) {
     list.push({ name: 'Wispy Breeze Neon', url: wispyBreeze });
