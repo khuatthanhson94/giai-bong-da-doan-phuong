@@ -44,7 +44,7 @@ export function performAutoBackup() {
       .map(f => ({ name: f, path: path.join(backupsDir, f), stat: fs.statSync(path.join(backupsDir, f)) }))
       .sort((a, b) => a.stat.mtime.getTime() - b.stat.mtime.getTime());
 
-    while (files.length > 50) {
+    while (files.length > 5) {
       const oldest = files.shift();
       fs.unlinkSync(oldest.path);
       console.log(`[Backup] Pruned oldest backup file: ${oldest.name}`);

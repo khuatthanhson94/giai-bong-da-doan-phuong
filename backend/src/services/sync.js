@@ -37,10 +37,6 @@ export function getDatabaseUrls() {
   if (backup && (backup.startsWith('postgres://') || backup.startsWith('postgresql://'))) {
     list.push({ name: 'Backup Neon', url: backup });
   }
-  const rapidRice = 'postgresql://neondb_owner:npg_BoQrt5haT7Fe@ep-rapid-rice-az2ir2s8-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
-  if (!list.some(x => x.url === rapidRice)) {
-    list.push({ name: 'Rapid Rice Neon', url: rapidRice });
-  }
   const softCredit = 'postgresql://neondb_owner:npg_E5KjxWXNAo2M@ep-soft-credit-azu5s02r-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
   if (!list.some(x => x.url === softCredit)) {
     list.push({ name: 'Soft Credit Neon', url: softCredit });
@@ -137,38 +133,6 @@ async function fetchFromNeon(name, url) {
   return null; // All retries exhausted
 }
 
-function saveLocalSnapshot(dbPath, prefix = 'auto-snapshot') {
-  try {
-    if (!fs.existsSync(dbPath)) return;
-    const stat = fs.statSync(dbPath);
-    if (stat.size < 4096) return;
-
-    const backupDir = path.join(path.dirname(dbPath), 'data', 'backups');
-    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-
-    const now = new Date();
-    const dateStr = now.toISOString().replace(/[:.]/g, '-');
-    const snapshotPath = path.join(backupDir, `${prefix}-${dateStr}.db`);
-
-    fs.copyFileSync(dbPath, snapshotPath);
-    console.log(`[Backup Guard] Saved safety snapshot (${stat.size} bytes) -> ${snapshotPath}`);
-
-    // Keep up to 50 latest backups to prevent disk bloat
-    const files = fs.readdirSync(backupDir)
-      .filter(f => f.endsWith('.db'))
-      .map(f => ({ name: f, full: path.join(backupDir, f), mtime: fs.statSync(path.join(backupDir, f)).mtimeMs }))
-      .sort((a, b) => b.mtime - a.mtime);
-
-    if (files.length > 50) {
-      for (const oldFile of files.slice(50)) {
-        try { fs.unlinkSync(oldFile.full); } catch (e) {}
-      }
-    }
-  } catch (err) {
-    console.warn('[Backup Guard Warning]', err.message);
-  }
-}
-
 /**
  * Restores the SQLite database from the best available Neon backup.
  * Returns true if a valid backup was restored, false otherwise.
@@ -202,9 +166,6 @@ export async function restoreDatabase(dbPath) {
   if (latestData) {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    // ALWAYS save local snapshot of current DB before replacing with cloud DB
-    saveLocalSnapshot(dbPath, 'before-restore');
 
     fs.writeFileSync(dbPath, latestData);
     console.log(`[Sync] Wrote restored database (${latestData.length} bytes) from ${latestSource}`);
@@ -278,8 +239,7 @@ export async function backupDatabase(dbPath) {
     return;
   }
 
-  // Save safety local snapshot before uploading to cloud
-  saveLocalSnapshot(dbPath, 'before-cloud-sync');
+  // Flush SQLite WAL frames into tournament.db before reading
   try {
     const { checkpointDatabase } = await import("../db.js");
     checkpointDatabase();
