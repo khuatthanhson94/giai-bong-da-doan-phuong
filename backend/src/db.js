@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
-import { getVNLocalDateTimeString } from './utils/date.js';
+import { getVNLocalDateString, getVNLocalDateTimeString } from './utils/date.js';
 import { requestStorage } from './utils/context.js';
 
 let DatabaseSync;
