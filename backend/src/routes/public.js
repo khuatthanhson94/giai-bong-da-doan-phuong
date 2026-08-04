@@ -218,20 +218,11 @@ router.get('/livescore', (req, res) => {
 
   let liveMatchesSql = `
     SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
-           tb.name as team_b_name, tb.logo as team_b_logo,
-           CASE 
-             WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
-             THEN g.name 
-             ELSE NULL 
-           END as group_name
+           tb.name as team_b_name, tb.logo as team_b_logo
     FROM matches m
     LEFT JOIN teams ta ON m.team_a_id = ta.id
     LEFT JOIN teams tb ON m.team_b_id = tb.id
-    LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-    LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
     WHERE m.status = 'live' AND m.deleted_at IS NULL 
-      AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
-      AND (tb.deleted_at IS NULL OR tb.id IS NULL)
   `;
   const liveParams = [];
   if (tId) {
