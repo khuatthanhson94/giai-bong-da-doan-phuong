@@ -534,6 +534,9 @@ export function initDatabase() {
   try { db.exec('ALTER TABLE groups ADD COLUMN tournament_id INTEGER REFERENCES tournaments(id)'); } catch (e) {}
   try { db.exec('ALTER TABLE groups ADD COLUMN deleted_at TEXT'); } catch (e) {}
 
+  try { db.exec('ALTER TABLE matches ADD COLUMN penalty_a INTEGER'); } catch (e) {}
+  try { db.exec('ALTER TABLE matches ADD COLUMN penalty_b INTEGER'); } catch (e) {}
+
   // Migration: Ensure matches.team_a_id and team_b_id are NULLABLE for knockout matches
   try {
     const matchesSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='matches'").get();

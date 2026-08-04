@@ -517,15 +517,18 @@ router.post('/:id/result', authRequired, (req, res, next) => {
   next();
 }, (req, res) => {
   const matchId = req.params.id;
-  const { score_a, score_b, goals, yellow_cards, red_cards, motm_player_id, motm_player_name, notes, status } = req.body;
+  const { score_a, score_b, penalty_a, penalty_b, goals, yellow_cards, red_cards, motm_player_id, motm_player_name, notes, status } = req.body;
+
+  const penA = penalty_a !== undefined && penalty_a !== null && penalty_a !== '' ? Number(penalty_a) : null;
+  const penB = penalty_b !== undefined && penalty_b !== null && penalty_b !== '' ? Number(penalty_b) : null;
 
   const saveResult = () => {
     db.exec('BEGIN IMMEDIATE');
     try {
       db.prepare(`
-        UPDATE matches SET score_a=?, score_b=?, motm_player_id=?, motm_player_name=?, notes=?, status=?, published = CASE WHEN ? = 'live' THEN 1 ELSE published END
+        UPDATE matches SET score_a=?, score_b=?, penalty_a=?, penalty_b=?, motm_player_id=?, motm_player_name=?, notes=?, status=?, published = CASE WHEN ? = 'live' THEN 1 ELSE published END
         WHERE id=?
-      `).run(score_a, score_b, motm_player_id || null, motm_player_name || null, notes || '', status || 'finished', status || 'finished', matchId);
+      `).run(score_a, score_b, penA, penB, motm_player_id || null, motm_player_name || null, notes || '', status || 'finished', status || 'finished', matchId);
 
       db.prepare('DELETE FROM goals WHERE match_id = ?').run(matchId);
       db.prepare('DELETE FROM yellow_cards WHERE match_id = ?').run(matchId);

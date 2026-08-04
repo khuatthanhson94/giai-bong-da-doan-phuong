@@ -130,6 +130,8 @@ export default function AdminResults() {
       setForm({
         score_a: m.score_a ?? 0,
         score_b: m.score_b ?? 0,
+        penalty_a: m.penalty_a !== undefined && m.penalty_a !== null ? m.penalty_a : '',
+        penalty_b: m.penalty_b !== undefined && m.penalty_b !== null ? m.penalty_b : '',
         goals_a: goalsA,
         goals_b: goalsB,
         yellow_cards_a: yellowA,
@@ -180,6 +182,8 @@ export default function AdminResults() {
     return {
       score_a: form.score_a,
       score_b: form.score_b,
+      penalty_a: form.penalty_a !== '' && form.penalty_a !== null ? Number(form.penalty_a) : null,
+      penalty_b: form.penalty_b !== '' && form.penalty_b !== null ? Number(form.penalty_b) : null,
       goals: [
         ...form.goals_a.map(g => ({ player_id: g.player_id || null, player_name: g.player_name || null, team_id: teamAId, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 })),
         ...form.goals_b.map(g => ({ player_id: g.player_id || null, player_name: g.player_name || null, team_id: teamBId, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 }))
@@ -273,7 +277,7 @@ export default function AdminResults() {
             </h3>
 
             {/* Score inputs */}
-            <div className="flex items-center justify-center gap-4 sm:gap-8 mb-8">
+            <div className="flex items-center justify-center gap-4 sm:gap-8 mb-4">
               <div className="text-center flex-1 max-w-[140px]">
                 <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 truncate">{match.team_a?.name}</p>
                 <input
@@ -296,6 +300,41 @@ export default function AdminResults() {
                 />
               </div>
             </div>
+
+            {/* Penalty Score Inputs (Visible for Knockout matches or when score is tied) */}
+            {(!match.round?.includes('bảng') || form.score_a === form.score_b) && (
+              <div className="mb-8 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-center max-w-md mx-auto shadow-sm">
+                <div className="flex items-center justify-center gap-1.5 mb-2">
+                  <span className="text-base">🎯</span>
+                  <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Tỉ số Luân lưu Penalty (Khi hòa)</span>
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[90px]">{match.team_a?.name}:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      className="input-field w-14 text-center font-black text-lg text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 py-1"
+                      value={form.penalty_a}
+                      onChange={(e) => setForm({ ...form, penalty_a: e.target.value })}
+                    />
+                  </div>
+                  <span className="font-bold text-amber-500">—</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      className="input-field w-14 text-center font-black text-lg text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 py-1"
+                      value={form.penalty_b}
+                      onChange={(e) => setForm({ ...form, penalty_b: e.target.value })}
+                    />
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[90px]">{match.team_b?.name}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Event list - Divided into Two Columns (Team A vs Team B) */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">

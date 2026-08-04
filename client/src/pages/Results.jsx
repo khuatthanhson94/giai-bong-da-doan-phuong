@@ -285,6 +285,11 @@ export default function Results() {
                     <div className="text-xl sm:text-3xl font-black text-primary bg-blue-50 border border-blue-200 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-2xl shadow-inner font-mono tracking-tighter">
                       {m.score_a ?? 0} - {m.score_b ?? 0}
                     </div>
+                    {m.penalty_a !== null && m.penalty_a !== undefined && m.penalty_b !== null && m.penalty_b !== undefined && (
+                      <div className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 px-2 py-0.5 rounded-md mt-1 inline-block shadow-xs">
+                        (Pen {m.penalty_a} - {m.penalty_b})
+                      </div>
+                    )}
                     <span className="text-[10px] font-bold text-gray-400 block mt-1">FT (90')</span>
                   </div>
 

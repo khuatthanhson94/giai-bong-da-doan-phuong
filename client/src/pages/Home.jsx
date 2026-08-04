@@ -228,6 +228,11 @@ export default function Home() {
                         <div className="text-2xl sm:text-4xl font-black text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl shadow-inner font-mono tracking-tighter">
                           {m.score_a} - {m.score_b}
                         </div>
+                        {m.penalty_a !== null && m.penalty_a !== undefined && m.penalty_b !== null && m.penalty_b !== undefined && (
+                          <div className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 px-2 py-0.5 rounded-md mt-1 shadow-xs">
+                            (Pen {m.penalty_a} - {m.penalty_b})
+                          </div>
+                        )}
                         <span className="text-[10px] font-bold text-red-500 bg-red-100 px-2 py-0.5 rounded-full mt-2 animate-pulse tracking-widest flex items-center gap-1">
                           <span className="w-1.5 h-1.5 bg-red-600 rounded-full"></span> LIVE
                         </span>
@@ -342,6 +347,11 @@ export default function Home() {
                       <div className="text-2xl sm:text-4xl font-black text-primary bg-blue-50 border border-blue-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-inner font-mono tracking-tighter">
                         {latestMatch.score_a} - {latestMatch.score_b}
                       </div>
+                      {latestMatch.penalty_a !== null && latestMatch.penalty_a !== undefined && latestMatch.penalty_b !== null && latestMatch.penalty_b !== undefined && (
+                        <div className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 px-2 py-0.5 rounded-md mt-1 inline-block shadow-xs">
+                          (Pen {latestMatch.penalty_a} - {latestMatch.penalty_b})
+                        </div>
+                      )}
                       <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 block mt-1.5">FT (90')</span>
                     </div>
 

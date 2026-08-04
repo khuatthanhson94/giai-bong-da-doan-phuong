@@ -210,6 +210,9 @@ export function publishMatchResult(matchId, userId) {
           const config = JSON.parse(configRow.value);
           const scoreA = updatedMatch.score_a ?? 0;
           const scoreB = updatedMatch.score_b ?? 0;
+          const penA = updatedMatch.penalty_a;
+          const penB = updatedMatch.penalty_b;
+
           let winnerTeamId = null;
           let loserTeamId = null;
           if (scoreA > scoreB) {
@@ -218,6 +221,14 @@ export function publishMatchResult(matchId, userId) {
           } else if (scoreB > scoreA) {
             winnerTeamId = updatedMatch.team_b_id;
             loserTeamId = updatedMatch.team_a_id;
+          } else if (penA !== null && penA !== undefined && penB !== null && penB !== undefined) {
+            if (penA > penB) {
+              winnerTeamId = updatedMatch.team_a_id;
+              loserTeamId = updatedMatch.team_b_id;
+            } else if (penB > penA) {
+              winnerTeamId = updatedMatch.team_b_id;
+              loserTeamId = updatedMatch.team_a_id;
+            }
           } else {
             winnerTeamId = updatedMatch.team_a_id;
             loserTeamId = updatedMatch.team_b_id;

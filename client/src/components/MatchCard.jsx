@@ -48,8 +48,15 @@ export default function MatchCard({ match, showScore = false }) {
           <p className="font-semibold text-sm mt-2">{teamA.name}</p>
         </div>
         <div className="text-center px-4">
-          {showScore && match.status === 'finished' ? (
-            <div className="text-2xl font-bold text-primary">{match.score_a} - {match.score_b}</div>
+          {showScore && (match.status === 'finished' || match.status === 'live') ? (
+            <div>
+              <div className="text-2xl font-bold text-primary">{match.score_a} - {match.score_b}</div>
+              {match.penalty_a !== null && match.penalty_a !== undefined && match.penalty_b !== null && match.penalty_b !== undefined && (
+                <div className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 px-2 py-0.5 rounded-md mt-1 inline-block shadow-xs">
+                  (Pen {match.penalty_a} - {match.penalty_b})
+                </div>
+              )}
+            </div>
           ) : (
             <div className="text-lg font-bold text-gray-400">VS</div>
           )}

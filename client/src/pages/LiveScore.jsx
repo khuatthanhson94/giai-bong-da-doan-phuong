@@ -276,6 +276,11 @@ export default function LiveScore() {
                       <div className="text-2xl sm:text-4xl font-black text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-inner font-mono tracking-tighter">
                         {m.score_a} - {m.score_b}
                       </div>
+                      {m.penalty_a !== null && m.penalty_a !== undefined && m.penalty_b !== null && m.penalty_b !== undefined && (
+                        <div className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 px-2 py-0.5 rounded-md mt-1 inline-block shadow-xs">
+                          (Pen {m.penalty_a} - {m.penalty_b})
+                        </div>
+                      )}
                       <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 block mt-1.5">{m.match_time}</span>
                     </div>
 
@@ -408,9 +413,20 @@ export default function LiveScore() {
                   </div>
                   <div className="text-right">
                     {m.status === 'finished' ? (
-                      <span className="font-bold text-primary text-base">{m.score_a} - {m.score_b}</span>
+                      <div>
+                        <span className="font-bold text-primary text-base">{m.score_a} - {m.score_b}</span>
+                        {m.penalty_a !== null && m.penalty_a !== undefined && m.penalty_b !== null && m.penalty_b !== undefined && (
+                          <span className="block text-[10px] font-bold text-amber-700 dark:text-amber-300">(Pen {m.penalty_a} - {m.penalty_b})</span>
+                        )}
+                      </div>
                     ) : m.status === 'live' ? (
-                      <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded animate-pulse">LIVE</span>
+                      <div>
+                        <span className="font-bold text-red-600 text-base">{m.score_a} - {m.score_b}</span>
+                        {m.penalty_a !== null && m.penalty_a !== undefined && m.penalty_b !== null && m.penalty_b !== undefined && (
+                          <span className="block text-[10px] font-bold text-amber-700 dark:text-amber-300">(Pen {m.penalty_a} - {m.penalty_b})</span>
+                        )}
+                        <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded animate-pulse block mt-0.5">LIVE</span>
+                      </div>
                     ) : (
                       <span className="text-xs text-gray-500 font-medium">{m.match_time}</span>
                     )}
