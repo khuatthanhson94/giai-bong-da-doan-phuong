@@ -1037,6 +1037,21 @@ export function logAction(username, action, details) {
   }
 }
 
+function normalizeDateStr(dateStr) {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+  }
+  return trimmed;
+}
+
 export function autoStartMatches() {
   try {
     const todayStr = getVNLocalDateString();
@@ -1046,8 +1061,9 @@ export function autoStartMatches() {
     const liveMatches = db.prepare("SELECT * FROM matches WHERE status = 'live' AND deleted_at IS NULL").all();
     for (const match of liveMatches) {
       if (!match.match_date || !match.match_time) continue;
+      const normDate = normalizeDateStr(match.match_date);
       const timeStr = match.match_time.substring(0, 5);
-      const matchStart = new Date(`${match.match_date}T${timeStr}:00+07:00`);
+      const matchStart = new Date(`${normDate}T${timeStr}:00+07:00`);
 
       if (now < matchStart && (match.score_a === null || match.score_a === undefined) && (match.score_b === null || match.score_b === undefined)) {
         db.prepare("UPDATE matches SET status = 'scheduled' WHERE id = ?").run(match.id);
@@ -1059,11 +1075,13 @@ export function autoStartMatches() {
     const scheduled = db.prepare("SELECT * FROM matches WHERE status = 'scheduled' AND deleted_at IS NULL").all();
 
     for (const match of scheduled) {
-      if (!match.match_date || match.match_date !== todayStr) continue;
+      if (!match.match_date) continue;
+      const normDate = normalizeDateStr(match.match_date);
+      if (normDate !== todayStr) continue;
 
       const timeStr = match.match_time ? match.match_time.substring(0, 5) : '00:00';
-      const matchStart = new Date(`${match.match_date}T${timeStr}:00+07:00`);
-      const matchEnd = new Date(matchStart.getTime() + 3 * 60 * 60 * 1000);
+      const matchStart = new Date(`${normDate}T${timeStr}:00+07:00`);
+      const matchEnd = new Date(matchStart.getTime() + 4 * 60 * 60 * 1000);
 
       if (now >= matchStart && now <= matchEnd) {
         db.prepare(`

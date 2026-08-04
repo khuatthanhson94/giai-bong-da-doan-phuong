@@ -4,6 +4,7 @@ import { db, logAction, autoStartMatches } from '../db.js';
 import { authRequired, requireRole, ROLES } from '../middleware/auth.js';
 import { computeStandings, getTopScorers, getStatistics } from '../services/standings.js';
 import { getVNLocalDateString } from '../utils/date.js';
+import { getKnockoutPlaceholder } from './matches.js';
 
 const router = Router();
 
@@ -208,6 +209,7 @@ router.get('/livescore', (req, res) => {
              THEN g.name 
              ELSE NULL 
            END as group_name
+    FROM matches m
     LEFT JOIN teams ta ON m.team_a_id = ta.id
     LEFT JOIN teams tb ON m.team_b_id = tb.id
     LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
@@ -251,7 +253,19 @@ router.get('/livescore', (req, res) => {
       ORDER BY r.minute ASC
     `).all(m.id);
 
-    return { ...m, goals, yellow_cards, red_cards };
+    const teamAName = m.team_a_name || getKnockoutPlaceholder(m, 'home');
+    const teamBName = m.team_b_name || getKnockoutPlaceholder(m, 'away');
+
+    return { 
+      ...m, 
+      team_a_name: teamAName,
+      team_b_name: teamBName,
+      team_a: { id: m.team_a_id, name: teamAName, logo: m.team_a_logo },
+      team_b: { id: m.team_b_id, name: teamBName, logo: m.team_b_logo },
+      goals, 
+      yellow_cards, 
+      red_cards 
+    };
   });
 
   let upcomingMatchesSql = `
@@ -270,7 +284,17 @@ router.get('/livescore', (req, res) => {
     upcomingParams.push(tId);
   }
   upcomingMatchesSql += ' ORDER BY m.match_date, m.match_time LIMIT 6';
-  const upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingParams);
+  const upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingParams).map(m => {
+    const teamAName = m.team_a_name || getKnockoutPlaceholder(m, 'home');
+    const teamBName = m.team_b_name || getKnockoutPlaceholder(m, 'away');
+    return {
+      ...m,
+      team_a_name: teamAName,
+      team_b_name: teamBName,
+      team_a: { id: m.team_a_id, name: teamAName, logo: m.team_a_logo },
+      team_b: { id: m.team_b_id, name: teamBName, logo: m.team_b_logo }
+    };
+  });
 
   let todayMatchesSql = `
     SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
@@ -288,13 +312,24 @@ router.get('/livescore', (req, res) => {
     todayParams.push(tId);
   }
   todayMatchesSql += ' ORDER BY m.match_time';
-  const todayMatches = db.prepare(todayMatchesSql).all(...todayParams);
+  const todayMatches = db.prepare(todayMatchesSql).all(...todayParams).map(m => {
+    const teamAName = m.team_a_name || getKnockoutPlaceholder(m, 'home');
+    const teamBName = m.team_b_name || getKnockoutPlaceholder(m, 'away');
+    return {
+      ...m,
+      team_a_name: teamAName,
+      team_b_name: teamBName,
+      team_a: { id: m.team_a_id, name: teamAName, logo: m.team_a_logo },
+      team_b: { id: m.team_b_id, name: teamBName, logo: m.team_b_logo }
+    };
+  });
 
   const now = new Date();
   const validLiveMatches = liveMatches.filter((m) => {
     if (!m.match_date || !m.match_time) return true;
+    const normDate = normalizeDateStr(m.match_date);
     const timeStr = m.match_time.substring(0, 5);
-    const matchStart = new Date(`${m.match_date}T${timeStr}:00+07:00`);
+    const matchStart = new Date(`${normDate}T${timeStr}:00+07:00`);
     if (now < matchStart && (m.score_a === null || m.score_a === undefined) && (m.score_b === null || m.score_b === undefined)) {
       return false;
     }
