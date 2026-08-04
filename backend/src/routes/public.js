@@ -65,26 +65,18 @@ router.get('/home', (req, res) => {
     try {
       let allMatchesSql = `
         SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
-               tb.name as team_b_name, tb.logo as team_b_logo,
-               CASE 
-                 WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
-                 THEN g.name 
-                 ELSE NULL 
-               END as group_name
+               tb.name as team_b_name, tb.logo as team_b_logo
+        FROM matches m
         LEFT JOIN teams ta ON m.team_a_id = ta.id
         LEFT JOIN teams tb ON m.team_b_id = tb.id
-        LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-        LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
         WHERE m.published = 1 AND m.deleted_at IS NULL 
-          AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
-          AND (tb.deleted_at IS NULL OR tb.id IS NULL)
       `;
       const allMatchesParams = [];
       if (tId) {
         allMatchesSql += ' AND m.tournament_id = ?';
         allMatchesParams.push(tId);
       }
-      allMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time';
+      allMatchesSql += ' ORDER BY m.match_date, m.match_time';
       allMatches = db.prepare(allMatchesSql).all(...allMatchesParams).map((m) => {
         let goals = [], yellow_cards = [], red_cards = [];
         try {
@@ -120,7 +112,19 @@ router.get('/home', (req, res) => {
           `).all(m.id);
         } catch (e) {}
 
-        return { ...m, goals, yellow_cards, red_cards };
+        const teamAName = m.team_a_name || getKnockoutPlaceholder(m, 'home');
+        const teamBName = m.team_b_name || getKnockoutPlaceholder(m, 'away');
+
+        return { 
+          ...m, 
+          team_a_name: teamAName,
+          team_b_name: teamBName,
+          team_a: { id: m.team_a_id, name: teamAName, logo: m.team_a_logo },
+          team_b: { id: m.team_b_id, name: teamBName, logo: m.team_b_logo },
+          goals, 
+          yellow_cards, 
+          red_cards 
+        };
       });
     } catch (e) {
       console.error('[API /home] Error fetching matches:', e.message);
@@ -131,8 +135,9 @@ router.get('/home', (req, res) => {
     const liveMatches = allMatches.filter((m) => {
       if (m.status !== 'live') return false;
       if (!m.match_date || !m.match_time) return true;
+      const normDate = normalizeDateStr(m.match_date);
       const timeStr = m.match_time.substring(0, 5);
-      const matchStart = new Date(`${m.match_date}T${timeStr}:00+07:00`);
+      const matchStart = new Date(`${normDate}T${timeStr}:00+07:00`);
       if (now < matchStart && (m.score_a === null || m.score_a === undefined) && (m.score_b === null || m.score_b === undefined)) {
         return false;
       }
@@ -143,28 +148,29 @@ router.get('/home', (req, res) => {
     try {
       let upcomingMatchesSql = `
         SELECT m.*, ta.name as team_a_name, ta.logo as team_a_logo,
-               tb.name as team_b_name, tb.logo as team_b_logo,
-               CASE 
-                 WHEN m.round LIKE '%bảng%' OR m.round LIKE '%lượt%' OR m.round LIKE '%group%' 
-                 THEN g.name 
-                 ELSE NULL 
-               END as group_name
+               tb.name as team_b_name, tb.logo as team_b_logo
         FROM matches m
         LEFT JOIN teams ta ON m.team_a_id = ta.id
         LEFT JOIN teams tb ON m.team_b_id = tb.id
-        LEFT JOIN group_teams gt ON m.team_a_id = gt.team_id
-        LEFT JOIN groups g ON gt.group_id = g.id AND g.deleted_at IS NULL
         WHERE m.status = 'scheduled' AND m.deleted_at IS NULL 
-          AND (ta.deleted_at IS NULL OR ta.id IS NULL) 
-          AND (tb.deleted_at IS NULL OR tb.id IS NULL)
       `;
       const upcomingMatchesParams = [];
       if (tId) {
         upcomingMatchesSql += ' AND m.tournament_id = ?';
         upcomingMatchesParams.push(tId);
       }
-      upcomingMatchesSql += ' GROUP BY m.id ORDER BY m.match_date, m.match_time LIMIT 12';
-      upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingMatchesParams);
+      upcomingMatchesSql += ' ORDER BY m.match_date, m.match_time LIMIT 12';
+      upcomingMatches = db.prepare(upcomingMatchesSql).all(...upcomingMatchesParams).map(m => {
+        const teamAName = m.team_a_name || getKnockoutPlaceholder(m, 'home');
+        const teamBName = m.team_b_name || getKnockoutPlaceholder(m, 'away');
+        return {
+          ...m,
+          team_a_name: teamAName,
+          team_b_name: teamBName,
+          team_a: { id: m.team_a_id, name: teamAName, logo: m.team_a_logo },
+          team_b: { id: m.team_b_id, name: teamBName, logo: m.team_b_logo }
+        };
+      });
     } catch (e) {}
 
     let news = [];
