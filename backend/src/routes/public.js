@@ -336,6 +336,9 @@ router.get('/livescore', (req, res) => {
     return true;
   });
 
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all();
+  const settings = settingsRows.reduce((acc, row) => ({ ...acc, [row.key]: row.value }), {});
+
   res.json({
     liveMatches: validLiveMatches,
     upcomingMatches,

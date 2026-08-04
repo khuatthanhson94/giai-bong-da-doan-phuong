@@ -1,5 +1,5 @@
 const API_BASE = (
-  import.meta.env.VITE_API_URL || 'https://giai-bong-da-doan-phuong-backend.onrender.com'
+  import.meta.env.VITE_API_URL || 'https://giai-bong-da-api-v2.onrender.com'
 ).replace(/\/$/, '');
 const API = API_BASE.endsWith('/api') ? API_BASE : `${API_BASE}/api`;
 
