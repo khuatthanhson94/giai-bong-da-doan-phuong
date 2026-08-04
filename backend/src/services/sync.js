@@ -98,14 +98,14 @@ function validateRestoredDatabase(dbPath) {
  * Returns { data, updatedAt } or null on failure.
  */
 async function fetchFromNeon(name, url) {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY_MS = 3000;
+  const MAX_RETRIES = 1;
+  const RETRY_DELAY_MS = 500;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     let client = null;
     try {
       console.log(`[Sync] Connecting to ${name} (attempt ${attempt}/${MAX_RETRIES})...`);
-      client = new Client({ connectionString: url, connectionTimeoutMillis: 15000 });
+      client = new Client({ connectionString: url, connectionTimeoutMillis: 3000 });
       await client.connect();
 
       await client.query(`
