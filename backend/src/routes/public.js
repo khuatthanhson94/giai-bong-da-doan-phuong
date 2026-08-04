@@ -8,6 +8,21 @@ import { getKnockoutPlaceholder } from './matches.js';
 
 const router = Router();
 
+function normalizeDateStr(dateStr) {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+  }
+  return trimmed;
+}
+
 const serverCache = new Map();
 const CACHE_DURATION_MS = 10000; // 10s server cache for public read endpoints
 
