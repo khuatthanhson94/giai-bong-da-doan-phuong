@@ -51,6 +51,10 @@ export function computeStandings(tournamentId) {
   }
 
   for (const m of publishedMatches) {
+    // Exclude Knockout matches from group standings table
+    const isKnockout = /tứ kết|bán kết|chung kết|tranh hạng|knockout|vòng loại trực tiếp/i.test(m.round) || !/bảng|lượt|group/i.test(m.round);
+    if (isKnockout) continue;
+
     const a = stats[m.team_a_id];
     const b = stats[m.team_b_id];
     if (!a || !b) continue;

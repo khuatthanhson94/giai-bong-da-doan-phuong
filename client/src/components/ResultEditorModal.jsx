@@ -140,6 +140,8 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
       setForm({
         score_a: m.score_a ?? 0,
         score_b: m.score_b ?? 0,
+        penalty_a: m.penalty_a !== undefined && m.penalty_a !== null ? m.penalty_a : '',
+        penalty_b: m.penalty_b !== undefined && m.penalty_b !== null ? m.penalty_b : '',
         goals_a: goalsA,
         goals_b: goalsB,
         yellow_cards_a: yellowA,
@@ -227,6 +229,8 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
     return {
       score_a: form.score_a,
       score_b: form.score_b,
+      penalty_a: form.penalty_a !== '' && form.penalty_a !== null ? Number(form.penalty_a) : null,
+      penalty_b: form.penalty_b !== '' && form.penalty_b !== null ? Number(form.penalty_b) : null,
       goals: [
         ...form.goals_a.map(g => ({ player_id: g.player_id || null, player_name: g.player_name || null, team_id: match.team_a_id, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 })),
         ...form.goals_b.map(g => ({ player_id: g.player_id || null, player_name: g.player_name || null, team_id: match.team_b_id, minute: g.minute, is_own_goal: g.is_own_goal ? 1 : 0 }))
@@ -363,6 +367,41 @@ export default function ResultEditorModal({ matchId, onClose, onSaved }) {
               />
             </div>
           </div>
+
+          {/* Penalty Score Inputs */}
+          {(!match.round?.includes('bảng') || form.score_a === form.score_b) && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl text-center max-w-md mx-auto shadow-sm">
+              <div className="flex items-center justify-center gap-1.5 mb-2">
+                <span className="text-base">🎯</span>
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Tỉ số Luân lưu Penalty (Khi hòa)</span>
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[90px]">{match.team_a?.name}:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    className="input-field w-14 text-center font-black text-lg text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 py-1"
+                    value={form.penalty_a}
+                    onChange={(e) => setForm(prev => ({ ...prev, penalty_a: e.target.value }))}
+                  />
+                </div>
+                <span className="font-bold text-amber-500">—</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    className="input-field w-14 text-center font-black text-lg text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 py-1"
+                    value={form.penalty_b}
+                    onChange={(e) => setForm(prev => ({ ...prev, penalty_b: e.target.value }))}
+                  />
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[90px]">{match.team_b?.name}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Event list - Divided into Two Columns (Team A vs Team B) */}
           <div className="grid md:grid-cols-2 gap-6">

@@ -368,6 +368,11 @@ export default function Results() {
                   <div className="text-2xl sm:text-4xl font-black text-primary bg-blue-50 border border-blue-200 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-inner font-mono tracking-tighter">
                     {selected.score_a ?? 0} - {selected.score_b ?? 0}
                   </div>
+                  {selected.penalty_a !== null && selected.penalty_a !== undefined && selected.penalty_b !== null && selected.penalty_b !== undefined && (
+                    <div className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 px-2 py-0.5 rounded-md mt-1 inline-block shadow-xs">
+                      (Pen {selected.penalty_a} - {selected.penalty_b})
+                    </div>
+                  )}
                   <span className="text-[10px] sm:text-xs font-bold text-gray-400 block mt-1.5">FT (90')</span>
                 </div>
 
