@@ -14,11 +14,15 @@ function getTeamStats(teamId) {
   const matches = db.prepare(`
     SELECT * FROM matches
     WHERE published = 1 AND status = 'finished' AND deleted_at IS NULL
+    AND (is_friendly IS NULL OR is_friendly = 0)
     AND (team_a_id = ? OR team_b_id = ?)
   `).all(teamId, teamId);
 
   let played = 0, won = 0, drawn = 0, lost = 0, points = 0, goals_for = 0, goals_against = 0;
   for (const m of matches) {
+    const isKnockout = /tứ kết|bán kết|chung kết|tranh hạng|knockout|vòng loại trực tiếp/i.test(m.round) || !/bảng|lượt|group/i.test(m.round);
+    if (isKnockout) continue;
+
     played++;
     const isHome = m.team_a_id === teamId;
     const gf = isHome ? (m.score_a ?? 0) : (m.score_b ?? 0);
