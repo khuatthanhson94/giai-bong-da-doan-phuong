@@ -199,8 +199,9 @@ router.get('/home', (req, res) => {
     try {
       const finalMatch = allMatches.find(m => 
         m.status === 'finished' && 
-        (/Chung kết/i.test(m.round) || /F1/i.test(m.notes || '')) &&
-        !/Bán kết/i.test(m.round)
+        ((/Chung kết|\bFinal\b/i.test(m.round) || (m.notes && /\bF1\b|KO_ID:\s*F\b/.test(m.notes))) &&
+        !/Bán|Semi|Tứ|Quarter|3P|Tranh hạng/i.test(m.round) &&
+        !/SF\d|QF\d/i.test(m.notes || ''))
       );
 
       if (finalMatch && finalMatch.team_a_id && finalMatch.team_b_id) {
