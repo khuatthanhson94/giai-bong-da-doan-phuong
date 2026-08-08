@@ -134,7 +134,7 @@ export default function Home() {
     );
   }
 
-  const { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers } = data || {};
+  const { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, championTeam } = data || {};
 
   return (
     <div>
@@ -183,6 +183,66 @@ export default function Home() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-16">
+        {/* Champion Showcase Banner (Displays prominently when final match is finished) */}
+        {championTeam && (
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 p-1 shadow-2xl animate-scale-in">
+            <div className="relative rounded-[22px] bg-gradient-to-b from-gray-950/95 via-gray-900/90 to-amber-950/95 p-6 sm:p-10 text-white backdrop-blur-md">
+              {/* Decorative Golden Glows & Rays */}
+              <div className="absolute -top-24 -left-24 w-72 h-72 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-yellow-400/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
+                {/* Left Side: Trophy Icon & Champion Title */}
+                <div className="flex flex-col items-center md:items-start space-y-3 flex-1">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-gray-950 font-black text-xs sm:text-sm shadow-lg tracking-wider uppercase">
+                    <span className="text-base">👑</span> ĐỘI VÔ ĐỊCH GIẢI ĐẤU <span className="text-base">✨</span>
+                  </div>
+
+                  <h2 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-100 drop-shadow-md tracking-tight">
+                    {championTeam.name}
+                  </h2>
+
+                  {championTeam.coach && (
+                    <p className="text-amber-200/90 text-sm font-semibold flex items-center gap-2">
+                      <span>📋 HLV Trưởng:</span>
+                      <span className="text-white font-bold">{championTeam.coach}</span>
+                    </p>
+                  )}
+
+                  {championTeam.finalMatch && (
+                    <div className="inline-flex items-center gap-3 bg-amber-950/80 border border-amber-500/40 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-amber-200 mt-2">
+                      <span>🏆 Trận Chung kết:</span>
+                      <span className="font-mono text-white font-black text-base">
+                        {championTeam.finalMatch.score_a} - {championTeam.finalMatch.score_b}
+                      </span>
+                      {championTeam.finalMatch.penalty_a !== null && championTeam.finalMatch.penalty_b !== null && (
+                        <span className="text-amber-300 font-extrabold">(Pen {championTeam.finalMatch.penalty_a} - {championTeam.finalMatch.penalty_b})</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Side: Champion Logo & Golden Trophy Badge */}
+                <div className="relative flex items-center justify-center flex-shrink-0">
+                  <div className="absolute inset-0 bg-yellow-400/30 rounded-full blur-2xl animate-pulse" />
+                  <div className="relative w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 p-1.5 shadow-2xl border-4 border-yellow-200/60 flex items-center justify-center">
+                    {championTeam.logo ? (
+                      <img src={getFullUrl(championTeam.logo)} alt={championTeam.name} className="w-full h-full object-contain rounded-full bg-white p-2 shadow-inner" />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-amber-600 to-yellow-700 flex items-center justify-center text-white text-5xl font-black shadow-inner">
+                        {championTeam.name?.charAt(0)}
+                      </div>
+                    )}
+                    <div className="absolute -bottom-3 -right-2 bg-gradient-to-br from-yellow-300 to-amber-500 text-gray-950 w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-xl border-2 border-white">
+                      🏆
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Live Matches Panel (Only visible when matches are live) */}
         {liveMatches && liveMatches.length > 0 && (
           <section className="bg-red-50 border-2 border-red-500/30 p-6 md:p-8 rounded-2xl space-y-4 shadow-sm">

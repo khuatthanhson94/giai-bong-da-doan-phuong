@@ -195,6 +195,46 @@ router.get('/home', (req, res) => {
       topScorers = getTopScorers(5, tId);
     } catch (e) {}
 
+    let championTeam = null;
+    try {
+      const finalMatch = allMatches.find(m => 
+        m.status === 'finished' && 
+        (/Chung kết/i.test(m.round) || /F1/i.test(m.notes || '')) &&
+        !/Bán kết/i.test(m.round)
+      );
+
+      if (finalMatch && finalMatch.team_a_id && finalMatch.team_b_id) {
+        const sa = finalMatch.score_a ?? 0;
+        const sb = finalMatch.score_b ?? 0;
+        const pa = finalMatch.penalty_a;
+        const pb = finalMatch.penalty_b;
+
+        let winnerTeamId = null;
+        if (sa > sb) winnerTeamId = finalMatch.team_a_id;
+        else if (sb > sa) winnerTeamId = finalMatch.team_b_id;
+        else if (pa !== null && pa !== undefined && pb !== null && pb !== undefined) {
+          if (pa > pb) winnerTeamId = finalMatch.team_a_id;
+          else if (pb > pa) winnerTeamId = finalMatch.team_b_id;
+        }
+
+        if (winnerTeamId) {
+          championTeam = db.prepare('SELECT id, name, logo, coach, stadium, jersey_color FROM teams WHERE id = ?').get(winnerTeamId);
+          if (championTeam) {
+            championTeam.finalMatch = {
+              score_a: sa,
+              score_b: sb,
+              penalty_a: pa,
+              penalty_b: pb,
+              team_a_name: finalMatch.team_a_name,
+              team_b_name: finalMatch.team_b_name
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[API /home Champion Error]', e.message);
+    }
+
     let visits = {
       total_visits: 0,
       total_unique_visitors: 0,
@@ -202,12 +242,12 @@ router.get('/home', (req, res) => {
       today_unique_visitors: 0
     };
 
-    const result = { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, visits };
+    const result = { settings, latestMatch, liveMatches, upcomingMatches, news, standings, topScorers, visits, championTeam };
     setCache(cacheKey, result);
     res.json(result);
   } catch (err) {
     console.error('[API /home Fatal Error]', err.message);
-    res.json({ settings: {}, latestMatch: null, liveMatches: [], upcomingMatches: [], news: [], standings: [], topScorers: [], visits: {} });
+    res.json({ settings: {}, latestMatch: null, liveMatches: [], upcomingMatches: [], news: [], standings: [], topScorers: [], visits: {}, championTeam: null });
   }
 });
 
